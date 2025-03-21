@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Prevent inline style modifications on the HTML element */
+html {
+  filter: none !important;
+}

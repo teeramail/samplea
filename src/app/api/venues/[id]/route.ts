@@ -1,0 +1,155 @@
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "~/server/db";
+import { venues } from "~/server/db/schema";
+import { z } from "zod";
+import { eq } from "drizzle-orm";
+
+// Schema for venue updates
+const updateVenueSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters").optional(),
+  address: z.string().min(2, "Address must be at least 2 characters").optional(),
+  capacity: z.number().int().positive().nullable().optional(),
+  regionId: z.string().min(1, "Region ID is required").optional(),
+});
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { id } = params;
+    
+    // Get venue by ID
+    const venue = await db.query.venues.findFirst({
+      where: eq(venues.id, id),
+      with: {
+        region: true,
+        events: {
+          orderBy: (events, { desc }) => [desc(events.date)],
+          limit: 5,
+        },
+      },
+    });
+    
+    if (!venue) {
+      return NextResponse.json(
+        { error: "Venue not found" },
+        { status: 404 }
+      );
+    }
+    
+    return NextResponse.json(venue);
+  } catch (error) {
+    console.error("Error fetching venue:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch venue" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { id } = params;
+    const body = await req.json();
+    
+    // Validate request body
+    const validation = updateVenueSchema.safeParse(body);
+    
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: "Invalid data", details: validation.error.format() },
+        { status: 400 }
+      );
+    }
+    
+    const data = validation.data;
+    
+    // Check if venue exists
+    const existingVenue = await db.query.venues.findFirst({
+      where: eq(venues.id, id),
+    });
+    
+    if (!existingVenue) {
+      return NextResponse.json(
+        { error: "Venue not found" },
+        { status: 404 }
+      );
+    }
+    
+    // Update venue
+    await db.update(venues)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .where(eq(venues.id, id));
+    
+    const updatedVenue = await db.query.venues.findFirst({
+      where: eq(venues.id, id),
+      with: {
+        region: true,
+      },
+    });
+    
+    return NextResponse.json(updatedVenue);
+  } catch (error) {
+    console.error("Error updating venue:", error);
+    return NextResponse.json(
+      { error: "Failed to update venue" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { id } = params;
+    
+    // Check if venue exists
+    const existingVenue = await db.query.venues.findFirst({
+      where: eq(venues.id, id),
+      with: {
+        events: true,
+      },
+    });
+    
+    if (!existingVenue) {
+      return NextResponse.json(
+        { error: "Venue not found" },
+        { status: 404 }
+      );
+    }
+    
+    // Check if venue has events
+    if (existingVenue.events && existingVenue.events.length > 0) {
+      return NextResponse.json(
+        { 
+          error: "Cannot delete venue with events",
+          message: "This venue has events associated with it. Please reassign or delete these events first."
+        },
+        { status: 400 }
+      );
+    }
+    
+    // Delete venue
+    await db.delete(venues).where(eq(venues.id, id));
+    
+    return NextResponse.json(
+      { message: "Venue deleted successfully" },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error deleting venue:", error);
+    return NextResponse.json(
+      { error: "Failed to delete venue" },
+      { status: 500 }
+    );
+  }
+} 
