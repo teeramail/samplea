@@ -4,18 +4,14 @@ import { db } from "~/server/db";
 import { events } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
 
-interface EventDetailPageProps {
-  params: {
-    id: string;
-  };
-}
-
-export default async function EventDetailPage({ params }: EventDetailPageProps) {
-  const id = params.id;
-  
+export default async function EventDetailPage({ 
+  params 
+}: { 
+  params: { id: string } 
+}) {
   // Fetch event details with venue, region and ticket types
   const event = await db.query.events.findFirst({
-    where: eq(events.id, id),
+    where: eq(events.id, params.id),
     with: {
       venue: true,
       region: true,
