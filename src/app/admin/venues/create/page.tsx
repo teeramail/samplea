@@ -9,9 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 const venueSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long"),
   address: z.string().min(5, "Address must be at least 5 characters long"),
-  capacity: z.string().refine(value => !value || !isNaN(parseInt(value)), {
-    message: "Capacity must be a number",
-  }).optional(),
+  capacity: z.number().min(1, "Capacity is required"),
   regionId: z.string().min(1, "Please select a region"),
 });
 
@@ -173,19 +171,17 @@ export default function CreateVenuePage() {
           )}
         </div>
         
-        <div>
-          <label htmlFor="capacity" className="block text-sm font-medium text-gray-700">
-            Capacity (optional)
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700">
+            Capacity
           </label>
           <input
-            id="capacity"
             type="number"
-            {...register("capacity")}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-            placeholder="Maximum seating capacity"
+            {...register("capacity", { required: true, valueAsNumber: true })}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
           />
           {errors.capacity && (
-            <p className="mt-1 text-sm text-red-600">{errors.capacity.message}</p>
+            <p className="mt-1 text-sm text-red-600">Capacity is required</p>
           )}
         </div>
         

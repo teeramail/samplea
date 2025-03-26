@@ -77,7 +77,7 @@ export default async function Home({ searchParams }: HomePageProps) {
       <div className="container flex flex-col items-center gap-8 px-4 py-16">
         <h1 className="text-5xl font-extrabold tracking-tight text-center sm:text-[5rem]">
           <span className="text-[hsl(280,100%,70%)]">Thai</span>Boxing<span className="text-[hsl(280,100%,70%)]">Hub</span>
-        </h1>
+          </h1>
         
         <p className="text-xl text-center max-w-2xl mb-4">
           Your ultimate destination for authentic Muay Thai in Thailand. Find fights, book training sessions, learn techniques, and follow top fighters.
@@ -89,7 +89,7 @@ export default async function Home({ searchParams }: HomePageProps) {
             <h2 className="text-3xl font-bold">
               {regionId ? "Events In Your Region" : "Upcoming Events"}
             </h2>
-            <Link 
+            <Link
               href="/events" 
               className="text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]"
             >
@@ -153,7 +153,7 @@ export default async function Home({ searchParams }: HomePageProps) {
         <section className="w-full max-w-5xl mt-16">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-3xl font-bold">Featured Fighters</h2>
-            <Link 
+            <Link
               href="/fighters" 
               className="text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]"
             >
@@ -435,19 +435,19 @@ export default async function Home({ searchParams }: HomePageProps) {
         
         {/* Auth Section */}
         <div className="flex flex-col items-center gap-2 mt-16">
-          <div className="flex flex-col items-center justify-center gap-4">
+            <div className="flex flex-col items-center justify-center gap-4">
             <p className="text-center text-xl text-white">
-              {session && <span>Logged in as {session.user?.name}</span>}
-            </p>
-            <Link
-              href={session ? "/api/auth/signout" : "/api/auth/signin"}
-              className="rounded-full bg-white/10 px-10 py-3 font-semibold no-underline transition hover:bg-white/20"
-            >
+                {session && <span>Logged in as {session.user?.name}</span>}
+              </p>
+              <Link
+                href={session ? "/api/auth/signout" : "/api/auth/signin"}
+                className="rounded-full bg-white/10 px-10 py-3 font-semibold no-underline transition hover:bg-white/20"
+              >
               {session ? "Sign out" : "Sign in to book and save events"}
-            </Link>
+              </Link>
+            </div>
           </div>
         </div>
-      </div>
-    </main>
+      </main>
   );
 }

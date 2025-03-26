@@ -8,6 +8,7 @@ import {
   timestamp,
   varchar,
   boolean,
+  doublePrecision,
 } from "drizzle-orm/pg-core";
 import { type AdapterAccount } from "next-auth/adapters";
 
@@ -26,6 +27,12 @@ export const regions = createTable(
     id: text("id").primaryKey(),
     name: text("name").notNull(),
     description: text("description"),
+    createdAt: timestamp("createdAt", { withTimezone: false })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updatedAt", { withTimezone: false })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
   }
 );
 
@@ -36,12 +43,12 @@ export const venues = createTable(
     id: text("id").primaryKey(),
     name: text("name").notNull(),
     address: text("address").notNull(),
-    capacity: integer("capacity"),
-    regionId: text("regionId").references(() => regions.id),
-    createdAt: timestamp("createdAt", { withTimezone: true })
+    capacity: integer("capacity").notNull(), // Make this NOT NULL to match DB
+    regionId: text("regionId").references(() => regions.id).notNull(), // Make this NOT NULL
+    createdAt: timestamp("createdAt", { withTimezone: false }) // Remove timezone
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
-    updatedAt: timestamp("updatedAt", { withTimezone: true })
+    updatedAt: timestamp("updatedAt", { withTimezone: false }) // Remove timezone
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
   }
@@ -53,17 +60,37 @@ export const events = createTable(
     id: text("id").primaryKey(),
     title: text("title").notNull(),
     description: text("description"),
-    date: timestamp("date", { withTimezone: true }).notNull(),
-    startTime: timestamp("startTime", { withTimezone: true }).notNull(),
-    endTime: timestamp("endTime", { withTimezone: true }),
+    date: timestamp("date", { withTimezone: false }).notNull(),
+    startTime: timestamp("startTime", { withTimezone: false }).notNull(),
+    endTime: timestamp("endTime", { withTimezone: false }),
     imageUrl: text("imageUrl"),
     usesDefaultPoster: boolean("usesDefaultPoster").default(true).notNull(),
     venueId: text("venueId").references(() => venues.id),
     regionId: text("regionId").references(() => regions.id),
-    createdAt: timestamp("createdAt", { withTimezone: true })
+    createdAt: timestamp("createdAt", { withTimezone: false })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
-    updatedAt: timestamp("updatedAt", { withTimezone: true })
+    updatedAt: timestamp("updatedAt", { withTimezone: false })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  }
+);
+
+// Add EventTicket table for seat types and pricing
+export const eventTickets = createTable(
+  "EventTicket",
+  {
+    id: text("id").primaryKey(),
+    eventId: text("eventId").references(() => events.id).notNull(),
+    seatType: text("seatType").notNull(), // e.g., "VIP", "Ringside", "General"
+    price: doublePrecision("price").notNull(),
+    capacity: integer("capacity").notNull(),
+    description: text("description"),
+    soldCount: integer("soldCount").default(0).notNull(),
+    createdAt: timestamp("createdAt", { withTimezone: false })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updatedAt", { withTimezone: false })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
   }
@@ -76,10 +103,13 @@ export const fighters = createTable(
     name: text("name").notNull(),
     nickname: text("nickname"),
     weightClass: text("weightClass"),
-    createdAt: timestamp("createdAt", { withTimezone: true })
+    record: text("record"),
+    imageUrl: text("imageUrl"),
+    country: text("country"),
+    createdAt: timestamp("createdAt", { withTimezone: false })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
-    updatedAt: timestamp("updatedAt", { withTimezone: true })
+    updatedAt: timestamp("updatedAt", { withTimezone: false })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
   }
@@ -93,10 +123,46 @@ export const users = createTable(
     password: text("password").notNull(),
     name: text("name"),
     role: text("role").default("user"),
-    createdAt: timestamp("createdAt", { withTimezone: true })
+    createdAt: timestamp("createdAt", { withTimezone: false })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
-    updatedAt: timestamp("updatedAt", { withTimezone: true })
+    updatedAt: timestamp("updatedAt", { withTimezone: false })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  }
+);
+
+// Bookings table to track ticket purchases
+export const bookings = createTable(
+  "Booking",
+  {
+    id: text("id").primaryKey(),
+    userId: text("userId").references(() => users.id).notNull(),
+    eventId: text("eventId").references(() => events.id).notNull(),
+    totalAmount: doublePrecision("totalAmount").notNull(),
+    paymentStatus: text("paymentStatus").notNull().default("PENDING"), // PENDING, COMPLETED, CANCELLED
+    createdAt: timestamp("createdAt", { withTimezone: false })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updatedAt", { withTimezone: false })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  }
+);
+
+// Tickets table to track individual tickets
+export const tickets = createTable(
+  "Ticket",
+  {
+    id: text("id").primaryKey(),
+    eventId: text("eventId").references(() => events.id).notNull(),
+    eventDetailId: text("eventDetailId").references(() => eventTickets.id).notNull(),
+    bookingId: text("bookingId").references(() => bookings.id).notNull(),
+    status: text("status").notNull().default("ACTIVE"), // ACTIVE, USED, CANCELLED
+    createdAt: timestamp("createdAt", { withTimezone: false })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updatedAt", { withTimezone: false })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
   }
@@ -112,9 +178,28 @@ export const venuesRelations = relations(venues, ({ one, many }) => ({
   region: one(regions, { fields: [venues.regionId], references: [regions.id] }),
 }));
 
-export const eventsRelations = relations(events, ({ one }) => ({
+export const eventsRelations = relations(events, ({ one, many }) => ({
   venue: one(venues, { fields: [events.venueId], references: [venues.id] }),
   region: one(regions, { fields: [events.regionId], references: [regions.id] }),
+  tickets: many(eventTickets),
+  bookings: many(bookings),
+}));
+
+export const eventTicketsRelations = relations(eventTickets, ({ one, many }) => ({
+  event: one(events, { fields: [eventTickets.eventId], references: [events.id] }),
+  tickets: many(tickets),
+}));
+
+export const bookingsRelations = relations(bookings, ({ one, many }) => ({
+  user: one(users, { fields: [bookings.userId], references: [users.id] }),
+  event: one(events, { fields: [bookings.eventId], references: [events.id] }),
+  tickets: many(tickets),
+}));
+
+export const ticketsRelations = relations(tickets, ({ one }) => ({
+  event: one(events, { fields: [tickets.eventId], references: [events.id] }),
+  eventDetail: one(eventTickets, { fields: [tickets.eventDetailId], references: [eventTickets.id] }),
+  booking: one(bookings, { fields: [tickets.bookingId], references: [bookings.id] }),
 }));
 
 // Keep the existing NextAuth tables
