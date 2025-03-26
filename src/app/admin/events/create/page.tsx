@@ -28,12 +28,27 @@ const eventSchema = z.object({
 
 type EventFormData = z.infer<typeof eventSchema>;
 
+// Define types for API responses
+type Venue = {
+  id: string;
+  name: string;
+  regionId: string;
+  address: string;
+  capacity: number | null;
+};
+
+type Region = {
+  id: string;
+  name: string;
+  description?: string;
+};
+
 export default function CreateEventPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [venues, setVenues] = useState<{ id: string; name: string; regionId?: string }[]>([]);
-  const [regions, setRegions] = useState<{ id: string; name: string }[]>([]);
+  const [venues, setVenues] = useState<Venue[]>([]);
+  const [regions, setRegions] = useState<Region[]>([]);
   const [isLoadingVenues, setIsLoadingVenues] = useState(true);
   const [isLoadingRegions, setIsLoadingRegions] = useState(true);
 
@@ -76,7 +91,7 @@ export default function CreateEventPage() {
         if (!venuesResponse.ok) {
           throw new Error("Failed to load venues");
         }
-        const venuesData = await venuesResponse.json();
+        const venuesData = await venuesResponse.json() as Venue[];
         setVenues(venuesData);
         setIsLoadingVenues(false);
 
@@ -86,7 +101,7 @@ export default function CreateEventPage() {
         if (!regionsResponse.ok) {
           throw new Error("Failed to load regions");
         }
-        const regionsData = await regionsResponse.json();
+        const regionsData = await regionsResponse.json() as Region[];
         setRegions(regionsData);
         setIsLoadingRegions(false);
       } catch (error) {
@@ -97,7 +112,7 @@ export default function CreateEventPage() {
       }
     };
 
-    fetchVenuesAndRegions();
+    void fetchVenuesAndRegions();
   }, []);
 
   // Watch for region changes to filter venues
@@ -370,7 +385,7 @@ export default function CreateEventPage() {
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     />
                     {errors.ticketTypes?.[index]?.seatType && (
-                      <p className="mt-1 text-sm text-red-600">{errors.ticketTypes[index]?.seatType?.message}</p>
+                      <p className="mt-1 text-sm text-red-600">{errors.ticketTypes?.[index]?.seatType?.message}</p>
                     )}
                   </div>
 
@@ -387,7 +402,7 @@ export default function CreateEventPage() {
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     />
                     {errors.ticketTypes?.[index]?.price && (
-                      <p className="mt-1 text-sm text-red-600">{errors.ticketTypes[index]?.price?.message}</p>
+                      <p className="mt-1 text-sm text-red-600">{errors.ticketTypes?.[index]?.price?.message}</p>
                     )}
                   </div>
 
@@ -403,7 +418,7 @@ export default function CreateEventPage() {
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                     />
                     {errors.ticketTypes?.[index]?.capacity && (
-                      <p className="mt-1 text-sm text-red-600">{errors.ticketTypes[index]?.capacity?.message}</p>
+                      <p className="mt-1 text-sm text-red-600">{errors.ticketTypes?.[index]?.capacity?.message}</p>
                     )}
                   </div>
 
