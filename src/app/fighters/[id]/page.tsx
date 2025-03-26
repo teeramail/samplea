@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "~/server/db";
-import { eq } from "drizzle-orm";
-import { fighters, events } from "~/server/db/schema";
+import { eq, desc } from "drizzle-orm";
+import { fighters } from "~/server/db/schema";
+import { events } from "~/server/db/schema";
 
 export default async function FighterDetailPage({
   params,
@@ -23,7 +24,7 @@ export default async function FighterDetailPage({
   // For now, we'll just get a few random events to display
   const fighterEvents = await db.query.events.findMany({
     limit: 3,
-    orderBy: (events, { desc }) => [desc(events.date)],
+    orderBy: [desc(events.date)],
   });
 
   const formatDate = (date: Date) => {
@@ -42,7 +43,7 @@ export default async function FighterDetailPage({
             <div>
               <h1 className="text-3xl font-bold text-gray-800">{fighter.name}</h1>
               {fighter.nickname && (
-                <p className="text-xl text-gray-600 italic">"{fighter.nickname}"</p>
+                <p className="text-xl text-gray-600 italic">&quot;{fighter.nickname}&quot;</p>
               )}
             </div>
             

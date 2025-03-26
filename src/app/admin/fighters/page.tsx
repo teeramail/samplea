@@ -50,10 +50,10 @@ export default async function FightersListPage() {
                     <div className="text-sm font-medium text-gray-900">{fighter.name}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">{fighter.nickname || "—"}</div>
+                    <div className="text-sm text-gray-500">{fighter.nickname ?? "—"}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">{fighter.weightClass || "—"}</div>
+                    <div className="text-sm text-gray-500">{fighter.weightClass ?? "N/A"}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <Link href={`/admin/fighters/${fighter.id}`} className="text-blue-600 hover:text-blue-900 mr-4">
@@ -71,7 +71,7 @@ export default async function FightersListPage() {
             ) : (
               <tr>
                 <td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500">
-                  No fighters found. Click "Add New Fighter" to create one.
+                  No fighters found. Click &quot;Add New Fighter&quot; to create one.
                 </td>
               </tr>
             )}

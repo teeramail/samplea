@@ -125,7 +125,7 @@ export default async function AdminDashboardPage() {
                       <div className="text-sm text-gray-500">{formatDate(event.date)}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{event.venue?.name || "N/A"}</div>
+                      <div className="text-sm text-gray-500">{event.venue?.name ?? "N/A"}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <Link href={`/admin/events/${event.id}`} className="text-blue-600 hover:text-blue-900 mr-4">

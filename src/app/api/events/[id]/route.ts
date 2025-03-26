@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "~/server/db";
 import { events, eventTickets } from "~/server/db/schema";
@@ -100,11 +100,17 @@ export async function PATCH(
       );
     }
 
-    // Parse and validate the request body
-    const body = await request.json();
-    console.log('Update request body:', body);
+    // Get the request body and validate it
+    const body = await request.json() as z.infer<typeof updateEventSchema>;
     
-    const data = updateEventSchema.parse(body);
+    // Validate the request body
+    const validation = updateEventSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: "Invalid request body", details: validation.error.errors },
+        { status: 400 }
+      );
+    }
     
     // Begin a transaction
     await db.transaction(async (tx) => {
@@ -112,23 +118,23 @@ export async function PATCH(
       const now = new Date();
       
       await tx.update(events).set({
-        title: data.title,
-        description: data.description,
-        date: new Date(data.date),
-        startTime: new Date(data.startTime),
-        endTime: new Date(data.endTime),
-        imageUrl: data.imageUrl,
-        venueId: data.venueId,
-        regionId: data.regionId,
-        usesDefaultPoster: !data.imageUrl, // Set to true if no image URL is provided
+        title: body.title,
+        description: body.description,
+        date: new Date(body.date),
+        startTime: new Date(body.startTime),
+        endTime: new Date(body.endTime),
+        imageUrl: body.imageUrl,
+        venueId: body.venueId,
+        regionId: body.regionId,
+        usesDefaultPoster: !body.imageUrl, // Set to true if no image URL is provided
         updatedAt: now,
       }).where(eq(events.id, id));
       
       // Process ticket types - convert from event.tickets to existing ticket IDs
       const existingTicketIds = new Set(existingEvent.tickets.map(t => t.id));
-      const updatedTicketIds = new Set(data.ticketTypes.filter(t => t.id).map(t => t.id as string));
+      const updatedTicketIds = new Set(body.ticketTypes.filter(t => t.id).map(t => t.id!));
       
-      console.log(`Processing ${data.ticketTypes.length} ticket types`);
+      console.log(`Processing ${body.ticketTypes.length} ticket types`);
       
       // Delete tickets that are no longer present
       for (const ticketId of existingTicketIds) {
@@ -139,7 +145,7 @@ export async function PATCH(
       }
       
       // Update or create ticket types
-      for (const ticketType of data.ticketTypes) {
+      for (const ticketType of body.ticketTypes) {
         if (ticketType.id && existingTicketIds.has(ticketType.id)) {
           // Update existing ticket type
           console.log(`Updating ticket: ${ticketType.id}`);

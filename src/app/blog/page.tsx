@@ -1,16 +1,17 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export default function BlogPage() {
   // Sample blog articles data
   const articles = [
     {
       id: "history-of-muay-thai",
-      title: "The Rich History of Muay Thai: Thailand's National Sport",
+      title: "The Rich History of Muay Thai: Thailand&apos;s National Sport",
       date: "April 10, 2023",
       author: "Somchai Jaidee",
       category: "History & Culture",
       image: "https://images.unsplash.com/photo-1599058917765-a780eda07a3e?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
-      excerpt: "Explore the fascinating evolution of Muay Thai from ancient battlefield tactics to Thailand's beloved national sport and global martial art phenomenon.",
+      excerpt: "Explore the fascinating evolution of Muay Thai from ancient battlefield tactics to Thailand&apos;s beloved national sport and global martial art phenomenon.",
       readTime: "8 min read"
     },
     {
@@ -40,7 +41,7 @@ export default function BlogPage() {
       author: "Dr. Channarong Kasemsuwan",
       category: "Nutrition",
       image: "https://images.unsplash.com/photo-1490645935967-10de6ba17061?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
-      excerpt: "Discover the traditional Thai fighter's diet and how to adapt it for optimal performance, recovery, and weight management for Muay Thai training.",
+      excerpt: "Discover the traditional Thai fighter&apos;s diet and how to adapt it for optimal performance, recovery, and weight management for Muay Thai training.",
       readTime: "10 min read"
     },
     {
@@ -50,12 +51,12 @@ export default function BlogPage() {
       author: "Ajarn Chai",
       category: "Training",
       image: "https://images.unsplash.com/photo-1600881333168-2ef49b341f30?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
-      excerpt: "How has Muay Thai training evolved from the grueling traditional methods to today's sport-science approach? We examine the changes and what's been lost and gained.",
+      excerpt: "How has Muay Thai training evolved from the grueling traditional methods to today&apos;s sport-science approach? We examine the changes and what&apos;s been lost and gained.",
       readTime: "11 min read"
     },
     {
       id: "mental-preparation",
-      title: "The Fighter's Mind: Mental Preparation for Muay Thai",
+      title: "The Fighter&apos;s Mind: Mental Preparation for Muay Thai",
       date: "January 18, 2023",
       author: "Buakaw Banchamek",
       category: "Psychology",
@@ -111,7 +112,7 @@ export default function BlogPage() {
               Muay Thai Journal
             </h1>
             <p className="mt-4 max-w-2xl text-xl mx-auto">
-              Insights, techniques, and stories from the world of Thailand's ancient martial art
+              Insights, techniques, and stories from the world of Thailand&apos;s ancient martial art
             </p>
           </div>
         </div>
@@ -142,11 +143,14 @@ export default function BlogPage() {
           <div className="bg-white shadow-lg rounded-lg overflow-hidden">
             <div className="md:flex">
               <div className="md:flex-shrink-0 md:w-1/2">
-                <img 
-                  className="h-64 w-full object-cover md:h-full"
-                  src={featuredArticle.image} 
-                  alt={featuredArticle.title}
-                />
+                <div className="relative h-64 mb-6">
+                  <Image
+                    src={featuredArticle.image}
+                    alt={featuredArticle.title}
+                    fill
+                    className="object-cover rounded-lg"
+                  />
+                </div>
               </div>
               <div className="p-8 md:w-1/2">
                 <div className="flex items-center text-sm text-gray-600 mb-2">
@@ -201,11 +205,14 @@ export default function BlogPage() {
           {secondaryFeatured?.map((article) => (
             article && (
               <div key={article.id} className="bg-white shadow-lg rounded-lg overflow-hidden">
-                <img 
-                  className="h-48 w-full object-cover" 
-                  src={article.image} 
-                  alt={article.title}
-                />
+                <div className="relative h-48 mb-6">
+                  <Image
+                    src={article.image}
+                    alt={article.title}
+                    fill
+                    className="object-cover rounded-lg"
+                  />
+                </div>
                 <div className="p-6">
                   <div className="flex items-center text-sm text-gray-600 mb-2">
                     <span className="bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded mr-2">{article.category}</span>
@@ -248,11 +255,14 @@ export default function BlogPage() {
             {articles.slice(3).map((article) => (
               <article key={article.id} className="border rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-shadow">
                 <Link href={`/blog/${article.id}`}>
-                  <img 
-                    className="h-48 w-full object-cover" 
-                    src={article.image} 
-                    alt={article.title}
-                  />
+                  <div className="relative h-48 mb-6">
+                    <Image
+                      src={article.image}
+                      alt={article.title}
+                      fill
+                      className="object-cover rounded-lg"
+                    />
+                  </div>
                 </Link>
                 <div className="p-5">
                   <div className="flex justify-between items-center text-xs text-gray-500 mb-2">
@@ -340,19 +350,19 @@ export default function BlogPage() {
           <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">Muay Thai: The Art of Eight Limbs</h2>
           <div className="prose prose-lg mx-auto text-gray-500">
             <p>
-              Muay Thai, often referred to as "The Art of Eight Limbs," is Thailand's national sport and cultural martial art. It uses the entire body as a weapon, employing strikes using the fists, elbows, knees, and shins. This makes it one of the most versatile and effective striking arts in the world.
+              &quot;The Art of Eight Limbs,&quot; as Muay Thai is known, is a martial art that uses the entire body as a weapon, employing strikes using the fists, elbows, knees, and shins. This makes it one of the most versatile and effective striking arts in the world.
             </p>
             <p>
-              With roots dating back several hundred years, Muay Thai was developed as a form of close-combat that utilizes the entire body as a weapon. Originally practiced by soldiers of the Siamese (now Thai) army, the martial art evolved from the older Muay Boran ("ancient boxing").
+              With roots dating back several hundred years, Muay Thai was developed as a form of close-combat that utilizes the entire body as a weapon. Originally practiced by soldiers of the Siamese (now Thai) army, the martial art evolved from the older Muay Boran (&quot;ancient boxing&quot;).
             </p>
             <p>
-              Today, Muay Thai is practiced worldwide both as a standalone sport and as an integral component of mixed martial arts (MMA). It's known for its brutal efficiency and effectiveness in competition as well as self-defense situations.
+              Today, Muay Thai is practiced worldwide both as a standalone sport and as an integral component of mixed martial arts (MMA). It&apos;s known for its brutal efficiency and effectiveness in competition as well as self-defense situations.
             </p>
             <p>
-              At ThaiBoxingHub, we're dedicated to promoting authentic Muay Thai culture, providing resources for practitioners of all levels, and connecting enthusiasts with the best training opportunities throughout Thailand. Our blog features articles written by experienced fighters, trainers, and Muay Thai scholars to help you deepen your understanding and appreciation of this magnificent martial art.
+              At ThaiBoxingHub, we&apos;re dedicated to promoting authentic Muay Thai culture, providing resources for practitioners of all levels, and connecting enthusiasts with the best training opportunities throughout Thailand. Our blog features articles written by experienced fighters, trainers, and Muay Thai scholars to help you deepen your understanding and appreciation of this magnificent martial art.
             </p>
             <p>
-              Whether you're interested in the technical aspects of training, the rich cultural traditions, or planning a trip to Thailand to experience Muay Thai firsthand, our blog provides valuable insights and practical information to enhance your journey in the art of eight limbs.
+              Whether you&apos;re interested in the technical aspects of training, the rich cultural traditions, or planning a trip to Thailand to experience Muay Thai firsthand, our blog provides valuable insights and practical information to enhance your journey in the art of eight limbs.
             </p>
           </div>
         </div>

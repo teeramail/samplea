@@ -22,6 +22,13 @@
       "when": 1742647173494,
       "tag": "0002_uneven_screwball",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1742988163225,
+      "tag": "0003_flaky_whiplash",
+      "breakpoints": true
     }
   ]
 }

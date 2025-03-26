@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { regions } from "~/server/db/schema";
 import { z } from "zod";
@@ -48,14 +48,14 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const body = await req.json();
+    const body = await req.json() as z.infer<typeof updateRegionSchema>;
     
     // Validate request body
     const validation = updateRegionSchema.safeParse(body);
     
     if (!validation.success) {
       return NextResponse.json(
-        { error: "Invalid data", details: validation.error.format() },
+        { error: "Invalid data", details: validation.error.errors },
         { status: 400 }
       );
     }
@@ -119,7 +119,7 @@ export async function DELETE(
     }
     
     // Check if region has venues
-    if (existingRegion.venues && existingRegion.venues.length > 0) {
+    if (existingRegion.venues?.length > 0) {
       return NextResponse.json(
         { 
           error: "Cannot delete region with venues",

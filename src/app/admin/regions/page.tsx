@@ -51,7 +51,7 @@ export default async function RegionsListPage() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm text-gray-500 truncate max-w-xs">
-                      {region.description || "No description provided."}
+                      {region.description ?? "No description"}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

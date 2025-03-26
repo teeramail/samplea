@@ -70,7 +70,7 @@ export default async function VenuesListPage() {
                     <div className="text-sm text-gray-500">{venue.address}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">{venue.capacity || "N/A"}</div>
+                    <div className="text-sm text-gray-500">{venue.capacity ?? "N/A"}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <Link href={`/admin/venues/${venue.id}`} className="text-blue-600 hover:text-blue-900 mr-4">
@@ -88,7 +88,7 @@ export default async function VenuesListPage() {
             ) : (
               <tr>
                 <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
-                  No venues found. Click "Add New Venue" to create one.
+                  No venues found. Click &quot;Add New Venue&quot; to create one.
                 </td>
               </tr>
             )}

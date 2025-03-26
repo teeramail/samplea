@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "~/server/db";
 import { events } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
+import Image from "next/image";
 
 export default async function EventDetailPage({ 
   params 
@@ -96,11 +97,23 @@ export default async function EventDetailPage({
             </div>
             <div className="flex items-center mb-2">
               <span className="font-medium text-gray-700 w-24">Venue:</span>
-              <span>{eventWithTickets.venue?.name || "N/A"}</span>
+              {eventWithTickets.venue ? (
+                <Link href={`/admin/venues/${eventWithTickets.venue.id}`} className="text-blue-600 hover:underline">
+                  {eventWithTickets.venue.name ?? "N/A"}
+                </Link>
+              ) : (
+                "N/A"
+              )}
             </div>
             <div className="flex items-center mb-2">
               <span className="font-medium text-gray-700 w-24">Region:</span>
-              <span>{eventWithTickets.region?.name || "N/A"}</span>
+              {eventWithTickets.region ? (
+                <Link href={`/admin/regions/${eventWithTickets.region.id}`} className="text-blue-600 hover:underline">
+                  {eventWithTickets.region.name ?? "N/A"}
+                </Link>
+              ) : (
+                "N/A"
+              )}
             </div>
             <div className="flex items-center mb-4">
               <span className="font-medium text-gray-700 w-24">Status:</span>
@@ -115,21 +128,16 @@ export default async function EventDetailPage({
           </div>
         </div>
         <div>
-          {eventWithTickets.imageUrl ? (
+          {eventWithTickets.imageUrl && (
             <div className="bg-gray-50 p-4 rounded-lg">
               <h3 className="text-lg font-semibold mb-4">Event Poster</h3>
-              <img 
-                src={eventWithTickets.imageUrl} 
-                alt={`${eventWithTickets.title} poster`} 
-                className="rounded-md w-full h-auto"
+              <Image
+                src={eventWithTickets.imageUrl}
+                alt={`${eventWithTickets.title} poster`}
+                width={300}
+                height={400}
+                className="rounded-lg shadow-md mb-6 object-cover"
               />
-            </div>
-          ) : (
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="text-lg font-semibold mb-4">Event Poster</h3>
-              <div className="bg-gray-200 p-8 rounded-md text-center text-gray-600">
-                No poster available
-              </div>
             </div>
           )}
         </div>

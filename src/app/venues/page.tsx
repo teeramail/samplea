@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { db } from "~/server/db";
-import { venues } from "~/server/db/schema";
 
 export default async function VenuesPage() {
   const venuesList = await db.query.venues.findMany({
@@ -23,7 +22,7 @@ export default async function VenuesPage() {
                 <p className="text-gray-600 mt-1">{venue.address}</p>
                 <div className="flex justify-between items-center mt-3">
                   <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
-                    Capacity: {venue.capacity || "N/A"}
+                    Capacity: {venue.capacity ?? "N/A"}
                   </span>
                   <Link 
                     href={`/venues/${venue.id}`}

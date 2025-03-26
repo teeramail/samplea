@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { regions } from "~/server/db/schema";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
-import { desc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 // Match the actual database structure (no countryCode)
 const regionSchema = z.object({
@@ -31,14 +31,14 @@ export async function POST(req: NextRequest) {
   console.log("Received POST request to /api/regions");
   
   try {
-    let body;
+    let body: { name: string; description?: string };
     try {
-      body = await req.json();
+      body = await req.json() as { name: string; description?: string };
       console.log("Request body:", body);
     } catch (error) {
       console.error("Error parsing request body:", error);
       return NextResponse.json(
-        { error: "Invalid JSON in request body" },
+        { error: "Invalid request body" },
         { status: 400 }
       );
     }
@@ -68,13 +68,13 @@ export async function POST(req: NextRequest) {
       console.log("Attempting to insert region with only fields that exist:", {
         id: regionId,
         name: data.name,
-        description: data.description || null,
+        description: data.description ?? null,
       });
       
       await db.insert(regions).values({
         id: regionId,
         name: data.name,
-        description: data.description || null,
+        description: data.description ?? null,
       });
       
       console.log("Insert successful, now querying to verify");

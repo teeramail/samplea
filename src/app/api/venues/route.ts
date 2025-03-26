@@ -1,9 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { venues } from "~/server/db/schema";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
-import { eq, desc } from "drizzle-orm";
 
 // Schema for venue creation
 const venueSchema = z.object({
@@ -36,18 +35,17 @@ export async function GET() {
   }
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const body = await req.json();
+    // Get request body and validate
+    const body = await request.json() as z.infer<typeof venueSchema>;
     
-    // Validate request body
     const validation = venueSchema.safeParse(body);
-    
     if (!validation.success) {
-      return NextResponse.json(
-        { error: "Invalid data", details: validation.error.format() },
-        { status: 400 }
-      );
+      return NextResponse.json({
+        error: "Invalid venue data",
+        details: validation.error.errors,
+      }, { status: 400 });
     }
     
     const data = validation.data;

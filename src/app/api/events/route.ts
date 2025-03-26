@@ -59,10 +59,16 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const body = await req.json() as z.infer<typeof eventSchema>;
     
-    // Validate request body
-    const data = eventSchema.parse(body);
+    // Validate the request body against the schema
+    const validation = eventSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: 'Invalid request body', details: validation.error.errors },
+        { status: 400 }
+      );
+    }
     
     // Begin a transaction
     const result = await db.transaction(async (tx) => {
@@ -72,21 +78,21 @@ export async function POST(req: Request) {
       
       await tx.insert(events).values({
         id: eventId,
-        title: data.title,
-        description: data.description,
-        date: new Date(data.date),
-        startTime: new Date(data.startTime),
-        endTime: new Date(data.endTime),
-        imageUrl: data.imageUrl,
-        venueId: data.venueId,
-        regionId: data.regionId,
-        usesDefaultPoster: !data.imageUrl, // Set to true if no image URL is provided
+        title: body.title,
+        description: body.description,
+        date: new Date(body.date),
+        startTime: new Date(body.startTime),
+        endTime: new Date(body.endTime),
+        imageUrl: body.imageUrl,
+        venueId: body.venueId,
+        regionId: body.regionId,
+        usesDefaultPoster: !body.imageUrl, // Set to true if no image URL is provided
         createdAt: now,
         updatedAt: now // Explicitly set the updatedAt field
       });
       
       // Create ticket types for the event
-      for (const ticketType of data.ticketTypes) {
+      for (const ticketType of body.ticketTypes) {
         await tx.insert(eventTickets).values({
           id: uuidv4(),
           eventId: eventId,

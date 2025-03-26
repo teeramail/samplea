@@ -28,15 +28,21 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body = await request.json() as z.infer<typeof fighterSchema>;
     
-    const validatedData = fighterSchema.parse(body);
+    const validation = fighterSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: 'Invalid fighter data', details: validation.error.errors },
+        { status: 400 }
+      );
+    }
     
     const newFighter = await db.insert(fighters).values({
       id: uuidv4(),
-      name: validatedData.name,
-      nickname: validatedData.nickname || null,
-      weightClass: validatedData.weightClass || null,
+      name: body.name,
+      nickname: body.nickname ?? null,
+      weightClass: body.weightClass ?? null,
       createdAt: new Date(),
       updatedAt: new Date(),
     }).returning();
@@ -44,13 +50,6 @@ export async function POST(request: Request) {
     return NextResponse.json(newFighter[0], { status: 201 });
   } catch (error) {
     console.error("Error creating fighter:", error);
-    
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Invalid data", details: error.errors },
-        { status: 400 }
-      );
-    }
     
     return NextResponse.json(
       { error: "Failed to create fighter" },

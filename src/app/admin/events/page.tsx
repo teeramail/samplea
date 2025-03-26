@@ -77,7 +77,7 @@ export default async function EventsListPage() {
                       <div className="text-sm text-gray-500">{formatDate(event.date)}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{event.venue?.name || "N/A"}</div>
+                      <div className="text-sm text-gray-500">{event.venue?.name ?? "N/A"}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${status.className}`}>
@@ -101,7 +101,7 @@ export default async function EventsListPage() {
             ) : (
               <tr>
                 <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
-                  No events found. Click "Add New Event" to create one.
+                  No events found. Click &quot;Add New Event&quot; to create one.
                 </td>
               </tr>
             )}

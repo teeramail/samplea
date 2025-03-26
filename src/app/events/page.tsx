@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { db } from "~/server/db";
-import { events, venues, regions } from "~/server/db/schema";
-import { eq, desc, and } from "drizzle-orm";
+import { events, regions } from "~/server/db/schema";
+import { eq } from "drizzle-orm";
 
 type EventsPageProps = {
   searchParams: Promise<{ region?: string }>;

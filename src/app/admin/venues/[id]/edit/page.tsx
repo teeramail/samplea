@@ -17,10 +17,19 @@ const venueSchema = z.object({
 
 type VenueFormData = z.infer<typeof venueSchema>;
 
-interface Region {
+// Define types for API responses
+type Region = {
   id: string;
   name: string;
-}
+  description?: string;
+};
+
+type Venue = {
+  name: string;
+  address: string;
+  capacity?: number | null;
+  regionId: string;
+};
 
 export default function EditVenuePage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -28,7 +37,7 @@ export default function EditVenuePage({ params }: { params: Promise<{ id: string
   const [isLoading, setIsLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [venue, setVenue] = useState<VenueFormData | null>(null);
+  const [venue, setVenue] = useState<Venue | null>(null);
   const [regions, setRegions] = useState<Region[]>([]);
   const [isLoadingRegions, setIsLoadingRegions] = useState(false);
 
@@ -57,17 +66,17 @@ export default function EditVenuePage({ params }: { params: Promise<{ id: string
           throw new Error("Failed to fetch regions");
         }
         
-        const data = await response.json();
+        const data = await response.json() as Region[];
         setRegions(data);
       } catch (error) {
         console.error("Error fetching regions:", error);
-        setError("Error loading regions. Please try again.");
+        setError("Failed to load regions. Please try again later.");
       } finally {
         setIsLoadingRegions(false);
       }
     };
 
-    fetchRegions();
+    void fetchRegions();
   }, []);
 
   useEffect(() => {
@@ -80,23 +89,23 @@ export default function EditVenuePage({ params }: { params: Promise<{ id: string
           throw new Error("Failed to fetch venue");
         }
         
-        const data = await response.json();
+        const data = await response.json() as Venue;
         setVenue(data);
         reset({
           name: data.name,
           address: data.address,
           capacity: data.capacity ? String(data.capacity) : "",
-          regionId: data.regionId || "",
+          regionId: data.regionId ?? "",
         });
       } catch (error) {
-        setError("Error loading venue data. Please try again.");
         console.error("Error fetching venue:", error);
+        setError("Failed to load venue details. Please try again later.");
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchVenue();
+    void fetchVenue();
   }, [id, reset]);
 
   const onSubmit = async (data: VenueFormData) => {

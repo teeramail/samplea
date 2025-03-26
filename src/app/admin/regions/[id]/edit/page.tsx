@@ -46,11 +46,11 @@ export default function EditRegionPage({ params }: { params: Promise<{ id: strin
           throw new Error("Failed to fetch region");
         }
         
-        const data = await response.json();
+        const data = await response.json() as { id: string; name: string; description?: string };
         setRegion(data);
         reset({
           name: data.name,
-          description: data.description || "",
+          description: data.description ?? "",
         });
       } catch (error) {
         setError("Error loading region data. Please try again.");
@@ -60,7 +60,7 @@ export default function EditRegionPage({ params }: { params: Promise<{ id: strin
       }
     };
 
-    fetchRegion();
+    void fetchRegion();
   }, [id, reset]);
 
   const onSubmit = async (data: RegionFormData) => {

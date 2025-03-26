@@ -43,9 +43,9 @@ export default function CreateVenuePage() {
       try {
         const response = await fetch("/api/regions");
         if (!response.ok) {
-          throw new Error("Failed to load regions");
+          throw new Error("Failed to fetch regions");
         }
-        const data = await response.json();
+        const data = await response.json() as { id: string; name: string }[];
         setRegions(data);
       } catch (error) {
         console.error("Error fetching regions:", error);
@@ -55,7 +55,7 @@ export default function CreateVenuePage() {
       }
     };
     
-    fetchRegions();
+    void fetchRegions();
   }, []);
 
   const onSubmit = async (data: VenueFormData) => {

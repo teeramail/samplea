@@ -24,7 +24,7 @@ export const postRouter = createTRPCRouter({
       await ctx.db.insert(events).values({
         id: uuidv4(),
         title: input.title,
-        description: input.description || null,
+        description: input.description ?? null,
         date: new Date(),
         startTime: new Date(),
       });

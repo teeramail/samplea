@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { venues } from "~/server/db/schema";
 import { z } from "zod";
@@ -54,14 +54,13 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const body = await req.json();
+    const body = await req.json() as z.infer<typeof updateVenueSchema>;
     
-    // Validate request body
+    // Validate the request body
     const validation = updateVenueSchema.safeParse(body);
-    
     if (!validation.success) {
       return NextResponse.json(
-        { error: "Invalid data", details: validation.error.format() },
+        { error: "Invalid data", details: validation.error.errors },
         { status: 400 }
       );
     }
@@ -134,7 +133,7 @@ export async function DELETE(
     }
     
     // Check if venue has events
-    if (existingVenue.events && existingVenue.events.length > 0) {
+    if (existingVenue.events?.length > 0) {
       return NextResponse.json(
         { 
           error: "Cannot delete venue with events",

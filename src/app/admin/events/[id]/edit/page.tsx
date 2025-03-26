@@ -198,43 +198,31 @@ export default function EditEventPage({
 
       console.log('Submitting event update:', requestBody);
 
-      try {
-        const response = await fetch(`/api/events/${id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody),
-        });
+      const response = await fetch(`/api/events/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
 
-        let responseData;
-        try {
-          responseData = await response.json();
-        } catch (e) {
-          console.error('Error parsing response:', e);
-          responseData = { error: 'Invalid server response' };
-        }
-
-        console.log('Response from server:', response.status, responseData);
-
-        if (!response.ok) {
-          throw new Error(responseData?.error ?? 'Failed to update event');
-        }
-
-        // Show success message
-        setSuccessMessage('Event updated successfully!');
-        
-        // Wait a moment before redirecting
-        setTimeout(() => {
-          router.push(`/admin/events/${id}`);
-          router.refresh();
-        }, 2000);
-      } catch (error) {
-        console.error('Fetch error:', error);
-        setError(`Error communicating with server: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        setIsLoading(false);
+      const responseData = await response.json() as { id?: string; error?: string };
+      
+      if (!response.ok) {
+        throw new Error(responseData.error ?? 'Failed to update event');
       }
+
+      // Show success message
+      setSuccessMessage('Event updated successfully!');
+      
+      // Wait a moment before redirecting
+      setTimeout(() => {
+        router.push(`/admin/events/${responseData.id ?? id}`);
+        router.refresh();
+      }, 2000);
     } catch (error) {
-      console.error('Form error:', error);
-      setError(error instanceof Error ? error.message : 'Failed to process form data');
+      console.error('Fetch error:', error);
+      setError(`Error communicating with server: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setIsLoading(false);
     }
   };

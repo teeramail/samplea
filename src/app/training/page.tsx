@@ -35,7 +35,7 @@ export default function TrainingPage() {
     },
     {
       id: "monthly",
-      title: "Fighter's Package",
+      title: "Fighter&apos;s Package",
       price: "15,000 THB",
       duration: "Full Month (20 Sessions)",
       features: [
@@ -47,7 +47,7 @@ export default function TrainingPage() {
         "Accommodation options available"
       ],
       recommended: false,
-      description: "For serious practitioners looking to immerse themselves in Thailand's Muay Thai culture."
+      description: "For serious practitioners looking to immerse themselves in Thailand&apos;s Muay Thai culture."
     }
   ];
 
@@ -90,7 +90,7 @@ export default function TrainingPage() {
           </h1>
           <p className="mt-6 max-w-3xl mx-auto text-xl text-purple-100 text-center">
             Experience authentic training from champion fighters and world-class coaches.
-            Choose from single sessions to monthly packages at Thailand's top gyms.
+            Choose from single sessions to monthly packages at Thailand&apos;s top gyms.
           </p>
         </div>
       </div>
@@ -347,7 +347,7 @@ export default function TrainingPage() {
             </div>
             <div className="py-6">
               <h3 className="text-lg leading-6 font-medium text-gray-900">
-                What's the best time of year to train in Thailand?
+                What&apos;s the best time of year to train in Thailand?
               </h3>
               <div className="mt-2">
                 <p className="text-base text-gray-500">
@@ -374,7 +374,7 @@ export default function TrainingPage() {
         <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8 lg:flex lg:items-center lg:justify-between">
           <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
             <span className="block">Ready to experience authentic Muay Thai?</span>
-            <span className="block text-purple-300">Book your training session today.</span>
+            <span className="block text-purple-300">It&apos;s time to start your journey</span>
           </h2>
           <div className="mt-8 flex lg:mt-0 lg:flex-shrink-0">
             <div className="inline-flex rounded-md shadow">
@@ -396,6 +396,10 @@ export default function TrainingPage() {
           </div>
         </div>
       </section>
+
+      <p className="text-base text-gray-600 mb-4">
+        Don&apos;t miss this opportunity to train with world-class coaches and fighters.
+      </p>
     </main>
   );
 } 

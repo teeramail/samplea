@@ -353,7 +353,7 @@ export default function CreateEventPage() {
             </button>
           </div>
 
-          {errors.ticketTypes && errors.ticketTypes.root && (
+          {errors.ticketTypes?.root && (
             <p className="mb-4 text-sm text-red-600">{errors.ticketTypes.root.message}</p>
           )}
 

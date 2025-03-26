@@ -14,7 +14,7 @@ const regionSchema = z.object({
 type RegionFormData = z.infer<typeof regionSchema>;
 
 // Thailand regions presets
-const THAI_REGIONS = [
+const THAI_REGIONS: string[] = [
   "Bangkok",
   "Phuket",
   "Chiang Mai",
@@ -74,10 +74,10 @@ export default function CreateRegionPage() {
         body: JSON.stringify(data),
       });
       
-      let responseData;
+      // Parse the JSON response
+      let responseData: { error?: string; details?: string; id?: string } | null = null;
       try {
-        // Try to parse the response as JSON
-        responseData = await response.json();
+        responseData = await response.json() as { error?: string; details?: string; id?: string };
       } catch (e) {
         // If parsing fails, set responseData to an empty object or error message
         console.error("Failed to parse response as JSON:", e);
@@ -90,9 +90,9 @@ export default function CreateRegionPage() {
       if (!response.ok) {
         // Handle the case where responseData might be empty
         let errorMessage = "Failed to create region";
-        if (responseData && responseData.error) {
+        if (responseData?.error) {
           errorMessage = responseData.error;
-        } else if (responseData && responseData.details) {
+        } else if (responseData?.details) {
           errorMessage = responseData.details;
         } else if (response.status === 500) {
           errorMessage = "Server error. Please try again later.";

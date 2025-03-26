@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { db } from "~/server/db";
 import { fighters } from "~/server/db/schema";
+import { asc } from "drizzle-orm";
 
 export default async function FightersPage() {
   const fightersList = await db.query.fighters.findMany({
-    orderBy: (fighters, { asc }) => [asc(fighters.name)],
+    orderBy: [asc(fighters.name)],
   });
 
   return (
@@ -21,7 +22,7 @@ export default async function FightersPage() {
               <div className="p-4">
                 <h2 className="text-xl font-semibold text-gray-800">{fighter.name}</h2>
                 {fighter.nickname && (
-                  <p className="text-gray-500 italic">"{fighter.nickname}"</p>
+                  <p className="text-gray-500 italic">&quot;{fighter.nickname}&quot;</p>
                 )}
                 {fighter.weightClass && (
                   <div className="mt-2">
@@ -45,7 +46,7 @@ export default async function FightersPage() {
             </div>
           ))
         ) : (
-          <p className="col-span-full text-center text-gray-500">No fighters found.</p>
+          <p className="col-span-full text-center text-gray-500">No fighters found. Click &quot;Add New Fighter&quot; to create one.</p>
         )}
       </div>
       

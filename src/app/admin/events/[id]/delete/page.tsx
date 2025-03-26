@@ -12,53 +12,64 @@ export default function DeleteEventPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const [event, setEvent] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [event, setEvent] = useState<{
+    id: string;
+    title: string;
+    date: string;
+    venue?: { id: string; name: string } | null;
+    region?: { id: string; name: string } | null;
+    eventTickets?: { id: string; seatType: string; price: number }[];
+  } | null>(null);
 
   useEffect(() => {
     const fetchEvent = async () => {
       try {
+        setIsLoading(true);
+        setError(null);
         const response = await fetch(`/api/events/${id}`);
+        
         if (!response.ok) {
-          if (response.status === 404) {
-            throw new Error('Event not found');
-          }
-          throw new Error('Failed to fetch event');
+          throw new Error(response.status === 404 ? 'Event not found' : 'Failed to fetch event');
         }
-        const data = await response.json();
-        setEvent(data);
+        
+        const eventData = await response.json() as {
+          id: string;
+          title: string;
+          date: string;
+          venue?: { id: string; name: string } | null;
+          region?: { id: string; name: string } | null;
+          eventTickets?: { id: string; seatType: string; price: number }[];
+        };
+        
+        setEvent(eventData);
       } catch (error) {
-        console.error('Error fetching event:', error);
-        setError(error instanceof Error ? error.message : 'Failed to load event details');
+        setError(error instanceof Error ? error.message : 'Failed to fetch event');
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchEvent();
+    void fetchEvent();
   }, [id]);
 
   const handleDelete = async () => {
     try {
       setIsDeleting(true);
-      setError(null);
-
       const response = await fetch(`/api/events/${id}`, {
         method: 'DELETE',
       });
-
+      
       if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.error || 'Failed to delete event');
+        const errorData = await response.json() as { error?: string };
+        throw new Error(errorData.error ?? 'Failed to delete event');
       }
-
-      // Redirect to events list after successful deletion
+      
       router.push('/admin/events');
       router.refresh();
     } catch (error) {
-      console.error('Error deleting event:', error);
       setError(error instanceof Error ? error.message : 'Failed to delete event');
       setIsDeleting(false);
     }
@@ -140,12 +151,14 @@ export default function DeleteEventPage({
         <p className="text-gray-600 mb-2">
           <span className="font-medium">Date:</span> {formatDate(event.date)}
         </p>
-        <p className="text-gray-600 mb-2">
-          <span className="font-medium">Venue:</span> {event.venue?.name || 'N/A'}
-        </p>
-        <p className="text-gray-600 mb-2">
-          <span className="font-medium">Region:</span> {event.region?.name || 'N/A'}
-        </p>
+        <div className="flex items-center mb-2">
+          <span className="font-medium text-gray-700 w-24">Venue:</span>
+          <span>{event.venue?.name ?? "N/A"}</span>
+        </div>
+        <div className="flex items-center mb-2">
+          <span className="font-medium text-gray-700 w-24">Region:</span>
+          <span>{event.region?.name ?? "N/A"}</span>
+        </div>
         {event.eventTickets && event.eventTickets.length > 0 && (
           <div className="mt-4">
             <p className="font-medium text-gray-700 mb-2">

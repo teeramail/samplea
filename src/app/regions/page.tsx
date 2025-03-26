@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { db } from "~/server/db";
-import { regions } from "~/server/db/schema";
 
 export default async function RegionsPage() {
   // Get all regions

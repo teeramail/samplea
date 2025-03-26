@@ -3,6 +3,7 @@ import { auth } from "~/server/auth";
 import { db } from "~/server/db";
 import { events } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
+import Image from "next/image";
 
 type HomePageProps = {
   searchParams: Promise<{ region?: string }>;
@@ -40,14 +41,14 @@ export default async function Home({ searchParams }: HomePageProps) {
   
   // Format date
   const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+    return new Date(date).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric"
     });
   };
 
-  // Featured fighters (would ideally come from database)
+  // Featured fighters (ideally from database)
   const featuredFighters = [
     {
       id: "1",
@@ -77,7 +78,8 @@ export default async function Home({ searchParams }: HomePageProps) {
       {/* Hero Section */}
       <div className="container flex flex-col items-center gap-8 px-4 py-16">
         <h1 className="text-5xl font-extrabold tracking-tight text-center sm:text-[5rem]">
-          <span className="text-[hsl(280,100%,70%)]">Thai</span>Boxing<span className="text-[hsl(280,100%,70%)]">Hub</span>
+          <span className="text-[hsl(280,100%,70%)]">Thai</span>Boxing
+          <span className="text-[hsl(280,100%,70%)]">Hub</span>
           </h1>
         
         <p className="text-xl text-center max-w-2xl mb-4">
@@ -94,7 +96,7 @@ export default async function Home({ searchParams }: HomePageProps) {
               href="/events" 
               className="text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]"
             >
-              View All →
+              View All &rarr;
             </Link>
           </div>
           
@@ -158,7 +160,7 @@ export default async function Home({ searchParams }: HomePageProps) {
               href="/fighters" 
               className="text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]"
             >
-              View All Fighters →
+              View All Fighters &rarr;
             </Link>
           </div>
           
@@ -166,9 +168,11 @@ export default async function Home({ searchParams }: HomePageProps) {
             {featuredFighters.map((fighter) => (
               <div key={fighter.id} className="bg-white/10 rounded-lg overflow-hidden hover:bg-white/20 transition-colors">
                 <div className="h-48 overflow-hidden">
-                  <img 
-                    src={fighter.image} 
-                    alt={fighter.name} 
+                  <Image
+                    src={fighter.image}
+                    alt={fighter.name}
+                    width={200}
+                    height={200}
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -212,7 +216,7 @@ export default async function Home({ searchParams }: HomePageProps) {
             <div>
               <h3 className="text-xl font-bold mb-3 text-[hsl(280,100%,70%)]">Training Packages</h3>
               <p className="text-gray-300 mb-4">
-                Train with champion fighters and experienced coaches at Thailand's top Muay Thai gyms. 
+                Train with champion fighters and experienced coaches at Thailand&apos;s top Muay Thai gyms. 
                 We offer various training packages from beginner to advanced levels.
               </p>
               <ul className="space-y-2 text-gray-300 mb-4">
@@ -254,14 +258,14 @@ export default async function Home({ searchParams }: HomePageProps) {
             <div>
               <h3 className="text-xl font-bold mb-3 text-[hsl(280,100%,70%)]">Muay Thai Experiences</h3>
               <p className="text-gray-300 mb-4">
-                Immerse yourself in Thailand's national sport with our curated Muay Thai experiences designed for tourists and enthusiasts alike.
+                Immerse yourself in Thailand&apos;s national sport with our curated Muay Thai experiences designed for tourists and enthusiasts alike.
               </p>
               <ul className="space-y-2 text-gray-300 mb-4">
                 <li className="flex items-start">
                   <svg className="w-5 h-5 mr-2 text-[hsl(280,100%,70%)] mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                   </svg>
-                  <span>VIP event tickets with fighter meet & greet</span>
+                  <span>VIP event tickets with fighter meet &amp; greet</span>
                 </li>
                 <li className="flex items-start">
                   <svg className="w-5 h-5 mr-2 text-[hsl(280,100%,70%)] mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -294,7 +298,7 @@ export default async function Home({ searchParams }: HomePageProps) {
             </div>
           </div>
         </section>
-
+        
         {/* Latest Muay Thai News & Articles */}
         <section className="w-full max-w-5xl mt-16">
           <div className="flex justify-between items-center mb-6">
@@ -303,7 +307,7 @@ export default async function Home({ searchParams }: HomePageProps) {
               href="/blog" 
               className="text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]"
             >
-              Read All Articles →
+              Read All Articles &rarr;
             </Link>
           </div>
           
@@ -354,7 +358,7 @@ export default async function Home({ searchParams }: HomePageProps) {
             className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 hover:bg-white/20"
             href="/events"
           >
-            <h3 className="text-2xl font-bold">Events →</h3>
+            <h3 className="text-2xl font-bold">Events &rarr;</h3>
             <div className="text-lg">
               Browse upcoming Muay Thai events, check fight cards, and purchase tickets.
             </div>
@@ -364,7 +368,7 @@ export default async function Home({ searchParams }: HomePageProps) {
             className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 hover:bg-white/20"
             href="/fighters"
           >
-            <h3 className="text-2xl font-bold">Fighters →</h3>
+            <h3 className="text-2xl font-bold">Fighters &rarr;</h3>
             <div className="text-lg">
               Explore profiles of Muay Thai fighters, their stats, and upcoming fights.
             </div>
@@ -374,7 +378,7 @@ export default async function Home({ searchParams }: HomePageProps) {
             className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 hover:bg-white/20"
             href="/venues"
           >
-            <h3 className="text-2xl font-bold">Venues →</h3>
+            <h3 className="text-2xl font-bold">Venues &rarr;</h3>
             <div className="text-lg">
               Discover locations where events are held and find information about each venue.
             </div>
@@ -386,13 +390,13 @@ export default async function Home({ searchParams }: HomePageProps) {
           <h2 className="text-2xl font-bold mb-4">About Muay Thai Boxing in Thailand</h2>
           <div className="text-gray-300">
             <p className="mb-4">
-              Muay Thai, known as the "Art of Eight Limbs," is Thailand's national sport and cultural martial art. It uses the entire body as a weapon, incorporating punches, kicks, elbows, and knee strikes. Dating back several hundred years, Muay Thai has evolved from a battlefield combat system to a beloved spectator sport and effective fitness regimen.
+              Muay Thai, known as the &quot;Art of Eight Limbs,&quot; is Thailand&apos;s national sport and cultural martial art. It uses the entire body as a weapon, incorporating punches, kicks, elbows, and knee strikes. Dating back several hundred years, Muay Thai has evolved from a battlefield combat system to a beloved spectator sport and effective fitness regimen.
             </p>
             <p className="mb-4">
-              Today, authentic Muay Thai matches can be witnessed throughout Thailand, with the most prestigious events held in Bangkok's Lumpinee and Rajadamnern Stadiums. The sport embodies Thailand's cultural heritage, with each match featuring the traditional Wai Kru Ram Muay ritual where fighters pay respect to their teachers.
+              Today, authentic Muay Thai matches can be witnessed throughout Thailand, with the most prestigious events held in Bangkok&apos;s Lumpinee and Rajadamnern Stadiums. The sport embodies Thailand&apos;s cultural heritage, with each match featuring the traditional Wai Kru Ram Muay ritual where fighters pay respect to their teachers.
             </p>
             <p>
-              Whether you're a tourist looking to experience the excitement of live Muay Thai, a fitness enthusiast wanting to train, or a serious practitioner aiming to test your skills, Thailand offers unparalleled opportunities to connect with this ancient martial art. ThaiBoxingHub is your comprehensive guide to finding the best events, training facilities, and Muay Thai experiences throughout Thailand.
+              Whether you&apos;re a tourist looking to experience the excitement of live Muay Thai, a fitness enthusiast wanting to train, or a serious practitioner aiming to test your skills, Thailand offers unparalleled opportunities to connect with this ancient martial art. ThaiBoxingHub is your comprehensive guide to finding the best events, training facilities, and Muay Thai experiences throughout Thailand.
             </p>
           </div>
         </section>
@@ -403,33 +407,45 @@ export default async function Home({ searchParams }: HomePageProps) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-white/10 rounded-lg p-6">
               <div className="flex items-center mb-4">
-                <div className="w-10 h-10 rounded-full bg-purple-700 flex items-center justify-center text-white font-bold mr-3">J</div>
+                <div className="w-10 h-10 rounded-full bg-purple-700 flex items-center justify-center text-white font-bold mr-3">
+                  J
+                </div>
                 <div>
                   <h3 className="font-medium">John Smith</h3>
                   <p className="text-xs text-gray-400">Tourist from Australia</p>
                 </div>
               </div>
-              <p className="text-gray-300">"ThaiBoxingHub made finding authentic Muay Thai events in Phuket so easy. The event tickets were waiting at my hotel and the fights were incredible!"</p>
+              <p className="text-gray-300">
+                &quot;ThaiBoxingHub made finding authentic Muay Thai events in Phuket so easy. The event tickets were waiting at my hotel and the fights were incredible!&quot;
+              </p>
             </div>
             <div className="bg-white/10 rounded-lg p-6">
               <div className="flex items-center mb-4">
-                <div className="w-10 h-10 rounded-full bg-purple-700 flex items-center justify-center text-white font-bold mr-3">S</div>
+                <div className="w-10 h-10 rounded-full bg-purple-700 flex items-center justify-center text-white font-bold mr-3">
+                  S
+                </div>
                 <div>
                   <h3 className="font-medium">Sarah Johnson</h3>
                   <p className="text-xs text-gray-400">Muay Thai Practitioner</p>
                 </div>
               </div>
-              <p className="text-gray-300">"I booked a week of training through ThaiBoxingHub and it exceeded all my expectations. The gym was authentic and the coaches were world-class."</p>
+              <p className="text-gray-300">
+                &quot;I booked a week of training through ThaiBoxingHub and it exceeded all my expectations. The gym was authentic and the coaches were world-class.&quot;
+              </p>
             </div>
             <div className="bg-white/10 rounded-lg p-6">
               <div className="flex items-center mb-4">
-                <div className="w-10 h-10 rounded-full bg-purple-700 flex items-center justify-center text-white font-bold mr-3">D</div>
+                <div className="w-10 h-10 rounded-full bg-purple-700 flex items-center justify-center text-white font-bold mr-3">
+                  D
+                </div>
                 <div>
                   <h3 className="font-medium">David Lee</h3>
                   <p className="text-xs text-gray-400">Fight Fan from Singapore</p>
                 </div>
               </div>
-              <p className="text-gray-300">"The VIP experience package was worth every penny. Getting to meet the fighters and having ringside seats made for an unforgettable night in Bangkok."</p>
+              <p className="text-gray-300">
+                &quot;The VIP experience package was worth every penny. Getting to meet the fighters and having ringside seats made for an unforgettable night in Bangkok.&quot;
+              </p>
             </div>
           </div>
         </section>
@@ -446,8 +462,8 @@ export default async function Home({ searchParams }: HomePageProps) {
               >
               {session ? "Sign out" : "Sign in to book and save events"}
               </Link>
-            </div>
           </div>
+        </div>
         </div>
       </main>
   );

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "~/server/db";
 import { eq } from "drizzle-orm";
-import { events, venues, fighters } from "~/server/db/schema";
+import { events } from "~/server/db/schema";
 
 export default async function EventDetailPage({
   params,
