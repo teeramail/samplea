@@ -4,11 +4,12 @@ import { events, venues, regions } from "~/server/db/schema";
 import { eq, desc, and } from "drizzle-orm";
 
 type EventsPageProps = {
-  searchParams: { region?: string };
+  searchParams: Promise<{ region?: string }>;
 };
 
 export default async function EventsPage({ searchParams }: EventsPageProps) {
-  const { region: regionId } = searchParams;
+  const resolvedParams = await searchParams;
+  const { region: regionId } = resolvedParams;
   
   // Query builder for events
   let query = db.query.events.findMany({

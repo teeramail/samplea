@@ -43,7 +43,7 @@ export const venues = createTable(
     id: text("id").primaryKey(),
     name: text("name").notNull(),
     address: text("address").notNull(),
-    capacity: integer("capacity").notNull(), // Make this NOT NULL to match DB
+    capacity: integer("capacity"), // Remove .notNull() to allow null values
     regionId: text("regionId").references(() => regions.id).notNull(), // Make this NOT NULL
     createdAt: timestamp("createdAt", { withTimezone: false }) // Remove timezone
       .default(sql`CURRENT_TIMESTAMP`)
@@ -122,6 +122,8 @@ export const users = createTable(
     email: text("email").notNull(),
     password: text("password").notNull(),
     name: text("name"),
+    emailVerified: timestamp("emailVerified", { mode: "date" }),
+    image: text("image"),
     role: text("role").default("user"),
     createdAt: timestamp("createdAt", { withTimezone: false })
       .default(sql`CURRENT_TIMESTAMP`)

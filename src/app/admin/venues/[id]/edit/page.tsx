@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { use } from "react";
 
 const venueSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -21,9 +22,9 @@ interface Region {
   name: string;
 }
 
-export default function EditVenuePage({ params }: { params: { id: string } }) {
+export default function EditVenuePage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
-  const { id } = params;
+  const { id } = use(params);
   const [isLoading, setIsLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);

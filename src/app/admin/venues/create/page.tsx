@@ -31,7 +31,7 @@ export default function CreateVenuePage() {
     defaultValues: {
       name: "",
       address: "",
-      capacity: "",
+      capacity: 0,
       regionId: "",
     },
   });
@@ -63,10 +63,9 @@ export default function CreateVenuePage() {
     setError("");
     
     try {
-      // Convert capacity to a number if provided
+      // Capacity is already a number now, no need to parse
       const venueData = {
         ...data,
-        capacity: data.capacity ? parseInt(data.capacity) : undefined,
       };
       
       const response = await fetch("/api/venues", {

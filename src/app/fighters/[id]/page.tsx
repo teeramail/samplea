@@ -7,10 +7,12 @@ import { fighters, events } from "~/server/db/schema";
 export default async function FighterDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
+  
   const fighter = await db.query.fighters.findFirst({
-    where: eq(fighters.id, params.id),
+    where: eq(fighters.id, id),
   });
 
   if (!fighter) {

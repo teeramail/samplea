@@ -5,12 +5,13 @@ import { events } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
 
 type HomePageProps = {
-  searchParams: { region?: string };
+  searchParams: Promise<{ region?: string }>;
 };
 
 export default async function Home({ searchParams }: HomePageProps) {
   const session = await auth();
-  const { region: regionId } = searchParams;
+  const resolvedParams = await searchParams;
+  const { region: regionId } = resolvedParams;
   
   // Get upcoming events, limited to 3
   let query = db.query.events.findMany({

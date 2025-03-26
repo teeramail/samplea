@@ -7,11 +7,13 @@ import { eq } from "drizzle-orm";
 export default async function RegionDetailPage({ 
   params 
 }: { 
-  params: { id: string } 
+  params: Promise<{ id: string }> 
 }) {
+  const { id } = await params;
+  
   // Fetch region with venues
   const region = await db.query.regions.findFirst({
-    where: eq(regions.id, params.id),
+    where: eq(regions.id, id),
     with: {
       venues: true,
     },

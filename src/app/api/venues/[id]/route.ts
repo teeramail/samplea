@@ -14,10 +14,10 @@ const updateVenueSchema = z.object({
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     
     // Get venue by ID
     const venue = await db.query.venues.findFirst({
@@ -50,10 +50,10 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const body = await req.json();
     
     // Validate request body
@@ -80,12 +80,18 @@ export async function PATCH(
       );
     }
     
-    // Update venue
+    // Update venue with type-safe fields
+    const updateData: Record<string, unknown> = {
+      updatedAt: new Date(),
+    };
+    
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.address !== undefined) updateData.address = data.address;
+    if (data.regionId !== undefined) updateData.regionId = data.regionId;
+    if (data.capacity !== undefined) updateData.capacity = data.capacity;
+    
     await db.update(venues)
-      .set({
-        ...data,
-        updatedAt: new Date(),
-      })
+      .set(updateData)
       .where(eq(venues.id, id));
     
     const updatedVenue = await db.query.venues.findFirst({
@@ -107,10 +113,10 @@ export async function PATCH(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     
     // Check if venue exists
     const existingVenue = await db.query.venues.findFirst({

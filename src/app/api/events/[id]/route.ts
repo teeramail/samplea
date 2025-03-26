@@ -30,11 +30,11 @@ const updateEventSchema = z.object({
 // GET event by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Using the synchronized param pattern recommended by Next.js
-    const id = params.id;
+    // Using the asynchronous param pattern required by Next.js 15
+    const { id } = await params;
 
     console.log(`Fetching event with ID: ${id}`);
 
@@ -76,11 +76,11 @@ export async function GET(
 // UPDATE event by ID
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Using the synchronized param pattern recommended by Next.js
-    const id = params.id;
+    // Using the asynchronous param pattern required by Next.js 15
+    const { id } = await params;
     
     console.log(`Updating event with ID: ${id}`);
     
@@ -216,11 +216,11 @@ export async function PATCH(
 // DELETE event by ID
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Using the synchronized param pattern recommended by Next.js
-    const id = params.id;
+    // Using the asynchronous param pattern required by Next.js 15
+    const { id } = await params;
     
     console.log(`Deleting event with ID: ${id}`);
     

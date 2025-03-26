@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
       id: venueId,
       name: data.name,
       address: data.address,
-      capacity: data.capacity || null,
+      capacity: data.capacity,
       regionId: data.regionId,
       createdAt: new Date(),
       updatedAt: new Date(),

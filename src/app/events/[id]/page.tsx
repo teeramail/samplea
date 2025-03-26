@@ -7,10 +7,12 @@ import { events, venues, fighters } from "~/server/db/schema";
 export default async function EventDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
+  
   const event = await db.query.events.findFirst({
-    where: eq(events.id, params.id),
+    where: eq(events.id, id),
     with: {
       venue: true,
     },

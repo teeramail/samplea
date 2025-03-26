@@ -3,15 +3,14 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { use } from 'react';
 
-interface DeleteEventPageProps {
-  params: {
-    id: string;
-  };
-}
-
-export default function DeleteEventPage({ params }: DeleteEventPageProps) {
-  const { id } = params;
+export default function DeleteEventPage({ 
+  params 
+}: { 
+  params: Promise<{ id: string }> 
+}) {
+  const { id } = use(params);
   const router = useRouter();
   const [event, setEvent] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);

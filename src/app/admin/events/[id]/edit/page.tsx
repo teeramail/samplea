@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { z } from 'zod';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { use } from 'react';
 
 // Define schema for ticket type
 const ticketTypeSchema = z.object({
@@ -31,22 +32,57 @@ const eventSchema = z.object({
 
 type EventFormValues = z.infer<typeof eventSchema>;
 
-interface EditEventPageProps {
-  params: {
-    id: string;
-  };
-}
+// API response types
+type Venue = {
+  id: string;
+  name: string;
+  regionId: string;
+  address: string;
+  capacity: number | null;
+};
 
-export default function EditEventPage({ params }: EditEventPageProps) {
-  const { id } = params;
+type Region = {
+  id: string;
+  name: string;
+  description?: string;
+};
+
+type EventTicket = {
+  id: string;
+  seatType: string;
+  price: number;
+  capacity: number;
+  description?: string;
+};
+
+type Event = {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  imageUrl?: string;
+  venueId: string;
+  regionId: string;
+  eventTickets: EventTicket[];
+};
+
+// Fix the component props to match Next.js 15 requirements
+export default function EditEventPage({ 
+  params 
+}: { 
+  params: Promise<{ id: string }> 
+}) {
+  const { id } = use(params);
   const router = useRouter();
-  const [venues, setVenues] = useState<any[]>([]);
-  const [regions, setRegions] = useState<any[]>([]);
+  const [venues, setVenues] = useState<Venue[]>([]);
+  const [regions, setRegions] = useState<Region[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const { register, handleSubmit, control, formState: { errors }, reset, setValue } = useForm<EventFormValues>({
+  const { register, handleSubmit, control, formState: { errors }, reset } = useForm<EventFormValues>({
     resolver: zodResolver(eventSchema),
     defaultValues: {
       title: '',
@@ -71,7 +107,7 @@ export default function EditEventPage({ params }: EditEventPageProps) {
       try {
         const response = await fetch('/api/venues');
         if (!response.ok) throw new Error('Failed to fetch venues');
-        const data = await response.json();
+        const data = await response.json() as Venue[];
         setVenues(data);
       } catch (error) {
         console.error('Error fetching venues:', error);
@@ -83,7 +119,7 @@ export default function EditEventPage({ params }: EditEventPageProps) {
       try {
         const response = await fetch('/api/regions');
         if (!response.ok) throw new Error('Failed to fetch regions');
-        const data = await response.json();
+        const data = await response.json() as Region[];
         setRegions(data);
       } catch (error) {
         console.error('Error fetching regions:', error);
@@ -95,7 +131,7 @@ export default function EditEventPage({ params }: EditEventPageProps) {
       try {
         const response = await fetch(`/api/events/${id}`);
         if (!response.ok) throw new Error('Failed to fetch event');
-        const event = await response.json();
+        const event = await response.json() as Event;
 
         // Format dates for form inputs
         const eventDate = new Date(event.date);
@@ -114,15 +150,15 @@ export default function EditEventPage({ params }: EditEventPageProps) {
           date: formattedDate,
           startTime: formattedStartTime,
           endTime: formattedEndTime,
-          imageUrl: event.imageUrl || '',
+          imageUrl: event.imageUrl ?? '',
           venueId: event.venueId,
           regionId: event.regionId,
-          ticketTypes: event.eventTickets.map((ticket: any) => ({
+          ticketTypes: event.eventTickets.map((ticket) => ({
             id: ticket.id,
             seatType: ticket.seatType,
             price: ticket.price,
             capacity: ticket.capacity,
-            description: ticket.description || '',
+            description: ticket.description ?? '',
           })),
         });
       } catch (error) {
@@ -133,7 +169,7 @@ export default function EditEventPage({ params }: EditEventPageProps) {
       }
     };
 
-    Promise.all([fetchVenues(), fetchRegions(), fetchEvent()]);
+    void Promise.all([fetchVenues(), fetchRegions(), fetchEvent()]);
   }, [id, reset]);
 
   const onSubmit = async (data: EventFormValues) => {
@@ -154,7 +190,7 @@ export default function EditEventPage({ params }: EditEventPageProps) {
         date: eventDate.toISOString(),
         startTime: startDateTime.toISOString(),
         endTime: endDateTime.toISOString(),
-        imageUrl: data.imageUrl || null,
+        imageUrl: data.imageUrl ?? null,
         venueId: data.venueId,
         regionId: data.regionId,
         ticketTypes: data.ticketTypes,
@@ -180,7 +216,7 @@ export default function EditEventPage({ params }: EditEventPageProps) {
         console.log('Response from server:', response.status, responseData);
 
         if (!response.ok) {
-          throw new Error(responseData?.error || 'Failed to update event');
+          throw new Error(responseData?.error ?? 'Failed to update event');
         }
 
         // Show success message

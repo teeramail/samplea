@@ -138,100 +138,104 @@ export default function BlogPage() {
       {/* Featured Article Section */}
       <section className="max-w-7xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-8">Featured Article</h2>
-        <div className="bg-white shadow-lg rounded-lg overflow-hidden">
-          <div className="md:flex">
-            <div className="md:flex-shrink-0 md:w-1/2">
-              <img 
-                className="h-64 w-full object-cover md:h-full"
-                src={featuredArticle.image} 
-                alt={featuredArticle.title}
-              />
-            </div>
-            <div className="p-8 md:w-1/2">
-              <div className="flex items-center text-sm text-gray-600 mb-2">
-                <span className="bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded mr-2">{featuredArticle.category}</span>
-                <span>{featuredArticle.date}</span>
-                <span className="mx-2">•</span>
-                <span>{featuredArticle.readTime}</span>
+        {featuredArticle && (
+          <div className="bg-white shadow-lg rounded-lg overflow-hidden">
+            <div className="md:flex">
+              <div className="md:flex-shrink-0 md:w-1/2">
+                <img 
+                  className="h-64 w-full object-cover md:h-full"
+                  src={featuredArticle.image} 
+                  alt={featuredArticle.title}
+                />
               </div>
-              <Link 
-                href={`/blog/${featuredArticle.id}`}
-                className="block mt-2"
-              >
-                <h3 className="text-2xl font-bold text-gray-900 hover:text-purple-700">{featuredArticle.title}</h3>
-              </Link>
-              <p className="mt-3 text-base text-gray-600">
-                {featuredArticle.excerpt}
-              </p>
-              <div className="mt-6 flex items-center">
-                <div className="flex-shrink-0">
-                  <span className="sr-only">{featuredArticle.author}</span>
-                  <div className="h-10 w-10 rounded-full bg-purple-700 flex items-center justify-center text-white font-bold">
-                    {featuredArticle.author.charAt(0)}
-                  </div>
+              <div className="p-8 md:w-1/2">
+                <div className="flex items-center text-sm text-gray-600 mb-2">
+                  <span className="bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded mr-2">{featuredArticle.category}</span>
+                  <span>{featuredArticle.date}</span>
+                  <span className="mx-2">•</span>
+                  <span>{featuredArticle.readTime}</span>
                 </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-900">
-                    {featuredArticle.author}
-                  </p>
-                </div>
-              </div>
-              <div className="mt-6">
                 <Link 
                   href={`/blog/${featuredArticle.id}`}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
-                >
-                  Read Full Article
-                  <svg className="ml-2 -mr-1 h-4 w-4" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                    <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd"></path>
-                  </svg>
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Secondary Featured Articles */}
-      <section className="max-w-7xl mx-auto px-4 pb-12 sm:px-6 lg:px-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-8">Trending Articles</h2>
-        <div className="grid gap-8 md:grid-cols-2">
-          {secondaryFeatured.map((article) => (
-            <div key={article.id} className="bg-white shadow-lg rounded-lg overflow-hidden">
-              <img 
-                className="h-48 w-full object-cover" 
-                src={article.image} 
-                alt={article.title}
-              />
-              <div className="p-6">
-                <div className="flex items-center text-sm text-gray-600 mb-2">
-                  <span className="bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded mr-2">{article.category}</span>
-                  <span>{article.date}</span>
-                  <span className="mx-2">•</span>
-                  <span>{article.readTime}</span>
-                </div>
-                <Link 
-                  href={`/blog/${article.id}`}
                   className="block mt-2"
                 >
-                  <h3 className="text-xl font-bold text-gray-900 hover:text-purple-700">{article.title}</h3>
+                  <h3 className="text-2xl font-bold text-gray-900 hover:text-purple-700">{featuredArticle.title}</h3>
                 </Link>
-                <p className="mt-3 text-sm text-gray-600">
-                  {article.excerpt}
+                <p className="mt-3 text-base text-gray-600">
+                  {featuredArticle.excerpt}
                 </p>
-                <div className="mt-4">
+                <div className="mt-6 flex items-center">
+                  <div className="flex-shrink-0">
+                    <span className="sr-only">{featuredArticle.author}</span>
+                    <div className="h-10 w-10 rounded-full bg-purple-700 flex items-center justify-center text-white font-bold">
+                      {featuredArticle.author.charAt(0)}
+                    </div>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm font-medium text-gray-900">
+                      {featuredArticle.author}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-6">
                   <Link 
-                    href={`/blog/${article.id}`}
-                    className="text-purple-600 hover:text-purple-800 font-medium inline-flex items-center"
+                    href={`/blog/${featuredArticle.id}`}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
                   >
-                    Read More
-                    <svg className="ml-1 w-4 h-4" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    Read Full Article
+                    <svg className="ml-2 -mr-1 h-4 w-4" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                       <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd"></path>
                     </svg>
                   </Link>
                 </div>
               </div>
             </div>
+          </div>
+        )}
+      </section>
+
+      {/* Secondary Featured Articles */}
+      <section className="max-w-7xl mx-auto px-4 pb-12 sm:px-6 lg:px-8">
+        <h2 className="text-2xl font-bold text-gray-900 mb-8">Trending Articles</h2>
+        <div className="grid gap-8 md:grid-cols-2">
+          {secondaryFeatured?.map((article) => (
+            article && (
+              <div key={article.id} className="bg-white shadow-lg rounded-lg overflow-hidden">
+                <img 
+                  className="h-48 w-full object-cover" 
+                  src={article.image} 
+                  alt={article.title}
+                />
+                <div className="p-6">
+                  <div className="flex items-center text-sm text-gray-600 mb-2">
+                    <span className="bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded mr-2">{article.category}</span>
+                    <span>{article.date}</span>
+                    <span className="mx-2">•</span>
+                    <span>{article.readTime}</span>
+                  </div>
+                  <Link 
+                    href={`/blog/${article.id}`}
+                    className="block mt-2"
+                  >
+                    <h3 className="text-xl font-bold text-gray-900 hover:text-purple-700">{article.title}</h3>
+                  </Link>
+                  <p className="mt-3 text-sm text-gray-600">
+                    {article.excerpt}
+                  </p>
+                  <div className="mt-4">
+                    <Link 
+                      href={`/blog/${article.id}`}
+                      className="text-purple-600 hover:text-purple-800 font-medium inline-flex items-center"
+                    >
+                      Read More
+                      <svg className="ml-1 w-4 h-4" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                        <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd"></path>
+                      </svg>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )
           ))}
         </div>
       </section>

@@ -4,8 +4,13 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
+type Region = {
+  id: string;
+  name: string;
+};
+
 export function RegionsNav() {
-  const [regions, setRegions] = useState<{ id: string; name: string }[]>([]);
+  const [regions, setRegions] = useState<Region[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -16,7 +21,7 @@ export function RegionsNav() {
       try {
         const response = await fetch('/api/regions');
         if (!response.ok) throw new Error('Failed to fetch regions');
-        const data = await response.json();
+        const data = await response.json() as Region[];
         setRegions(data);
       } catch (error) {
         console.error('Error fetching regions:', error);
@@ -25,7 +30,7 @@ export function RegionsNav() {
       }
     };
 
-    fetchRegions();
+    void fetchRegions();
   }, []);
 
   // Only show on events or homepage
