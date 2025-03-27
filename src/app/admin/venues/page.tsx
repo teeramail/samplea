@@ -3,6 +3,9 @@ import { db } from "~/server/db";
 import { venues } from "~/server/db/schema";
 import { asc } from "drizzle-orm";
 
+export const dynamic = 'force-dynamic'; // 👈 Add this line
+
+
 export default async function VenuesListPage() {
   // Fetch all venues with region information
   const allVenues = await db.query.venues.findMany({

@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { db } from "~/server/db";
 
+export const dynamic = 'force-dynamic'; // 👈 Add this line
+
+
 export default async function RegionsListPage() {
   const allRegions = await db.query.regions.findMany({
     orderBy: (regions, { asc }) => [asc(regions.name)],
