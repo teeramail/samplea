@@ -6,6 +6,8 @@ import { z } from "zod";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
+export const dynamic = 'force-dynamic'; // 👈 Add this line
+
 // Define schema for event creation
 const ticketTypeSchema = z.object({
   seatType: z.string().min(1, "Seat type is required"),
