@@ -3,6 +3,8 @@ import { db } from "~/server/db";
 import { fighters } from "~/server/db/schema";
 import { asc } from "drizzle-orm";
 
+export const dynamic = 'force-dynamic'; // 👈 Add this line
+
 export default async function FightersListPage() {
   // Fetch all fighters
   const allFighters = await db.query.fighters.findMany({
