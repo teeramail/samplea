@@ -16,6 +16,18 @@ export default async function Home({ searchParams }: HomePageProps) {
   
   // Get upcoming events, limited to 3
   let query = db.query.events.findMany({
+    where: (events, { gt, and, or, lte }) => {
+      const now = new Date();
+      const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
+      
+      return or(
+        gt(events.date, now),
+        and(
+          gt(events.startTime, fifteenMinutesAgo),
+          lte(events.startTime, now)
+        )
+      );
+    },
     orderBy: (events, { asc }) => [asc(events.date)],
     limit: 3,
     with: {
@@ -27,7 +39,21 @@ export default async function Home({ searchParams }: HomePageProps) {
   // If region filter is active, filter events by region
   if (regionId) {
     query = db.query.events.findMany({
-      where: eq(events.regionId, regionId),
+      where: (events, { gt, and, or, lte, eq: equals }) => {
+        const now = new Date();
+        const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
+        
+        return and(
+          equals(events.regionId, regionId),
+          or(
+            gt(events.date, now),
+            and(
+              gt(events.startTime, fifteenMinutesAgo),
+              lte(events.startTime, now)
+            )
+          )
+        );
+      },
       orderBy: (events, { asc }) => [asc(events.date)],
       limit: 3,
       with: {

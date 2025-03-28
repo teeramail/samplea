@@ -31,6 +31,18 @@ export async function GET(req: Request) {
     const regionId = url.searchParams.get("region");
     
     let query = db.query.events.findMany({
+      where: (events, { gt, and, or, lte }) => {
+        const now = new Date();
+        const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
+        
+        return or(
+          gt(events.date, now),
+          and(
+            gt(events.startTime, fifteenMinutesAgo),
+            lte(events.startTime, now)
+          )
+        );
+      },
       with: {
         venue: true,
         region: true,
@@ -40,7 +52,21 @@ export async function GET(req: Request) {
     
     if (regionId) {
       query = db.query.events.findMany({
-        where: (events, { eq }) => eq(events.regionId, regionId),
+        where: (events, { gt, and, or, lte, eq: equals }) => {
+          const now = new Date();
+          const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
+          
+          return and(
+            equals(events.regionId, regionId),
+            or(
+              gt(events.date, now),
+              and(
+                gt(events.startTime, fifteenMinutesAgo),
+                lte(events.startTime, now)
+              )
+            )
+          );
+        },
         with: {
           venue: true,
           region: true,

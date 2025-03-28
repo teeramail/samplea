@@ -23,6 +23,18 @@ export default async function FighterDetailPage({
   // In a real app, you'd fetch the events this fighter is part of
   // For now, we'll just get a few random events to display
   const fighterEvents = await db.query.events.findMany({
+    where: (events, { gt, and, or, lte }) => {
+      const now = new Date();
+      const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
+      
+      return or(
+        gt(events.date, now),
+        and(
+          gt(events.startTime, fifteenMinutesAgo),
+          lte(events.startTime, now)
+        )
+      );
+    },
     limit: 3,
     orderBy: [desc(events.date)],
   });

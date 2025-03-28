@@ -21,7 +21,21 @@ export default async function VenueDetailPage({
 
   // Get events at this venue
   const venueEvents = await db.query.events.findMany({
-    where: eq(events.venueId, venue.id),
+    where: (events, { gt, and, or, lte, eq: equals }) => {
+      const now = new Date();
+      const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
+      
+      return and(
+        equals(events.venueId, venue.id),
+        or(
+          gt(events.date, now),
+          and(
+            gt(events.startTime, fifteenMinutesAgo),
+            lte(events.startTime, now)
+          )
+        )
+      );
+    },
     orderBy: (events, { desc }) => [desc(events.date)],
   });
 
