@@ -119,8 +119,11 @@ export default function CreateRegionPage() {
   const removeImage = (index: number) => {
     setImages(prev => prev.filter((_, i) => i !== index));
     
-    // Revoke the object URL to avoid memory leaks
-    URL.revokeObjectURL(imagePreviews[index]);
+    // Add a null check before revoking the object URL
+    const previewUrl = imagePreviews[index];
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
     setImagePreviews(prev => prev.filter((_, i) => i !== index));
     
     // Update primary image index if needed
@@ -207,7 +210,6 @@ export default function CreateRegionPage() {
       try {
         responseData = await response.json() as { error?: string; details?: string; id?: string };
       } catch (e) {
-        // If parsing fails, set responseData to an empty object or error message
         console.error("Failed to parse response as JSON:", e);
         responseData = { error: "Failed to parse server response" };
       }
@@ -216,7 +218,6 @@ export default function CreateRegionPage() {
       console.log("Response data:", responseData);
       
       if (!response.ok) {
-        // Handle the case where responseData might be empty
         let errorMessage = "Failed to create region";
         if (responseData?.error) {
           errorMessage = responseData.error;
@@ -412,4 +413,4 @@ export default function CreateRegionPage() {
       </form>
     </div>
   );
-} 
+}
