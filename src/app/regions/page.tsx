@@ -1,11 +1,22 @@
 import Link from "next/link";
 import { db } from "~/server/db";
+import ImageWithFallback from "~/app/_components/ImageWithFallback";
 
 export default async function RegionsPage() {
   // Get all regions
   const allRegions = await db.query.regions.findMany({
     orderBy: (regions, { asc }) => [asc(regions.name)],
   });
+
+  // Helper function to get primary image URL
+  const getPrimaryImageUrl = (region: typeof allRegions[number]): string | null => {
+    if (!region.imageUrls || region.imageUrls.length === 0) {
+      return null;
+    }
+    
+    const primaryIndex = region.primaryImageIndex ?? 0;
+    return region.imageUrls[primaryIndex < region.imageUrls.length ? primaryIndex : 0] || null;
+  };
 
   return (
     <main className="container mx-auto px-4 py-8">
@@ -15,21 +26,44 @@ export default async function RegionsPage() {
       </p>
       
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-        {allRegions.map((region) => (
-          <Link 
-            key={region.id}
-            href={`/events?region=${region.id}`}
-            className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all p-6 flex flex-col"
-          >
-            <h2 className="text-xl font-bold text-purple-800 mb-2">{region.name}</h2>
-            {region.description && (
-              <p className="text-gray-600 text-sm flex-grow">{region.description}</p>
-            )}
-            <div className="mt-4 text-sm text-purple-600 font-medium">
-              View events in this region →
-            </div>
-          </Link>
-        ))}
+        {allRegions.map((region) => {
+          const imageUrl = getPrimaryImageUrl(region);
+          
+          return (
+            <Link 
+              key={region.id}
+              href={`/events?region=${region.id}`}
+              className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all flex flex-col"
+            >
+              {/* Image section */}
+              <div className="h-40 relative">
+                {imageUrl ? (
+                  <ImageWithFallback
+                    src={imageUrl}
+                    alt={region.name}
+                    fallbackSrc="https://via.placeholder.com/400x160?text=No+Image"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                    <span className="text-gray-400 text-2xl">No Image</span>
+                  </div>
+                )}
+              </div>
+              
+              {/* Content section */}
+              <div className="p-4 flex flex-col flex-grow">
+                <h2 className="text-xl font-bold text-purple-800 mb-2">{region.name}</h2>
+                {region.description && (
+                  <p className="text-gray-600 text-sm flex-grow">{region.description}</p>
+                )}
+                <div className="mt-4 text-sm text-purple-600 font-medium">
+                  View events in this region →
+                </div>
+              </div>
+            </Link>
+          );
+        })}
         
         {allRegions.length === 0 && (
           <div className="col-span-full bg-gray-50 rounded-lg p-8 text-center border border-gray-200">

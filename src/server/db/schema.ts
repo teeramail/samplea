@@ -27,6 +27,8 @@ export const regions = createTable(
     id: text("id").primaryKey(),
     name: text("name").notNull(),
     description: text("description"),
+    imageUrls: text("imageUrls").array(), // Array of image URLs
+    primaryImageIndex: integer("primaryImageIndex").default(0), // Index of primary image in the array
     createdAt: timestamp("createdAt", { withTimezone: false })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),

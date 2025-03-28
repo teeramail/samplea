@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "~/server/db";
 import { regions } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
+import ImageWithFallback from "~/app/_components/ImageWithFallback";
 
 export default async function RegionDetailPage({ 
   params 
@@ -22,6 +23,21 @@ export default async function RegionDetailPage({
   if (!region) {
     notFound();
   }
+
+  // Helper to get primary image URL
+  const getPrimaryImageUrl = (): string | null => {
+    if (!region.imageUrls || region.imageUrls.length === 0) {
+      return null;
+    }
+    
+    const primaryIndex = region.primaryImageIndex ?? 0;
+    return region.imageUrls[primaryIndex < region.imageUrls.length ? primaryIndex : 0] || null;
+  };
+
+  // Helper to check if image is primary
+  const isPrimaryImage = (index: number): boolean => {
+    return index === (region.primaryImageIndex ?? 0);
+  };
 
   return (
     <div className="space-y-6">
@@ -48,6 +64,36 @@ export default async function RegionDetailPage({
             </Link>
           </div>
         </div>
+
+        {/* Region Images */}
+        {region.imageUrls && region.imageUrls.length > 0 && (
+          <div className="mb-6 border rounded-lg overflow-hidden">
+            <div className="bg-gray-50 px-4 py-3 border-b">
+              <h3 className="text-lg font-medium text-gray-900">Region Images</h3>
+            </div>
+            <div className="p-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {region.imageUrls.map((imageUrl, index) => (
+                  <div key={index} className="relative">
+                    <div className={`border-2 rounded-lg overflow-hidden ${isPrimaryImage(index) ? 'border-blue-500' : 'border-gray-200'}`}>
+                      <ImageWithFallback
+                        src={imageUrl || null}
+                        alt={`${region.name} - Image ${index + 1}`}
+                        fallbackSrc="https://via.placeholder.com/800x480?text=Image+Not+Found"
+                        className="w-full h-48 object-cover"
+                      />
+                    </div>
+                    {isPrimaryImage(index) && (
+                      <div className="absolute top-2 left-2 bg-blue-500 text-white text-xs px-2 py-1 rounded">
+                        Primary
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="border rounded-lg overflow-hidden">
           <div className="bg-gray-50 px-4 py-3 border-b flex justify-between items-center">

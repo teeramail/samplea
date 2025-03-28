@@ -5,10 +5,12 @@ import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 import { eq } from "drizzle-orm";
 
-// Match the actual database structure (no countryCode)
+// Match the actual database structure with imageUrls and primaryImageIndex
 const regionSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long"),
   description: z.string().optional(),
+  imageUrls: z.array(z.string().url()).optional(),
+  primaryImageIndex: z.number().int().min(0).optional(),
 });
 
 export async function GET() {
@@ -31,9 +33,15 @@ export async function POST(req: NextRequest) {
   console.log("Received POST request to /api/regions");
   
   try {
-    let body: { name: string; description?: string };
+    let body: {
+      name: string;
+      description?: string;
+      imageUrls?: string[];
+      primaryImageIndex?: number;
+    };
+    
     try {
-      body = await req.json() as { name: string; description?: string };
+      body = await req.json();
       console.log("Request body:", body);
     } catch (error) {
       console.error("Error parsing request body:", error);
@@ -61,20 +69,18 @@ export async function POST(req: NextRequest) {
       id: regionId,
       name: data.name,
       description: data.description,
+      imageUrls: data.imageUrls,
+      primaryImageIndex: data.primaryImageIndex,
     });
     
     try {
-      // Insert region with only fields that exist in the actual database
-      console.log("Attempting to insert region with only fields that exist:", {
-        id: regionId,
-        name: data.name,
-        description: data.description ?? null,
-      });
-      
+      // Insert region with all fields
       await db.insert(regions).values({
         id: regionId,
         name: data.name,
         description: data.description ?? null,
+        imageUrls: data.imageUrls ?? [],
+        primaryImageIndex: data.primaryImageIndex ?? 0,
       });
       
       console.log("Insert successful, now querying to verify");
