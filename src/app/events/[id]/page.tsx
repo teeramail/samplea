@@ -148,9 +148,12 @@ export default async function EventDetailPage({
           </div>
           
           <div className="mt-6">
-            <button className="w-full py-3 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 focus:ring-4 focus:ring-red-300">
+            <Link
+              href={`/checkout?eventId=${event.id}&eventTitle=${encodeURIComponent(event.title)}`}
+              className="w-full py-3 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 focus:ring-4 focus:ring-red-300 inline-block text-center"
+            >
               Buy Tickets
-            </button>
+            </Link>
           </div>
         </div>
       </div>
