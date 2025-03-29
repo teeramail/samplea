@@ -10,21 +10,23 @@ export default function ConfirmationPage() {
   
   const fighterName = searchParams.get('fighterName');
   const eventTitle = searchParams.get('eventTitle');
+  const paymentMethod = searchParams.get('paymentMethod');
+  const bookingId = searchParams.get('bookingId');
   
   // Use effect to handle redirect when essential data is missing
   useEffect(() => {
-    if (!eventTitle) {
+    if (!eventTitle && !bookingId) {
       router.push('/');
     }
-  }, [eventTitle, router]);
+  }, [eventTitle, bookingId, router]);
 
   // If data is missing, don't render anything during redirect
-  if (!eventTitle) {
+  if (!eventTitle && !bookingId) {
     return null;
   }
 
-  // Generate a random confirmation number
-  const confirmationNumber = Math.floor(100000 + Math.random() * 900000);
+  // Generate a random confirmation number if not provided
+  const confirmationNumber = bookingId || Math.floor(100000 + Math.random() * 900000);
   
   return (
     <main className="container mx-auto px-4 py-12">
@@ -45,14 +47,24 @@ export default function ConfirmationPage() {
             <span className="text-gray-600">Order Number:</span>
             <span className="font-semibold">#{confirmationNumber}</span>
           </div>
-          <div className="flex justify-between mb-2">
-            <span className="text-gray-600">Event:</span>
-            <span className="font-semibold">{eventTitle}</span>
-          </div>
+          {eventTitle && (
+            <div className="flex justify-between mb-2">
+              <span className="text-gray-600">Event:</span>
+              <span className="font-semibold">{eventTitle}</span>
+            </div>
+          )}
           {fighterName && (
-            <div className="flex justify-between">
+            <div className="flex justify-between mb-2">
               <span className="text-gray-600">Fighter:</span>
               <span className="font-semibold">{fighterName}</span>
+            </div>
+          )}
+          {paymentMethod && (
+            <div className="flex justify-between">
+              <span className="text-gray-600">Payment Method:</span>
+              <span className="font-semibold">
+                {paymentMethod === 'paypal' ? 'PayPal' : 'Credit Card'}
+              </span>
             </div>
           )}
         </div>

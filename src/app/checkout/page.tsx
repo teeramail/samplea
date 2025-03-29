@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, FormEvent } from "react";
 
 // Removed database imports (db, ticketsSchema, inArray, eq)
 // Removed CheckoutClientUI import
@@ -19,6 +19,27 @@ export default function CheckoutPage() {
   const fighterName = searchParams.get('fighterName');
   const fighterId = searchParams.get('fighterId');
   const ticketsParam = searchParams.get('tickets') || '';
+
+  // Contact information state
+  const [contactInfo, setContactInfo] = useState({
+    fullName: '',
+    email: '',
+    phone: ''
+  });
+
+  // Payment method state
+  const [paymentMethod, setPaymentMethod] = useState<'paypal' | 'credit-card' | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Handle input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setContactInfo(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
   // Parse ticket information from the URL 
   const ticketInfo = useMemo(() => {
@@ -92,76 +113,195 @@ export default function CheckoutPage() {
     return `฿${amount.toLocaleString()}`;
   };
 
-  // --- Render the simplified UI ---
+  // Form submission handler
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+    
+    if (!paymentMethod) {
+      setErrorMessage("Please select a payment method");
+      return;
+    }
+    
+    if (!contactInfo.fullName || !contactInfo.email) {
+      setErrorMessage("Please fill in all required contact information");
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      // Save booking information to database
+      const response = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          eventId,
+          eventTitle,
+          contactInfo,
+          paymentMethod,
+          tickets: ticketInfo.ticketDetails,
+          totalCost,
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create booking');
+      }
+      
+      // Redirect to confirmation page or payment gateway
+      if (paymentMethod === 'paypal') {
+        // Redirect to PayPal checkout
+        router.push(`/checkout/paypal?bookingId=${data.bookingId}`);
+      } else {
+        // Redirect to credit card payment
+        router.push(`/checkout/credit-card?bookingId=${data.bookingId}`);
+      }
+    } catch (error) {
+      console.error('Error creating booking:', error);
+      setErrorMessage('There was an error processing your order. Please try again.');
+      setIsSubmitting(false);
+    }
+  };
+
+  // --- Render the UI ---
   return (
     <main className="container mx-auto px-4 py-8">
       <div className="max-w-3xl mx-auto">
         <h1 className="text-2xl font-bold text-gray-800 mb-6">Checkout</h1>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          
-          {/* Enhanced Order Summary */}
-          <div className="md:col-span-1">
-            <div className="bg-white p-4 rounded-lg shadow-md">
-              <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
-              
-              <div className="border-b pb-4 mb-4">
-                <h3 className="font-medium text-gray-800">{eventTitle}</h3>
-                {fighterName && <p className="text-sm text-gray-600 mt-1">Fighter: {fighterName}</p>}
+        <form onSubmit={handleSubmit}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Order Summary */}
+            <div className="md:col-span-1">
+              <div className="bg-white p-4 rounded-lg shadow-md">
+                <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
+                
+                <div className="border-b pb-4 mb-4">
+                  <h3 className="font-medium text-gray-800">{eventTitle}</h3>
+                  {fighterName && <p className="text-sm text-gray-600 mt-1">Fighter: {fighterName}</p>}
+                </div>
+                
+                <div className="space-y-3 mb-4">
+                  <h3 className="font-medium text-gray-800">Tickets</h3>
+                  <div className="space-y-2">
+                    {ticketInfo.ticketDetails.map((ticket) => (
+                      <div key={ticket.id} className="flex justify-between text-sm">
+                        <span>{ticket.type} × {ticket.quantity}</span>
+                        <span>{formatCurrency(ticket.price * ticket.quantity)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="border-t pt-4">
+                  <div className="flex justify-between font-medium">
+                    <span>Total</span>
+                    <span>{formatCurrency(totalCost)}</span>
+                  </div>
+                </div>
               </div>
-              
-              <div className="space-y-3 mb-4">
-                <h3 className="font-medium text-gray-800">Tickets</h3>
-                <div className="space-y-2">
-                  {ticketInfo.ticketDetails.map((ticket) => (
-                    <div key={ticket.id} className="flex justify-between text-sm">
-                      <span>{ticket.type} × {ticket.quantity}</span>
-                      <span>{formatCurrency(ticket.price * ticket.quantity)}</span>
+            </div>
+            
+            {/* Contact Info and Payment */}
+            <div className="md:col-span-2">
+              <div className="bg-white p-6 rounded-lg shadow-md mb-6">
+                <h2 className="text-lg font-semibold mb-4">Contact Information</h2>
+                {errorMessage && (
+                  <div className="mb-4 bg-red-100 p-3 rounded text-red-700">
+                    {errorMessage}
+                  </div>
+                )}
+                <div>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Full Name <span className="text-red-500">*</span></label>
+                    <input 
+                      type="text" 
+                      name="fullName"
+                      value={contactInfo.fullName}
+                      onChange={handleInputChange}
+                      className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2 border" 
+                      placeholder="John Doe" 
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Email <span className="text-red-500">*</span></label>
+                      <input 
+                        type="email" 
+                        name="email"
+                        value={contactInfo.email}
+                        onChange={handleInputChange}
+                        className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2 border" 
+                        placeholder="johndoe@example.com" 
+                        required
+                      />
                     </div>
-                  ))}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                      <input 
+                        type="tel" 
+                        name="phone"
+                        value={contactInfo.phone}
+                        onChange={handleInputChange}
+                        className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2 border" 
+                        placeholder="+66 12 345 6789" 
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
               
-              <div className="border-t pt-4">
-                <div className="flex justify-between font-medium">
-                  <span>Total</span>
-                  <span>{formatCurrency(totalCost)}</span>
+              {/* Payment Method Selection */}
+              <div className="bg-white p-6 rounded-lg shadow-md mb-6">
+                <h2 className="text-lg font-semibold mb-4">Payment Method</h2>
+                <div className="space-y-4">
+                  <div className="flex items-center">
+                    <input
+                      id="paypal"
+                      name="paymentMethod"
+                      type="radio"
+                      checked={paymentMethod === 'paypal'}
+                      onChange={() => setPaymentMethod('paypal')}
+                      className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300"
+                    />
+                    <label htmlFor="paypal" className="ml-3 block text-sm font-medium text-gray-700">
+                      PayPal
+                    </label>
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      id="credit-card"
+                      name="paymentMethod"
+                      type="radio"
+                      checked={paymentMethod === 'credit-card'}
+                      onChange={() => setPaymentMethod('credit-card')}
+                      className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300"
+                    />
+                    <label htmlFor="credit-card" className="ml-3 block text-sm font-medium text-gray-700">
+                      Credit Card
+                    </label>
+                  </div>
                 </div>
               </div>
+              
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full py-3 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 focus:ring-4 focus:ring-red-300 disabled:bg-gray-400"
+              >
+                {isSubmitting ? 'Processing...' : 'Complete Purchase'}
+              </button>
             </div>
           </div>
-          
-          {/* Checkout Form */}
-          <div className="md:col-span-2">
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-lg font-semibold mb-4">Contact Information</h2>
-              <div> 
-                 <div className="mb-4">
-                   <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                   <input type="text" className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2 border" placeholder="John Doe" />
-                 </div>
-                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                   <div>
-                     <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                     <input type="email" className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2 border" placeholder="johndoe@example.com" />
-                   </div>
-                   <div>
-                     <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                     <input type="tel" className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2 border" placeholder="+66 12 345 6789" />
-                   </div>
-                 </div>
-
-                <Link
-                  href={`/checkout/confirmation?fighterName=${encodeURIComponent(fighterName || '')}&eventTitle=${encodeURIComponent(eventTitle || '')}&quantity=${ticketInfo.totalQuantity}&total=${totalCost}`}
-                  className="mt-4 w-full py-3 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 focus:ring-4 focus:ring-red-300 inline-block text-center"
-                >
-                  Complete Purchase
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
+        </form>
         
-        {/* Back Link - Ensure eventId is checked */}
+        {/* Back Link */}
         <div className="mt-6">
           <Link 
             href={fighterId ? `/fighters/${fighterId}` : (eventId ? `/events/${eventId}` : '/')}

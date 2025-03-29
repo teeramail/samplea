@@ -136,12 +136,30 @@ export const users = createTable(
   }
 );
 
-// Bookings table to track ticket purchases
+// New Customer table to handle both registered users and guests
+export const customers = createTable(
+  "Customer",
+  {
+    id: text("id").primaryKey(),
+    userId: text("userId").references(() => users.id), // Nullable - can be linked to a User or null for guests
+    name: text("name").notNull(),
+    email: text("email").notNull(),
+    phone: text("phone"),
+    createdAt: timestamp("createdAt", { withTimezone: false })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updatedAt", { withTimezone: false })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  }
+);
+
+// Bookings table to track ticket purchases - now linked to Customer instead of User
 export const bookings = createTable(
   "Booking",
   {
     id: text("id").primaryKey(),
-    userId: text("userId").references(() => users.id).notNull(),
+    customerId: text("customerId").references(() => customers.id).notNull(), // Reference Customer instead of User
     eventId: text("eventId").references(() => events.id).notNull(),
     totalAmount: doublePrecision("totalAmount").notNull(),
     paymentStatus: text("paymentStatus").notNull().default("PENDING"), // PENDING, COMPLETED, CANCELLED
@@ -154,7 +172,7 @@ export const bookings = createTable(
   }
 );
 
-// Tickets table to track individual tickets
+// Add ticket details table to store individual tickets in a booking
 export const tickets = createTable(
   "Ticket",
   {
@@ -195,7 +213,7 @@ export const eventTicketsRelations = relations(eventTickets, ({ one, many }) => 
 }));
 
 export const bookingsRelations = relations(bookings, ({ one, many }) => ({
-  user: one(users, { fields: [bookings.userId], references: [users.id] }),
+  customer: one(customers, { fields: [bookings.customerId], references: [customers.id] }),
   event: one(events, { fields: [bookings.eventId], references: [events.id] }),
   tickets: many(tickets),
 }));
