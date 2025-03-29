@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "~/server/db";
 import { eq } from "drizzle-orm";
 import { events } from "~/server/db/schema";
+import TicketSelection from './TicketSelection';
 
 export default async function EventDetailPage({
   params,
@@ -147,14 +148,11 @@ export default async function EventDetailPage({
             )}
           </div>
           
-          <div className="mt-6">
-            <Link
-              href={`/checkout?eventId=${event.id}&eventTitle=${encodeURIComponent(event.title)}`}
-              className="w-full py-3 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 focus:ring-4 focus:ring-red-300 inline-block text-center"
-            >
-              Buy Tickets
-            </Link>
-          </div>
+          <TicketSelection 
+            tickets={eventTickets || []} 
+            eventId={event.id} 
+            eventTitle={event.title} 
+          />
         </div>
       </div>
       
