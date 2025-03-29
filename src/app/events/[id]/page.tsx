@@ -16,6 +16,7 @@ export default async function EventDetailPage({
     with: {
       venue: true,
       region: true,
+      tickets: true,
     },
   });
 
@@ -23,7 +24,10 @@ export default async function EventDetailPage({
     return notFound();
   }
 
-  const formatDate = (date: Date) => {
+  const { tickets: eventTickets } = event;
+
+  const formatDate = (date: Date | null) => {
+    if (!date) return 'N/A';
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
@@ -31,68 +35,120 @@ export default async function EventDetailPage({
     });
   };
 
-  const formatTime = (time: Date) => {
+  const formatTime = (time: Date | null) => {
+    if (!time) return 'N/A';
     return new Date(time).toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit'
     });
   };
 
+  const getEventStatus = (eventDate: Date | null) => {
+    const now = new Date();
+    
+    if (!eventDate) {
+      return { label: "Unknown", className: "bg-gray-100 text-gray-800" };
+    }
+    
+    const eventDateTime = new Date(eventDate);
+    
+    if (eventDateTime > now) {
+      return { label: "Upcoming", className: "bg-yellow-100 text-yellow-800" };
+    } else {
+      return { label: "Completed", className: "bg-green-100 text-green-800" };
+    }
+  };
+
+  const status = getEventStatus(event.date);
+
   return (
     <main className="container mx-auto px-4 py-8">
       <div className="bg-white shadow-lg rounded-lg overflow-hidden">
-        <div className="bg-gradient-to-r from-red-600 to-red-800 p-6 text-white">
-          <h1 className="text-3xl font-bold">{event.title}</h1>
-          <div className="mt-2 flex flex-wrap gap-3">
-            <div className="flex items-center">
-              <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-              </svg>
+        <div className="p-6">
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">Event Details</h1>
+          
+          <div className="bg-gray-50 p-4 rounded-lg mb-6">
+            <h2 className="text-xl font-semibold mb-4">{event.title}</h2>
+            
+            <div className="flex items-center mb-2">
+              <span className="font-medium text-gray-700 w-24">Date:</span>
               <span>{formatDate(event.date)}</span>
             </div>
             
-            <div className="flex items-center">
-              <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-              <span>{formatTime(event.startTime)}</span>
+            <div className="flex items-center mb-2">
+              <span className="font-medium text-gray-700 w-24">Time:</span>
+              <span>{formatTime(event.startTime)} - {formatTime(event.endTime)}</span>
             </div>
             
-            {event.venue && (
-              <div className="flex items-center">
-                <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                </svg>
-                <Link href={`/venues/${event.venue.id}`} className="hover:underline">
+            <div className="flex items-center mb-2">
+              <span className="font-medium text-gray-700 w-24">Venue:</span>
+              {event.venue && (
+                <Link href={`/venues/${event.venue.id}`} className="text-blue-600 hover:underline">
                   {event.venue.name}
                 </Link>
-              </div>
-            )}
+              )}
+            </div>
             
-            {event.region && (
-              <div className="flex items-center">
-                <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                <span>{event.region.name}</span>
+            <div className="flex items-center mb-2">
+              <span className="font-medium text-gray-700 w-24">Region:</span>
+              <span>{event.region?.name}</span>
+            </div>
+            
+            <div className="flex items-center mb-4">
+              <span className="font-medium text-gray-700 w-24">Status:</span>
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${status.className}`}>
+                {status.label}
+              </span>
+            </div>
+            
+            {event.description && (
+              <div>
+                <span className="font-medium text-gray-700 block mb-2">Description:</span>
+                <p className="text-gray-600 whitespace-pre-line">{event.description}</p>
               </div>
             )}
           </div>
-        </div>
-        
-        <div className="p-6">
-          {event.description && (
-            <div className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-800 mb-2">About this event</h2>
-              <p className="text-gray-600">{event.description}</p>
-            </div>
-          )}
           
-          <div className="mt-8">
-            <button
-              className="w-full py-3 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 focus:ring-4 focus:ring-red-300"
-            >
+          <div className="bg-gray-50 p-4 rounded-lg mb-6">
+            <h3 className="text-lg font-semibold mb-4">Ticket Types</h3>
+            
+            {eventTickets && eventTickets.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Seat Type
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Price
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {eventTickets.map((ticket) => (
+                      <tr key={ticket.id}>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{ticket.seatType}</div>
+                          {ticket.description && (
+                            <div className="text-xs text-gray-500">{ticket.description}</div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{ticket.price} THB</div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-gray-500">No ticket information available.</p>
+            )}
+          </div>
+          
+          <div className="mt-6">
+            <button className="w-full py-3 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 focus:ring-4 focus:ring-red-300">
               Buy Tickets
             </button>
           </div>
