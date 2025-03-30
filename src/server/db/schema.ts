@@ -9,6 +9,7 @@ import {
   varchar,
   boolean,
   doublePrecision,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { type AdapterAccount } from "next-auth/adapters";
 
@@ -86,6 +87,8 @@ export const eventTickets = createTable(
     eventId: text("eventId").references(() => events.id).notNull(),
     seatType: text("seatType").notNull(), // e.g., "VIP", "Ringside", "General"
     price: doublePrecision("price").notNull(),
+    discountedPrice: doublePrecision("discountedPrice"),
+    cost: doublePrecision("cost"),
     capacity: integer("capacity").notNull(),
     description: text("description"),
     soldCount: integer("soldCount").default(0).notNull(),
@@ -154,21 +157,31 @@ export const customers = createTable(
   }
 );
 
-// Bookings table to track ticket purchases - now linked to Customer instead of User
+// Bookings table to track ticket purchases - now linked to Customer and includes snapshot data
 export const bookings = createTable(
   "Booking",
   {
     id: text("id").primaryKey(),
-    customerId: text("customerId").references(() => customers.id).notNull(), // Reference Customer instead of User
+    customerId: text("customerId").references(() => customers.id).notNull(),
     eventId: text("eventId").references(() => events.id).notNull(),
     totalAmount: doublePrecision("totalAmount").notNull(),
-    paymentStatus: text("paymentStatus").notNull().default("PENDING"), // PENDING, COMPLETED, CANCELLED
+    paymentStatus: text("paymentStatus").notNull().default("PENDING"),
     createdAt: timestamp("createdAt", { withTimezone: false })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
     updatedAt: timestamp("updatedAt", { withTimezone: false })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
+    
+    // Snapshot fields (nullable as they are populated by the API)
+    customerNameSnapshot: text("customerNameSnapshot"),
+    customerEmailSnapshot: text("customerEmailSnapshot"),
+    customerPhoneSnapshot: text("customerPhoneSnapshot"),
+    eventTitleSnapshot: text("eventTitleSnapshot"),
+    eventDateSnapshot: timestamp("eventDateSnapshot", { withTimezone: false }),
+    venueNameSnapshot: text("venueNameSnapshot"),
+    regionNameSnapshot: text("regionNameSnapshot"),
+    bookingItemsJson: jsonb("bookingItemsJson"), // Use jsonb type
   }
 );
 

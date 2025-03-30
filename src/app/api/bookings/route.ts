@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { db } from '~/server/db';
-import { bookings, customers } from '~/server/db/schema';
+import { bookings, customers, events, venues, regions, eventTickets } from '~/server/db/schema';
 import { nanoid } from 'nanoid';
+import { eq } from 'drizzle-orm';
 
 export async function POST(request: Request) {
   try {
@@ -35,21 +36,109 @@ export async function POST(request: Request) {
       name: fullName,
       email: email,
       phone: phone || null,
-      // Note: userId is not included, which makes it null (for guest customers)
     });
     
-    // Create a new booking record
+    // 1. Fetch Event details
+    const eventDetails = await db.query.events.findFirst({
+      where: eq(events.id, data.eventId),
+      columns: {
+        title: true,
+        date: true,
+        venueId: true,
+        regionId: true
+      }
+    });
+    
+    if (!eventDetails) {
+      return NextResponse.json(
+        { error: 'Event not found' },
+        { status: 404 }
+      );
+    }
+    
+    // 2. Fetch Venue name if venueId exists
+    let venueName = 'N/A';
+    if (eventDetails.venueId) {
+      const venueResult = await db.query.venues.findFirst({
+        where: eq(venues.id, eventDetails.venueId),
+        columns: { name: true }
+      });
+      venueName = venueResult?.name ?? 'N/A';
+    }
+    
+    // 3. Fetch Region name if regionId exists
+    let regionName = 'N/A';
+    if (eventDetails.regionId) {
+      const regionResult = await db.query.regions.findFirst({
+        where: eq(regions.id, eventDetails.regionId),
+        columns: { name: true }
+      });
+      regionName = regionResult?.name ?? 'N/A';
+    }
+    
+    // 4. Process ticket data and fetch EventTicket details
+    const bookingItems = [];
+    
+    if (!Array.isArray(data.tickets)) {
+      return NextResponse.json(
+        { error: 'Invalid tickets data format' },
+        { status: 400 }
+      );
+    }
+    
+    for (const ticket of data.tickets) {
+      if (!ticket.id || !ticket.quantity) continue;
+      
+      try {
+        // Fetch EventTicket details
+        const ticketDetails = await db.query.eventTickets.findFirst({
+          where: eq(eventTickets.id, ticket.id),
+          columns: {
+            seatType: true,
+            price: true,
+            discountedPrice: true,
+            cost: true
+          }
+        });
+        
+        if (!ticketDetails) {
+          console.warn(`EventTicket with ID ${ticket.id} not found`);
+          continue; // Skip this ticket
+        }
+        
+        // Add to booking items, handling potential nulls directly
+        bookingItems.push({
+          seatType: ticketDetails.seatType,
+          quantity: ticket.quantity,
+          pricePaid: ticketDetails.discountedPrice ?? ticketDetails.price, // Use discount or standard price
+          costAtBooking: ticketDetails.cost ?? null // Ensure cost is explicitly null if missing
+        });
+      } catch (error) {
+        console.error(`Error processing ticket ${ticket.id}:`, error);
+        // Consider how to handle this - maybe skip the ticket or fail the booking?
+      }
+    }
+    
+    // Ensure bookingItems are valid before inserting
+    const validBookingItems = bookingItems.length > 0 ? bookingItems : null;
+    
+    // Create a new booking record with snapshot data
     await db.insert(bookings).values({
       id: bookingId,
-      customerId: customerId, // Link to the customer we just created
+      customerId: customerId,
       eventId: data.eventId,
       totalAmount: data.totalCost,
       paymentStatus: 'PENDING',
+      // Snapshot fields - provide defaults for any potentially missing data
+      customerNameSnapshot: fullName,
+      customerEmailSnapshot: email,
+      customerPhoneSnapshot: phone || null,
+      eventTitleSnapshot: eventDetails.title ?? 'N/A', // Default title
+      eventDateSnapshot: eventDetails.date, // Assumes date is always present if event is found
+      venueNameSnapshot: venueName, // Already defaults to 'N/A'
+      regionNameSnapshot: regionName, // Already defaults to 'N/A'
+      bookingItemsJson: validBookingItems
     });
-    
-    // In a real app you would also:
-    // 1. Store the selected tickets in the tickets table
-    // 2. Process payment or redirect to payment gateway
     
     return NextResponse.json({ 
       success: true, 
