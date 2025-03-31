@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect, useMemo, FormEvent } from "react";
+import { useState, useEffect, useMemo } from "react";
+import type { FormEvent } from "react";
 
-// Removed database imports (db, ticketsSchema, inArray, eq)
-// Removed CheckoutClientUI import
-// Removed SelectedTicketInfo type
+interface BookingResponse {
+  bookingId: string;
+  error?: string;
+}
 
-// CLIENT COMPONENT (Default Export)
 export default function CheckoutPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -18,7 +19,7 @@ export default function CheckoutPage() {
   const eventTitle = searchParams.get('eventTitle');
   const fighterName = searchParams.get('fighterName');
   const fighterId = searchParams.get('fighterId');
-  const ticketsParam = searchParams.get('tickets') || '';
+  const ticketsParam = searchParams.get('tickets') ?? '';
 
   // Contact information state
   const [contactInfo, setContactInfo] = useState({
@@ -52,31 +53,27 @@ export default function CheckoutPage() {
       
       for (const pair of ticketPairs) {
         const [id = '', qtyStr = '0'] = pair.split(':');
-        const quantity = parseInt(qtyStr || '0', 10);
+        const quantity = parseInt(qtyStr, 10);
         
         if (id && !isNaN(quantity) && quantity > 0) {
-          // Determine ticket type and price based on the ticket ID
-          // Since we don't have database access, we'll detect based on IDs in URL
           let ticketType = "";
           let price = 0;
           
-          // Check ID to determine if this is regular VIP or VIPS
           if (id.includes('85e-4e5c') || id.toLowerCase().includes('vips')) {
             ticketType = "VIPS";
-            price = 3000; // Exactly ฿3,000 per VIPS ticket
+            price = 3000;
           } else {
             ticketType = "Vip";
-            price = 2000; // Exactly ฿2,000 per Vip ticket
+            price = 2000;
           }
           
           details.push({
             id,
             type: ticketType,
-            price: price,
+            price,
             quantity
           });
           
-          // Add to total quantity count
           total += quantity;
         }
       }
@@ -101,14 +98,13 @@ export default function CheckoutPage() {
     return null;
   }
 
-  // Calculate total cost - ensure each ticket type is multiplied by its own price
+  // Calculate total cost
   const totalCost = ticketInfo.ticketDetails.reduce((sum, ticket) => {
     const itemTotal = ticket.price * ticket.quantity;
-    console.log(`${ticket.type}: ${ticket.quantity} × ${ticket.price} = ${itemTotal}`); // Debug log
+    console.log(`${ticket.type}: ${ticket.quantity} × ${ticket.price} = ${itemTotal}`);
     return sum + itemTotal;
   }, 0);
 
-  // Format currency with proper type annotation
   const formatCurrency = (amount: number): string => {
     return `฿${amount.toLocaleString()}`;
   };
@@ -131,7 +127,6 @@ export default function CheckoutPage() {
     setIsSubmitting(true);
     
     try {
-      // Save booking information to database
       const response = await fetch('/api/bookings', {
         method: 'POST',
         headers: {
@@ -147,18 +142,15 @@ export default function CheckoutPage() {
         }),
       });
       
-      const data = await response.json();
+      const data = (await response.json()) as BookingResponse;
       
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create booking');
+        throw new Error(data.error ?? 'Failed to create booking');
       }
       
-      // Redirect to confirmation page or payment gateway
       if (paymentMethod === 'paypal') {
-        // Redirect to PayPal checkout
         router.push(`/checkout/paypal?bookingId=${data.bookingId}`);
       } else {
-        // Redirect to credit card payment
         router.push(`/checkout/credit-card?bookingId=${data.bookingId}`);
       }
     } catch (error) {
@@ -217,7 +209,9 @@ export default function CheckoutPage() {
                 )}
                 <div>
                   <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Full Name <span className="text-red-500">*</span></label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Full Name <span className="text-red-500">*</span>
+                    </label>
                     <input 
                       type="text" 
                       name="fullName"
@@ -230,7 +224,9 @@ export default function CheckoutPage() {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Email <span className="text-red-500">*</span></label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Email <span className="text-red-500">*</span>
+                      </label>
                       <input 
                         type="email" 
                         name="email"
@@ -316,4 +312,4 @@ export default function CheckoutPage() {
       </div>
     </main>
   );
-} 
+}
