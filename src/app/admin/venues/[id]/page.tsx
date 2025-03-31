@@ -182,7 +182,7 @@ export default async function VenueDetailPage({
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {venue.events?.length > 0 ? (
+                    {venue.events && venue.events.length > 0 ? (
                       venue.events.map((event) => (
                         <tr key={event.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap">
