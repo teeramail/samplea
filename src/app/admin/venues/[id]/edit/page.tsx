@@ -33,6 +33,11 @@ type Region = {
     name: string;
 };
 
+// Define type for the upload API response
+type UploadResponse = {
+  urls: string[];
+};
+
 // --- Actual upload function (copy from create page or import) ---
 async function uploadFile(file: File, entityType: string): Promise<string | null> {
   const formData = new FormData();
@@ -48,11 +53,13 @@ async function uploadFile(file: File, entityType: string): Promise<string | null
       console.error("Upload failed:", response.status, await response.text());
       return null;
     }
-    const result = await response.json();
+    // Use type assertion here
+    const result = await response.json() as UploadResponse;
+    // Check result.urls and return first, or null
     if (result.urls && Array.isArray(result.urls) && result.urls.length > 0) {
-      return result.urls[0]; 
+      return result.urls[0] ?? null; // Use ?? to handle potential undefined
     } else {
-      console.error("Upload API response error:", result);
+      console.error("Upload API response error or no URLs:", result);
       return null;
     }
   } catch (error) {
@@ -198,8 +205,8 @@ export default function EditVenuePage() {
     setIsLoading(true);
     setError("");
     
-    let finalThumbnailUrl = currentThumbnailUrl; // Start with existing URL
-    let finalImageUrls = currentImageUrls; // Start with existing URLs
+    let finalThumbnailUrl = currentThumbnailUrl; // Assume current URL initially
+    let finalImageUrls = currentImageUrls; // Assume current URLs initially
 
     try {
       // 1. Upload NEW Thumbnail (if selected)
@@ -222,7 +229,8 @@ export default function EditVenuePage() {
            const failedIndices = results.map((url, index) => url === null ? index + 1 : -1).filter(i => i !== -1);
            throw new Error(`Failed to upload new venue image(s): #${failedIndices.join(', ')}.`);
         }
-        finalImageUrls = results.filter(url => url !== null) as string[]; // Use the new URLs
+        // Remove unnecessary assertion - filter already narrows type
+        finalImageUrls = results.filter(url => url !== null); // Use the new URLs
       }
 
       // 3. Prepare final data for venue update API
