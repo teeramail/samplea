@@ -10,6 +10,7 @@ import {
   boolean,
   doublePrecision,
   jsonb,
+  time,
 } from "drizzle-orm/pg-core";
 import { type AdapterAccount } from "next-auth/adapters";
 
@@ -70,6 +71,7 @@ export const events = createTable(
     usesDefaultPoster: boolean("usesDefaultPoster").default(true).notNull(),
     venueId: text("venueId").references(() => venues.id),
     regionId: text("regionId").references(() => regions.id),
+    status: text("status").default('SCHEDULED').notNull(),
     createdAt: timestamp("createdAt", { withTimezone: false })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
@@ -203,14 +205,59 @@ export const tickets = createTable(
   }
 );
 
+// NEW Event Template table
+export const eventTemplates = createTable(
+  "EventTemplate",
+  {
+    id: text("id").primaryKey(),
+    templateName: text("templateName").notNull(),
+    venueId: text("venueId").references(() => venues.id).notNull(),
+    regionId: text("regionId").references(() => regions.id).notNull(),
+    defaultTitleFormat: text("defaultTitleFormat").notNull(),
+    defaultDescription: text("defaultDescription"),
+    recurringDaysOfWeek: integer("recurringDaysOfWeek").array().notNull(),
+    defaultStartTime: time("defaultStartTime").notNull(),
+    defaultEndTime: time("defaultEndTime"),
+    isActive: boolean("isActive").default(true).notNull(),
+    createdAt: timestamp("createdAt", { withTimezone: false })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updatedAt", { withTimezone: false })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  }
+);
+
+// NEW Event Template Ticket table
+export const eventTemplateTickets = createTable(
+  "EventTemplateTicket",
+  {
+    id: text("id").primaryKey(),
+    eventTemplateId: text("eventTemplateId").references(() => eventTemplates.id, { onDelete: 'cascade' }).notNull(),
+    seatType: text("seatType").notNull(),
+    defaultPrice: doublePrecision("defaultPrice").notNull(),
+    defaultCapacity: integer("defaultCapacity").notNull(),
+    defaultDescription: text("defaultDescription"),
+    createdAt: timestamp("createdAt", { withTimezone: false })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updatedAt", { withTimezone: false })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  }
+);
+
 // Define relationships
-export const regionsRelations = relations(regions, ({ many }) => ({
+export const regionsRelations = relations(regions, ({ one, many }) => ({
   venues: many(venues),
+  events: many(events),
+  eventTemplates: many(eventTemplates),
 }));
 
 export const venuesRelations = relations(venues, ({ one, many }) => ({
   events: many(events),
   region: one(regions, { fields: [venues.regionId], references: [regions.id] }),
+  eventTemplates: many(eventTemplates),
 }));
 
 export const eventsRelations = relations(events, ({ one, many }) => ({
@@ -235,6 +282,27 @@ export const ticketsRelations = relations(tickets, ({ one }) => ({
   event: one(events, { fields: [tickets.eventId], references: [events.id] }),
   eventDetail: one(eventTickets, { fields: [tickets.eventDetailId], references: [eventTickets.id] }),
   booking: one(bookings, { fields: [tickets.bookingId], references: [bookings.id] }),
+}));
+
+// NEW relations for EventTemplate
+export const eventTemplatesRelations = relations(eventTemplates, ({ one, many }) => ({
+  venue: one(venues, {
+    fields: [eventTemplates.venueId],
+    references: [venues.id],
+  }),
+  region: one(regions, {
+    fields: [eventTemplates.regionId],
+    references: [regions.id],
+  }),
+  templateTickets: many(eventTemplateTickets),
+}));
+
+// NEW relations for EventTemplateTicket
+export const eventTemplateTicketsRelations = relations(eventTemplateTickets, ({ one }) => ({
+  eventTemplate: one(eventTemplates, {
+    fields: [eventTemplateTickets.eventTemplateId],
+    references: [eventTemplates.id],
+  }),
 }));
 
 // Keep the existing NextAuth tables

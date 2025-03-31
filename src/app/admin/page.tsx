@@ -200,6 +200,23 @@ export default async function AdminDashboardPage() {
                 <p className="text-sm text-gray-500">Add a new fighter profile</p>
               </div>
             </Link>
+
+            <Link 
+              href="/admin/event-templates/create" 
+              className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
+            >
+              <div className="bg-green-100 p-3 rounded-full mr-4">
+                <svg className="w-6 h-6 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h7"></path> 
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 18h.01M18 18h.01M21 18h.01"></path>
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-medium text-gray-800">Create Event Template</h3>
+                <p className="text-sm text-gray-500">Define a recurring event schedule</p>
+              </div>
+            </Link>
+
           </div>
         </div>
         
