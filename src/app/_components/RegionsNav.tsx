@@ -7,6 +7,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 type Region = {
   id: string;
   name: string;
+  slug?: string;
 };
 
 export function RegionsNav() {
@@ -15,6 +16,11 @@ export function RegionsNav() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentRegionId = searchParams.get('region');
+  
+  // Extract current region slug from pathname if we're on a region page
+  const currentPathSegments = pathname.split('/').filter(Boolean);
+  const isRegionPage = currentPathSegments[0] === 'region';
+  const currentRegionSlug = isRegionPage ? currentPathSegments[1] : null;
 
   useEffect(() => {
     const fetchRegions = async () => {
@@ -33,11 +39,12 @@ export function RegionsNav() {
     void fetchRegions();
   }, []);
 
-  // Only show on events or homepage
-  if (!pathname.startsWith('/events') && pathname !== '/') {
+  // Only show on events, homepage, or region pages
+  if (!pathname.startsWith('/events') && pathname !== '/' && !pathname.startsWith('/region')) {
     return null;
   }
 
+  // For fallback to query params in case some regions don't have slugs yet
   const createQueryString = (regionId: string) => {
     const params = new URLSearchParams(searchParams);
     params.set('region', regionId);
@@ -52,9 +59,9 @@ export function RegionsNav() {
             <li className="text-gray-500 font-medium py-1 px-1">Regions:</li>
             <li>
               <Link 
-                href={pathname}
+                href="/"
                 className={`px-3 py-1 rounded-full inline-block text-sm transition-colors 
-                ${!currentRegionId 
+                ${(!currentRegionId && !currentRegionSlug) 
                   ? 'bg-purple-100 text-purple-800 font-medium' 
                   : 'text-gray-700 hover:bg-gray-200'}`}
               >
@@ -64,19 +71,28 @@ export function RegionsNav() {
             {isLoading ? (
               <li className="text-gray-500 italic">Loading...</li>
             ) : (
-              regions.map(region => (
-                <li key={region.id}>
-                  <Link
-                    href={`${pathname}?${createQueryString(region.id)}`}
-                    className={`px-3 py-1 rounded-full inline-block text-sm transition-colors
-                    ${currentRegionId === region.id 
-                      ? 'bg-purple-100 text-purple-800 font-medium' 
-                      : 'text-gray-700 hover:bg-gray-200'}`}
-                  >
-                    {region.name}
-                  </Link>
-                </li>
-              ))
+              regions.map(region => {
+                // For each region, determine if we should use slug or query param
+                const hasSlug = !!region.slug;
+                const isActive = currentRegionSlug === region.slug || currentRegionId === region.id;
+                const href = hasSlug 
+                  ? `/region/${region.slug}` 
+                  : `/?${createQueryString(region.id)}`;
+                
+                return (
+                  <li key={region.id}>
+                    <Link
+                      href={href}
+                      className={`px-3 py-1 rounded-full inline-block text-sm transition-colors
+                      ${isActive 
+                        ? 'bg-purple-100 text-purple-800 font-medium' 
+                        : 'text-gray-700 hover:bg-gray-200'}`}
+                    >
+                      {region.name}
+                    </Link>
+                  </li>
+                );
+              })
             )}
           </ul>
         </div>

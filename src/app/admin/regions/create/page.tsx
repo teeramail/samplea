@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -14,8 +14,18 @@ const MAX_IMAGES = 5;
 
 const regionSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long"),
+  slug: z.string().min(2, "Slug must be at least 2 characters long"),
   description: z.string().optional(),
 });
+
+// Function to convert a name to a URL-friendly slug
+const nameToSlug = (name: string) => {
+  return name
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, '') // Remove special characters
+    .replace(/\s+/g, '-')     // Replace spaces with hyphens
+    .trim();
+};
 
 type RegionFormData = z.infer<typeof regionSchema>;
 
@@ -58,17 +68,28 @@ export default function CreateRegionPage() {
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<RegionFormData>({
     resolver: zodResolver(regionSchema),
     defaultValues: {
       name: "",
+      slug: "",
       description: "",
     },
   });
 
+  // Auto-generate slug from name when name changes
+  const name = watch("name");
+  useEffect(() => {
+    if (name) {
+      setValue("slug", nameToSlug(name), { shouldValidate: true });
+    }
+  }, [name, setValue]);
+
   const setPresetRegion = (regionName: string) => {
     setValue("name", regionName, { shouldValidate: true });
+    setValue("slug", nameToSlug(regionName), { shouldValidate: true });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -268,6 +289,20 @@ export default function CreateRegionPage() {
           {errors.name && (
             <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
           )}
+        </div>
+        
+        <div>
+          <label htmlFor="slug" className="block text-sm font-medium text-gray-700">
+            URL Slug (used in website URLs)
+          </label>
+          <input
+            id="slug"
+            type="text"
+            {...register("slug")}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          />
+          {errors.slug && <p className="mt-1 text-sm text-red-600">{errors.slug.message}</p>}
+          <p className="mt-1 text-sm text-gray-500">This will be used in URLs like: /region/your-slug</p>
         </div>
         
         <div>

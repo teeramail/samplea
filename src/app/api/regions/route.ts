@@ -5,9 +5,19 @@ import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 import { eq } from "drizzle-orm";
 
+// Helper function to generate a URL-friendly slug from a name
+const generateSlug = (name: string): string => {
+  return name
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, '') // Remove special characters
+    .replace(/\s+/g, '-')     // Replace spaces with hyphens
+    .trim();
+};
+
 // Match the actual database structure with imageUrls and primaryImageIndex
 const regionSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long"),
+  slug: z.string().min(2, "Slug must be at least 2 characters long").optional(),
   description: z.string().optional(),
   imageUrls: z.array(z.string().url()).optional(),
   primaryImageIndex: z.number().int().min(0).optional(),
@@ -35,6 +45,7 @@ export async function POST(req: NextRequest) {
   try {
     let body: {
       name: string;
+      slug?: string;
       description?: string;
       imageUrls?: string[];
       primaryImageIndex?: number;
@@ -65,19 +76,24 @@ export async function POST(req: NextRequest) {
     const data = validation.data;
     const regionId = uuidv4();
     
+    // Generate slug if not provided
+    const slug = data.slug || generateSlug(data.name);
+    
     console.log("Creating region with data:", {
       id: regionId,
       name: data.name,
+      slug,
       description: data.description,
       imageUrls: data.imageUrls,
       primaryImageIndex: data.primaryImageIndex,
     });
     
     try {
-      // Insert region with all fields
+      // Insert region with all fields including slug
       await db.insert(regions).values({
         id: regionId,
         name: data.name,
+        slug,
         description: data.description ?? null,
         imageUrls: data.imageUrls ?? [],
         primaryImageIndex: data.primaryImageIndex ?? 0,

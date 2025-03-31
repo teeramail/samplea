@@ -28,6 +28,7 @@ export const regions = createTable(
   {
     id: text("id").primaryKey(),
     name: text("name").notNull(),
+    slug: text("slug").notNull().unique(),
     description: text("description"),
     imageUrls: text("imageUrls").array(), // Array of image URLs
     primaryImageIndex: integer("primaryImageIndex").default(0), // Index of primary image in the array
