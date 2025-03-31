@@ -22,6 +22,11 @@ type FetchedRegionData = RegionFormData & {
   primaryImageIndex?: number | null;
 };
 
+// Define type for the upload API response
+type UploadResponse = {
+  urls: string[];
+};
+
 async function uploadFile(file: File, entityType: string): Promise<string | null> {
   const formData = new FormData();
   formData.append("image", file);
@@ -36,11 +41,13 @@ async function uploadFile(file: File, entityType: string): Promise<string | null
       console.error("Upload failed:", response.status, await response.text());
       return null;
     }
-    const result = await response.json();
+    // Use type assertion here
+    const result = await response.json() as UploadResponse;
+    // Check result.urls and return first, or null
     if (result.urls && Array.isArray(result.urls) && result.urls.length > 0) {
-      return result.urls[0];
+      return result.urls[0] ?? null; // Use ?? to handle potential undefined
     } else {
-      console.error("Upload API response error:", result);
+      console.error("Upload API response error or no URLs:", result);
       return null;
     }
   } catch (error) {
@@ -154,7 +161,8 @@ export default function EditRegionPage() {
            const failedIndices = results.map((url, index) => url === null ? index + 1 : -1).filter(i => i !== -1);
            throw new Error(`Failed to upload new region image(s): #${failedIndices.join(', ')}.`);
         }
-        finalImageUrls = results.filter(url => url !== null) as string[];
+        // Remove unnecessary assertion - filter already narrows type
+        finalImageUrls = results.filter(url => url !== null);
       }
       
       const finalPrimaryIndex = 
