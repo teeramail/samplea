@@ -47,12 +47,16 @@ export const venues = createTable(
     id: text("id").primaryKey(),
     name: text("name").notNull(),
     address: text("address").notNull(),
-    capacity: integer("capacity"), // Remove .notNull() to allow null values
-    regionId: text("regionId").references(() => regions.id).notNull(), // Make this NOT NULL
-    createdAt: timestamp("createdAt", { withTimezone: false }) // Remove timezone
+    capacity: integer("capacity"),
+    regionId: text("regionId").references(() => regions.id).notNull(),
+    latitude: doublePrecision("latitude"),
+    longitude: doublePrecision("longitude"),
+    thumbnailUrl: text("thumbnailUrl"),
+    imageUrls: text("imageUrls").array(),
+    createdAt: timestamp("createdAt", { withTimezone: false })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
-    updatedAt: timestamp("updatedAt", { withTimezone: false }) // Remove timezone
+    updatedAt: timestamp("updatedAt", { withTimezone: false })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
   }
@@ -68,6 +72,8 @@ export const events = createTable(
     startTime: timestamp("startTime", { withTimezone: false }).notNull(),
     endTime: timestamp("endTime", { withTimezone: false }),
     imageUrl: text("imageUrl"),
+    thumbnailUrl: text("thumbnailUrl"),
+    imageUrls: text("imageUrls").array(),
     usesDefaultPoster: boolean("usesDefaultPoster").default(true).notNull(),
     venueId: text("venueId").references(() => venues.id),
     regionId: text("regionId").references(() => regions.id),
@@ -248,7 +254,7 @@ export const eventTemplateTickets = createTable(
 );
 
 // Define relationships
-export const regionsRelations = relations(regions, ({ one, many }) => ({
+export const regionsRelations = relations(regions, ({ one: _one, many }) => ({
   venues: many(venues),
   events: many(events),
   eventTemplates: many(eventTemplates),

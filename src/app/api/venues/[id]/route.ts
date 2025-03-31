@@ -12,35 +12,50 @@ const updateVenueSchema = z.object({
   regionId: z.string().min(1, "Region ID is required").optional(),
 });
 
+// Schema for venue update (similar to create, but all fields potentially optional for PATCH, required for PUT)
+// For PUT, we usually expect the full resource representation
+const venueUpdateSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  address: z.string().min(5, "Address must be at least 5 characters"),
+  capacity: z.number().int().min(0).nullable().optional(),
+  regionId: z.string().min(1, "Region ID is required"),
+  latitude: z.number().nullable().optional(),
+  longitude: z.number().nullable().optional(),
+  thumbnailUrl: z.string().url().nullable().optional(),
+  imageUrls: z.array(z.string().url()).nullable().optional(),
+});
+
+interface Params {
+  id: string;
+}
+
 export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  request: Request,
+  { params }: { params: Promise<Params> }
 ) {
   try {
-    const { id } = await params;
-    
-    // Get venue by ID
+    const resolvedParams = await params;
+    const venueId = resolvedParams.id;
+
+    if (!venueId) {
+      return NextResponse.json({ error: "Venue ID is required" }, { status: 400 });
+    }
+
     const venue = await db.query.venues.findFirst({
-      where: eq(venues.id, id),
+      where: eq(venues.id, venueId),
       with: {
-        region: true,
-        events: {
-          orderBy: (events, { desc }) => [desc(events.date)],
-          limit: 5,
-        },
+        region: true, // Include region data if needed for display
       },
     });
-    
+
     if (!venue) {
-      return NextResponse.json(
-        { error: "Venue not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Venue not found" }, { status: 404 });
     }
-    
+
     return NextResponse.json(venue);
   } catch (error) {
-    console.error("Error fetching venue:", error);
+    const venueIdForError = (await params)?.id || 'unknown';
+    console.error(`Error fetching venue ${venueIdForError}:`, error);
     return NextResponse.json(
       { error: "Failed to fetch venue" },
       { status: 500 }
@@ -154,6 +169,75 @@ export async function DELETE(
     console.error("Error deleting venue:", error);
     return NextResponse.json(
       { error: "Failed to delete venue" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<Params> }
+) {
+  try {
+    const resolvedParams = await params;
+    const venueId = resolvedParams.id;
+
+    if (!venueId) {
+      return NextResponse.json({ error: "Venue ID is required" }, { status: 400 });
+    }
+
+    const body = await request.json();
+    const validation = venueUpdateSchema.safeParse(body);
+
+    if (!validation.success) {
+      console.error("Venue update validation failed:", validation.error.errors);
+      return NextResponse.json({
+        error: "Invalid venue data",
+        details: validation.error.errors,
+      }, { status: 400 });
+    }
+
+    const data = validation.data;
+
+    // Check if venue exists before attempting update
+    const existingVenue = await db.query.venues.findFirst({
+      where: eq(venues.id, venueId),
+    });
+
+    if (!existingVenue) {
+      return NextResponse.json({ error: "Venue not found" }, { status: 404 });
+    }
+
+    // Update the venue
+    await db.update(venues)
+      .set({
+        name: data.name,
+        address: data.address,
+        capacity: data.capacity,
+        regionId: data.regionId,
+        latitude: data.latitude,
+        longitude: data.longitude,
+        thumbnailUrl: data.thumbnailUrl,
+        imageUrls: data.imageUrls,
+        updatedAt: new Date(), // Update the timestamp
+      })
+      .where(eq(venues.id, venueId));
+
+    // Fetch the updated venue to return it
+    const updatedVenue = await db.query.venues.findFirst({
+        where: eq(venues.id, venueId),
+        with: {
+            region: true,
+        },
+    });
+
+    return NextResponse.json(updatedVenue);
+
+  } catch (error) {
+    const venueIdForError = (await params)?.id || 'unknown';
+    console.error(`Error updating venue ${venueIdForError}:`, error);
+    return NextResponse.json(
+      { error: "Failed to update venue" },
       { status: 500 }
     );
   }

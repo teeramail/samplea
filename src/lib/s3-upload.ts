@@ -5,11 +5,11 @@ import { v4 as uuidv4 } from "uuid";
 
 // Initialize the S3 client
 const s3Client = new S3Client({
-  region: env.AWS_REGION || "sgp1",
-  endpoint: env.AWS_ENDPOINT || "https://sgp1.digitaloceanspaces.com",
+  region: env.AWS_REGION ?? "sgp1",
+  endpoint: env.AWS_ENDPOINT ?? "https://sgp1.digitaloceanspaces.com",
   credentials: {
-    accessKeyId: env.AWS_ACCESS_KEY_ID || "",
-    secretAccessKey: env.AWS_SECRET_ACCESS_KEY || "",
+    accessKeyId: env.AWS_ACCESS_KEY_ID ?? "",
+    secretAccessKey: env.AWS_SECRET_ACCESS_KEY ?? "",
   },
 });
 
@@ -71,9 +71,15 @@ export async function uploadImages(
       };
     }
     
-    const folderPath = entityId 
+    // Prepend the main directory
+    const baseDirectory = "thaiboxinghub"; 
+    
+    // Construct folder path under the base directory
+    const entitySpecificPath = entityId 
       ? `${entityType}/${entityId}`
       : `${entityType}/${uuidv4()}`;
+      
+    const folderPath = `${baseDirectory}/${entitySpecificPath}`;
     
     // Process and upload each file
     const uploadPromises = imageFiles.map(async (file, index) => {
@@ -98,7 +104,7 @@ export async function uploadImages(
         // Upload to S3
         await s3Client.send(
           new PutObjectCommand({
-            Bucket: env.AWS_S3_BUCKET || "",
+            Bucket: env.AWS_S3_BUCKET ?? "",
             Key: fileName,
             Body: processedBuffer,
             ContentType: file.type,
@@ -144,7 +150,7 @@ export async function deleteImage(url: string): Promise<boolean> {
     // Use DeleteObjectCommand instead of PutObjectCommand with private ACL
     await s3Client.send(
       new DeleteObjectCommand({
-        Bucket: env.AWS_S3_BUCKET || "",
+        Bucket: env.AWS_S3_BUCKET ?? "",
         Key: key,
       })
     );

@@ -2,21 +2,49 @@ import { NextResponse } from 'next/server';
 import { db } from '~/server/db';
 import { bookings, customers, events, venues, regions, eventTickets } from '~/server/db/schema';
 import { nanoid } from 'nanoid';
-import { eq } from 'drizzle-orm';
+import { eq, type SQLWrapper } from 'drizzle-orm';
+
+// Define types for the request body
+interface ContactInfo {
+  fullName: string;
+  email: string;
+  phone?: string | null; // Optional phone
+}
+
+interface BookingTicketInput {
+  id: string; // ID of the EventTicket
+  quantity: number;
+}
+
+interface BookingRequestData {
+  eventId: string;
+  contactInfo: ContactInfo;
+  tickets: BookingTicketInput[];
+  totalCost: number;
+}
+
+// Define type for the items stored in bookingItemsJson
+interface BookingItemSnapshot {
+  seatType: string;
+  quantity: number;
+  pricePaid: number | null; // Handle potential null from schema
+  costAtBooking: number | null; // Handle potential null from schema
+}
 
 export async function POST(request: Request) {
   try {
-    const data = await request.json();
+    // Use type assertion for the request data
+    const data = await request.json() as BookingRequestData;
     
-    // Validate required fields
-    if (!data.eventId || !data.contactInfo || !data.tickets || !data.totalCost) {
+    // Validate required fields (already typed)
+    if (!data.eventId || !data.contactInfo || !data.tickets || data.totalCost === undefined) { // Check totalCost for undefined explicitly if needed
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       );
     }
     
-    // Extract contact info
+    // Extract contact info (already typed)
     const { fullName, email, phone } = data.contactInfo;
     
     if (!fullName || !email) {
@@ -35,10 +63,10 @@ export async function POST(request: Request) {
       id: customerId,
       name: fullName,
       email: email,
-      phone: phone || null,
+      phone: phone ?? null, // Use nullish coalescing
     });
     
-    // 1. Fetch Event details
+    // 1. Fetch Event details (eq should be safe now)
     const eventDetails = await db.query.events.findFirst({
       where: eq(events.id, data.eventId),
       columns: {
@@ -56,7 +84,7 @@ export async function POST(request: Request) {
       );
     }
     
-    // 2. Fetch Venue name if venueId exists
+    // 2. Fetch Venue name if venueId exists (Should be safe)
     let venueName = 'N/A';
     if (eventDetails.venueId) {
       const venueResult = await db.query.venues.findFirst({
@@ -66,7 +94,7 @@ export async function POST(request: Request) {
       venueName = venueResult?.name ?? 'N/A';
     }
     
-    // 3. Fetch Region name if regionId exists
+    // 3. Fetch Region name if regionId exists (Should be safe)
     let regionName = 'N/A';
     if (eventDetails.regionId) {
       const regionResult = await db.query.regions.findFirst({
@@ -77,8 +105,9 @@ export async function POST(request: Request) {
     }
     
     // 4. Process ticket data and fetch EventTicket details
-    const bookingItems = [];
+    const bookingItems: BookingItemSnapshot[] = []; // Type the array
     
+    // Check if data.tickets is an array (already typed)
     if (!Array.isArray(data.tickets)) {
       return NextResponse.json(
         { error: 'Invalid tickets data format' },
@@ -86,11 +115,12 @@ export async function POST(request: Request) {
       );
     }
     
+    // Type the ticket variable in the loop
     for (const ticket of data.tickets) {
       if (!ticket.id || !ticket.quantity) continue;
       
       try {
-        // Fetch EventTicket details
+        // Fetch EventTicket details (eq should be safe now)
         const ticketDetails = await db.query.eventTickets.findFirst({
           where: eq(eventTickets.id, ticket.id),
           columns: {
@@ -106,7 +136,7 @@ export async function POST(request: Request) {
           continue; // Skip this ticket
         }
         
-        // Add to booking items, handling potential nulls directly
+        // Add to booking items (already typed)
         bookingItems.push({
           seatType: ticketDetails.seatType,
           quantity: ticket.quantity,
@@ -122,7 +152,7 @@ export async function POST(request: Request) {
     // Ensure bookingItems are valid before inserting
     const validBookingItems = bookingItems.length > 0 ? bookingItems : null;
     
-    // Create a new booking record with snapshot data
+    // Create a new booking record with snapshot data (values should be safe now)
     await db.insert(bookings).values({
       id: bookingId,
       customerId: customerId,
@@ -132,12 +162,12 @@ export async function POST(request: Request) {
       // Snapshot fields - provide defaults for any potentially missing data
       customerNameSnapshot: fullName,
       customerEmailSnapshot: email,
-      customerPhoneSnapshot: phone || null,
+      customerPhoneSnapshot: phone ?? null, // Use nullish coalescing
       eventTitleSnapshot: eventDetails.title ?? 'N/A', // Default title
       eventDateSnapshot: eventDetails.date, // Assumes date is always present if event is found
       venueNameSnapshot: venueName, // Already defaults to 'N/A'
       regionNameSnapshot: regionName, // Already defaults to 'N/A'
-      bookingItemsJson: validBookingItems
+      bookingItemsJson: validBookingItems // Type should match the column type
     });
     
     return NextResponse.json({ 

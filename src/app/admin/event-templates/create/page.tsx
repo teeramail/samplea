@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useForm, SubmitHandler, useFieldArray, useWatch } from 'react-hook-form';
+import { useForm, type SubmitHandler, useFieldArray } from 'react-hook-form';
 import { DevTool } from "@hookform/devtools";
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -84,10 +84,10 @@ export default function CreateEventTemplatePage() {
         if (!venueRes.ok || !regionRes.ok) {
           throw new Error('Failed to fetch venues or regions');
         }
-        const venueData = await venueRes.json();
-        const regionData = await regionRes.json();
-        setAllVenues(venueData || []);
-        setRegions(regionData || []);
+        const venueData = await venueRes.json() as Venue[];
+        const regionData = await regionRes.json() as Region[];
+        setAllVenues(venueData ?? []);
+        setRegions(regionData ?? []);
       } catch (error) {
         console.error("Failed to load data:", error);
         // Handle error display
@@ -134,7 +134,10 @@ export default function CreateEventTemplatePage() {
       console.log("Response data:", responseData);
 
       if (!response.ok) {
-        throw new Error(responseData.error || 'Failed to create template'); 
+        const errorMessage = typeof responseData === 'object' && responseData !== null && 'error' in responseData 
+                            ? responseData.error as string 
+                            : 'Failed to create template';
+        throw new Error(errorMessage); 
       }
 
       router.push('/admin/event-templates');

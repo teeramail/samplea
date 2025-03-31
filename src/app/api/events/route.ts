@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "~/server/db";
-import { events, eventTickets } from "~/server/db/schema";
+import { events, eventTickets, venues, regions } from "~/server/db/schema";
+import type { InferSelectModel } from 'drizzle-orm';
 
 // Define schema for ticket type
 const ticketTypeSchema = z.object({
@@ -18,60 +19,39 @@ const eventSchema = z.object({
   description: z.string().min(5, "Description must be at least 5 characters long"),
   date: z.string().datetime(),
   startTime: z.string().datetime(),
-  endTime: z.string().datetime(),
-  imageUrl: z.string().optional(),
+  endTime: z.string().datetime().nullable().optional(),
+  thumbnailUrl: z.string().url().nullable().optional(),
+  imageUrls: z.array(z.string().url()).nullable().optional(),
   venueId: z.string().min(1, "Please select a venue"),
   regionId: z.string().min(1, "Please select a region"),
   ticketTypes: z.array(ticketTypeSchema).min(1, "At least one ticket type is required"),
 });
+
+// Define type for the events table (or rely on Drizzle's inference)
+type EventSchema = typeof events.$inferSelect;
 
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
     const regionId = url.searchParams.get("region");
     
-    let query = db.query.events.findMany({
-      where: (events, { gt, and, or, lte }) => {
-        const now = new Date();
-        const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
-        
-        return or(
-          gt(events.date, now),
-          and(
-            gt(events.startTime, fifteenMinutesAgo),
-            lte(events.startTime, now)
-          )
-        );
-      },
-      with: {
-        venue: true,
-        region: true,
-      },
-      orderBy: (events, { asc }) => [asc(events.date)],
-    });
-    
+    let query;
     if (regionId) {
       query = db.query.events.findMany({
-        where: (events, { gt, and, or, lte, eq: equals }) => {
-          const now = new Date();
-          const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
-          
-          return and(
-            equals(events.regionId, regionId),
-            or(
-              gt(events.date, now),
-              and(
-                gt(events.startTime, fifteenMinutesAgo),
-                lte(events.startTime, now)
-              )
-            )
-          );
-        },
+        where: (eventsTable, { eq }) => eq(eventsTable.regionId, regionId), 
         with: {
           venue: true,
           region: true,
         },
-        orderBy: (events, { asc }) => [asc(events.date)],
+        orderBy: (eventsTable, { desc }) => [desc(eventsTable.updatedAt)], 
+      });
+    } else {
+      query = db.query.events.findMany({
+        with: {
+          venue: true,
+          region: true,
+        },
+        orderBy: (eventsTable, { desc }) => [desc(eventsTable.updatedAt)],
       });
     }
     
@@ -85,40 +65,37 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json() as z.infer<typeof eventSchema>;
+    const body = await req.json(); 
     
-    // Validate the request body against the schema
     const validation = eventSchema.safeParse(body);
     if (!validation.success) {
-      return NextResponse.json(
-        { error: 'Invalid request body', details: validation.error.errors },
-        { status: 400 }
-      );
+      console.error("Event validation failed:", validation.error.errors);
+      return NextResponse.json({ /* ... error response ... */ }, { status: 400 });
     }
+
+    const validatedData = validation.data;
     
-    // Begin a transaction
     const result = await db.transaction(async (tx) => {
-      // Create the event
       const eventId = uuidv4();
       const now = new Date();
       
       await tx.insert(events).values({
         id: eventId,
-        title: body.title,
-        description: body.description,
-        date: new Date(body.date),
-        startTime: new Date(body.startTime),
-        endTime: new Date(body.endTime),
-        imageUrl: body.imageUrl,
-        venueId: body.venueId,
-        regionId: body.regionId,
-        usesDefaultPoster: !body.imageUrl, // Set to true if no image URL is provided
+        title: validatedData.title,
+        description: validatedData.description,
+        date: new Date(validatedData.date),
+        startTime: new Date(validatedData.startTime),
+        endTime: validatedData.endTime ? new Date(validatedData.endTime) : null,
+        thumbnailUrl: validatedData.thumbnailUrl,
+        imageUrls: validatedData.imageUrls,
+        venueId: validatedData.venueId,
+        regionId: validatedData.regionId,
+        usesDefaultPoster: !validatedData.thumbnailUrl && !validatedData.imageUrls,
         createdAt: now,
-        updatedAt: now // Explicitly set the updatedAt field
+        updatedAt: now
       });
       
-      // Create ticket types for the event
-      for (const ticketType of body.ticketTypes) {
+      for (const ticketType of validatedData.ticketTypes) {
         await tx.insert(eventTickets).values({
           id: uuidv4(),
           eventId: eventId,
@@ -126,13 +103,12 @@ export async function POST(req: Request) {
           price: ticketType.price,
           capacity: ticketType.capacity,
           description: ticketType.description,
-          soldCount: 0, // Initialize with zero sold tickets
+          soldCount: 0, 
           createdAt: now,
-          updatedAt: now // Explicitly set the updatedAt field
+          updatedAt: now
         });
       }
       
-      // Return the created event ID
       return { id: eventId };
     });
     

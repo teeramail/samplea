@@ -68,6 +68,10 @@ export default async function EventsListPage() {
             {allEvents.length > 0 ? (
               allEvents.map((event) => {
                 const status = getEventStatus(event.date);
+                // Construct URLs explicitly
+                const viewUrl = `/admin/events/${event.id}`;
+                const editUrl = `/admin/events/${event.id}/edit`;
+                const deleteUrl = `/admin/events/${event.id}/delete`;
                 return (
                   <tr key={event.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -85,13 +89,13 @@ export default async function EventsListPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <Link href={`/admin/events/${event.id}`} className="text-blue-600 hover:text-blue-900 mr-4">
+                      <Link href={viewUrl} className="text-blue-600 hover:text-blue-900 mr-4">
                         View
                       </Link>
-                      <Link href={`/admin/events/${event.id}/edit`} className="text-indigo-600 hover:text-indigo-900 mr-4">
+                      <Link href={editUrl} className="text-indigo-600 hover:text-indigo-900 mr-4">
                         Edit
                       </Link>
-                      <Link href={`/admin/events/${event.id}/delete`} className="text-red-600 hover:text-red-900">
+                      <Link href={deleteUrl} className="text-red-600 hover:text-red-900">
                         Delete
                       </Link>
                     </td>

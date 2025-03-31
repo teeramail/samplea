@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -9,11 +9,45 @@ import { zodResolver } from "@hookform/resolvers/zod";
 const venueSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long"),
   address: z.string().min(5, "Address must be at least 5 characters long"),
-  capacity: z.number().min(1, "Capacity is required"),
+  capacity: z.coerce.number().int().min(0, "Capacity must be non-negative"),
   regionId: z.string().min(1, "Please select a region"),
+  latitude: z.coerce.number().optional(),
+  longitude: z.coerce.number().optional(),
 });
 
-type VenueFormData = z.infer<typeof venueSchema>;
+type VenueFormData = Omit<z.infer<typeof venueSchema>, 'thumbnailUrl' | 'imageUrls'>;
+
+// Helper function to upload a single file
+async function uploadFile(file: File, entityType: string): Promise<string | null> {
+  const formData = new FormData();
+  formData.append("image", file);
+  formData.append("entityType", entityType);
+
+  try {
+    const response = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      console.error("Upload failed with status:", response.status);
+      const errorText = await response.text();
+      console.error("Upload error details:", errorText);
+      return null;
+    }
+
+    const result = await response.json();
+    if (result.urls && Array.isArray(result.urls) && result.urls.length > 0) {
+      return result.urls[0];
+    } else {
+      console.error("Upload API response missing urls or urls array is empty:", result);
+      return null;
+    }
+  } catch (error) {
+    console.error("Error during file upload fetch:", error);
+    return null;
+  }
+}
 
 export default function CreateVenuePage() {
   const router = useRouter();
@@ -21,6 +55,10 @@ export default function CreateVenuePage() {
   const [error, setError] = useState("");
   const [regions, setRegions] = useState<{ id: string; name: string }[]>([]);
   const [isLoadingRegions, setIsLoadingRegions] = useState(true);
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   
   const {
     register,
@@ -33,6 +71,8 @@ export default function CreateVenuePage() {
       address: "",
       capacity: 0,
       regionId: "",
+      latitude: undefined,
+      longitude: undefined,
     },
   });
 
@@ -58,16 +98,89 @@ export default function CreateVenuePage() {
     void fetchRegions();
   }, []);
 
+  // Handle Thumbnail File Selection
+  const handleThumbnailChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setThumbnailFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setThumbnailPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setThumbnailFile(null);
+      setThumbnailPreview(null);
+    }
+  };
+
+  // Handle Multiple Image File Selection
+  const handleImagesChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files ? Array.from(e.target.files) : [];
+    setImageFiles(files);
+    
+    const newPreviews: string[] = [];
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        newPreviews.push(reader.result as string);
+        // Only update state when all files are read
+        if (newPreviews.length === files.length) {
+           setImagePreviews(newPreviews);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+     // If no files selected, clear previews
+    if (files.length === 0) {
+       setImagePreviews([]);
+    }
+  };
+
   const onSubmit = async (data: VenueFormData) => {
     setIsLoading(true);
     setError("");
     
+    let uploadedThumbnailUrl: string | null = null;
+    const uploadedImageUrls: string[] = [];
+
     try {
-      // Capacity is already a number now, no need to parse
+      // 1. Upload Thumbnail (if selected)
+      if (thumbnailFile) {
+        uploadedThumbnailUrl = await uploadFile(thumbnailFile, "venue");
+        if (!uploadedThumbnailUrl) {
+          throw new Error("Failed to upload thumbnail image. Please try again.");
+        }
+      }
+
+      // 2. Upload Venue Images (if selected)
+      if (imageFiles.length > 0) {
+        const results: (string | null)[] = [];
+        for (const file of imageFiles) {
+          const url = await uploadFile(file, "venue");
+          results.push(url);
+        }
+        
+        // Check if all uploads were successful
+        if (results.some(url => url === null)) {
+           const failedIndices = results.map((url, index) => url === null ? index + 1 : -1).filter(i => i !== -1);
+           throw new Error(`Failed to upload venue image(s): #${failedIndices.join(', ')}. Please try again.`);
+        }
+        uploadedImageUrls.push(...results.filter(url => url !== null) as string[]); 
+      }
+
+      // 3. Prepare final data for venue creation API
       const venueData = {
         ...data,
+        latitude: data.latitude === undefined || isNaN(data.latitude) ? null : data.latitude,
+        longitude: data.longitude === undefined || isNaN(data.longitude) ? null : data.longitude,
+        thumbnailUrl: uploadedThumbnailUrl,
+        imageUrls: uploadedImageUrls,
       };
       
+      console.log("Submitting final venue data:", venueData);
+
+      // 4. Send data to venue creation API
       const response = await fetch("/api/venues", {
         method: "POST",
         headers: {
@@ -77,13 +190,15 @@ export default function CreateVenuePage() {
       });
       
       if (!response.ok) {
-        throw new Error("Failed to create venue");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to create venue");
       }
       
       router.push("/admin/venues");
+
     } catch (error) {
       console.error("Error creating venue:", error);
-      setError("Failed to create venue. Please try again.");
+      setError(error instanceof Error ? error.message : "Failed to create venue. Please check uploads and try again.");
     } finally {
       setIsLoading(false);
     }
@@ -170,17 +285,92 @@ export default function CreateVenuePage() {
           )}
         </div>
         
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label htmlFor="latitude" className="block text-sm font-medium text-gray-700">
+              Latitude (Optional)
+            </label>
+            <input
+              id="latitude"
+              type="number"
+              step="any"
+              {...register("latitude")}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+              placeholder="e.g., 13.7563"
+            />
+            {errors.latitude && (
+              <p className="mt-1 text-sm text-red-600">{errors.latitude.message}</p>
+            )}
+          </div>
+          <div>
+            <label htmlFor="longitude" className="block text-sm font-medium text-gray-700">
+              Longitude (Optional)
+            </label>
+            <input
+              id="longitude"
+              type="number"
+              step="any"
+              {...register("longitude")}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+              placeholder="e.g., 100.5018"
+            />
+            {errors.longitude && (
+              <p className="mt-1 text-sm text-red-600">{errors.longitude.message}</p>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <label htmlFor="capacity" className="block text-sm font-medium text-gray-700">
             Capacity
           </label>
           <input
+            id="capacity"
             type="number"
-            {...register("capacity", { required: true, valueAsNumber: true })}
+            {...register("capacity")}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
           />
           {errors.capacity && (
-            <p className="mt-1 text-sm text-red-600">Capacity is required</p>
+            <p className="mt-1 text-sm text-red-600">{errors.capacity.message}</p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="thumbnail" className="block text-sm font-medium text-gray-700">
+            Thumbnail Image (for listings)
+          </label>
+          <input 
+            id="thumbnail"
+            type="file"
+            accept="image/*"
+            onChange={handleThumbnailChange}
+            className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+          />
+          {thumbnailPreview && (
+            <div className="mt-2">
+              <img src={thumbnailPreview} alt="Thumbnail preview" className="h-24 w-auto rounded-md object-cover"/>
+            </div>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="images" className="block text-sm font-medium text-gray-700">
+            Venue Images (Multiple allowed)
+          </label>
+          <input 
+            id="images"
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleImagesChange}
+            className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+          />
+          {imagePreviews.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {imagePreviews.map((preview, index) => (
+                <img key={index} src={preview} alt={`Venue image preview ${index + 1}`} className="h-24 w-auto rounded-md object-cover"/>
+              ))}
+            </div>
           )}
         </div>
         
