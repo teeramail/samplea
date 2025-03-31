@@ -2,11 +2,46 @@ import Link from "next/link";
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
 import { events } from "~/server/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import Image from "next/image";
+import { format } from 'date-fns';
+import { MapPinIcon, BuildingLibraryIcon } from '@heroicons/react/24/outline';
 
 type HomePageProps = {
   searchParams: Promise<{ region?: string }>;
+};
+
+async function getUpcomingEvents() {
+  try {
+    const upcomingEvents = await db.query.events.findMany({
+      columns: { 
+          id: true,
+          title: true,
+          date: true,
+          thumbnailUrl: true,
+      },
+      with: {
+        venue: { columns: { name: true } },
+        region: { columns: { name: true } },
+      },
+      orderBy: [desc(events.date)],
+      where: (eventsTable, { gte }) => gte(eventsTable.date, new Date()),
+      limit: 3,
+    });
+    return upcomingEvents;
+  } catch (error) {
+    console.error("Error fetching upcoming events:", error);
+    return [];
+  }
+}
+
+type UpcomingEvent = {
+  id: string;
+  title: string;
+  date: Date;
+  thumbnailUrl: string | null;
+  venue: { name: string } | null;
+  region: { name: string } | null;
 };
 
 export default async function Home({ searchParams }: HomePageProps) {
@@ -14,56 +49,7 @@ export default async function Home({ searchParams }: HomePageProps) {
   const resolvedParams = await searchParams;
   const { region: regionId } = resolvedParams;
   
-  // Get upcoming events, limited to 3
-  let query = db.query.events.findMany({
-    where: (events, { gt, and, or, lte }) => {
-      const now = new Date();
-      const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
-      
-      return or(
-        gt(events.date, now),
-        and(
-          gt(events.startTime, fifteenMinutesAgo),
-          lte(events.startTime, now)
-        )
-      );
-    },
-    orderBy: (events, { asc }) => [asc(events.date)],
-    limit: 3,
-    with: {
-      venue: true,
-      region: true,
-    },
-  });
-  
-  // If region filter is active, filter events by region
-  if (regionId) {
-    query = db.query.events.findMany({
-      where: (events, { gt, and, or, lte, eq: equals }) => {
-        const now = new Date();
-        const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
-        
-        return and(
-          equals(events.regionId, regionId),
-          or(
-            gt(events.date, now),
-            and(
-              gt(events.startTime, fifteenMinutesAgo),
-              lte(events.startTime, now)
-            )
-          )
-        );
-      },
-      orderBy: (events, { asc }) => [asc(events.date)],
-      limit: 3,
-      with: {
-        venue: true,
-        region: true,
-      },
-    });
-  }
-  
-  const upcomingEvents = await query;
+  const upcomingEvents: UpcomingEvent[] = await getUpcomingEvents();
   
   // Format date
   const formatDate = (date: Date) => {
@@ -132,27 +118,37 @@ export default async function Home({ searchParams }: HomePageProps) {
                 <Link 
                   key={event.id} 
                   href={`/events/${event.id}`}
-                  className="bg-white/10 rounded-lg overflow-hidden hover:bg-white/20 transition-colors"
+                  className="block bg-white/10 rounded-lg overflow-hidden hover:bg-white/20 transition-colors shadow-lg group"
                 >
+                  <div className="relative w-full h-48 bg-white/5">
+                    {event.thumbnailUrl ? (
+                      <Image
+                        src={event.thumbnailUrl}
+                        alt={`${event.title} thumbnail`}
+                        fill
+                        className="object-cover" 
+                        unoptimized
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-white/10 text-gray-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                      </div>
+                    )}
+                  </div>
                   <div className="p-5">
                     <div className="text-sm text-[hsl(280,100%,70%)] mb-2">
                       {formatDate(event.date)}
                     </div>
-                    <h3 className="text-xl font-bold mb-2">{event.title}</h3>
+                    <h3 className="text-xl font-bold mb-3 group-hover:text-[hsl(280,100%,70%)] transition-colors">{event.title}</h3>
                     {event.venue && (
                       <div className="flex items-center text-gray-300 text-sm mb-1">
-                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                        </svg>
+                        <BuildingLibraryIcon className="w-4 h-4 mr-1 flex-shrink-0" />
                         {event.venue.name}
                       </div>
                     )}
                     {event.region && (
                       <div className="flex items-center text-gray-300 text-sm">
-                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
+                        <MapPinIcon className="w-4 h-4 mr-1 flex-shrink-0" />
                         {event.region.name}
                       </div>
                     )}

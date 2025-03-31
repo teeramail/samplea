@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "~/server/db";
-import { events, eventTickets, venues, regions } from "~/server/db/schema";
-import type { InferSelectModel } from 'drizzle-orm';
+import { events, eventTickets } from "~/server/db/schema";
 
 // Define schema for ticket type
 const ticketTypeSchema = z.object({
@@ -27,8 +26,24 @@ const eventSchema = z.object({
   ticketTypes: z.array(ticketTypeSchema).min(1, "At least one ticket type is required"),
 });
 
-// Define type for the events table (or rely on Drizzle's inference)
-type EventSchema = typeof events.$inferSelect;
+// Define interface for the POST request body based on eventSchema
+interface EventCreateRequestBody {
+  title: string;
+  description: string;
+  date: string; // Keep as string, will be parsed
+  startTime: string; // Keep as string, will be parsed
+  endTime?: string | null; // Keep as string, will be parsed
+  thumbnailUrl?: string | null;
+  imageUrls?: string[] | null;
+  venueId: string;
+  regionId: string;
+  ticketTypes: Array<{ // Keep this structure
+    seatType: string;
+    price: number;
+    capacity: number;
+    description?: string;
+  }>;
+}
 
 export async function GET(req: Request) {
   try {
@@ -38,20 +53,40 @@ export async function GET(req: Request) {
     let query;
     if (regionId) {
       query = db.query.events.findMany({
+        columns: { // Explicitly select columns needed by the frontend
+            id: true,
+            title: true,
+            date: true,
+            thumbnailUrl: true,
+        },
         where: (eventsTable, { eq }) => eq(eventsTable.regionId, regionId), 
         with: {
-          venue: true,
-          region: true,
+          venue: {
+            columns: { name: true } // Only select venue name
+          },
+          region: {
+            columns: { name: true } // Only select region name
+          },
         },
-        orderBy: (eventsTable, { desc }) => [desc(eventsTable.updatedAt)], 
+        orderBy: (eventsTable, { desc }) => [desc(eventsTable.date)], // Order by event date
       });
     } else {
       query = db.query.events.findMany({
-        with: {
-          venue: true,
-          region: true,
+        columns: { // Explicitly select columns needed by the frontend
+            id: true,
+            title: true,
+            date: true,
+            thumbnailUrl: true,
         },
-        orderBy: (eventsTable, { desc }) => [desc(eventsTable.updatedAt)],
+        with: {
+          venue: {
+            columns: { name: true } // Only select venue name
+          },
+          region: {
+            columns: { name: true } // Only select region name
+          },
+        },
+        orderBy: (eventsTable, { desc }) => [desc(eventsTable.date)], // Order by event date
       });
     }
     
@@ -65,8 +100,10 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json(); 
+    // Use type assertion for the request body
+    const body = await req.json() as EventCreateRequestBody;
     
+    // Zod validation already handles type checking, no need for explicit validation before parse
     const validation = eventSchema.safeParse(body);
     if (!validation.success) {
       console.error("Event validation failed:", validation.error.errors);
