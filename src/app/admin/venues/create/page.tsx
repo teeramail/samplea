@@ -17,6 +17,11 @@ const venueSchema = z.object({
 
 type VenueFormData = Omit<z.infer<typeof venueSchema>, 'thumbnailUrl' | 'imageUrls'>;
 
+// Define type for the upload API response
+type UploadResponse = {
+  urls: string[];
+};
+
 // Helper function to upload a single file
 async function uploadFile(file: File, entityType: string): Promise<string | null> {
   const formData = new FormData();
@@ -36,9 +41,11 @@ async function uploadFile(file: File, entityType: string): Promise<string | null
       return null;
     }
 
-    const result = await response.json();
+    // Use type assertion here
+    const result = await response.json() as UploadResponse;
+    // Check result.urls and return first, or null
     if (result.urls && Array.isArray(result.urls) && result.urls.length > 0) {
-      return result.urls[0];
+      return result.urls[0] ?? null; // Use ?? to handle potential undefined
     } else {
       console.error("Upload API response missing urls or urls array is empty:", result);
       return null;
@@ -166,7 +173,7 @@ export default function CreateVenuePage() {
            const failedIndices = results.map((url, index) => url === null ? index + 1 : -1).filter(i => i !== -1);
            throw new Error(`Failed to upload venue image(s): #${failedIndices.join(', ')}. Please try again.`);
         }
-        uploadedImageUrls.push(...results.filter(url => url !== null) as string[]); 
+        uploadedImageUrls.push(...results.filter(url => url !== null)); 
       }
 
       // 3. Prepare final data for venue creation API
