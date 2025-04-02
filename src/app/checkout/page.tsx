@@ -151,7 +151,7 @@ export default function CheckoutPage() {
       if (paymentMethod === 'paypal') {
         router.push(`/checkout/paypal?bookingId=${data.bookingId}`);
       } else {
-        router.push(`/checkout/credit-card?bookingId=${data.bookingId}`);
+        router.push(`/checkout/credit-card?bookingId=${data.bookingId}&amount=${totalCost}&email=${encodeURIComponent(contactInfo.email)}&phone=${encodeURIComponent(contactInfo.phone || '')}&eventTitle=${encodeURIComponent(eventTitle || '')}`);
       }
     } catch (error) {
       console.error('Error creating booking:', error);
