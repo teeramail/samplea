@@ -7,83 +7,44 @@ import Image from "next/image";
 import { format } from 'date-fns';
 import { MapPinIcon, BuildingLibraryIcon } from '@heroicons/react/24/outline';
 
-type HomePageProps = {
-  searchParams: Promise<{ region?: string }>;
+// Import the server-side tRPC caller
+import { api } from "~/trpc/server";
+// Import the type helper from the correct location
+import type { RouterOutputs } from "~/trpc/react";
+
+// Assume these card components exist for displaying items
+// import { EventCard } from "~/app/_components/EventCard";
+// import { FighterCard } from "~/app/_components/FighterCard";
+// import { CourseCard } from "~/app/_components/CourseCard";
+// import { VenueCard } from "~/app/_components/VenueCard";
+// import { BlogPostCard } from "~/app/_components/BlogPostCard";
+
+// Helper function (consider moving to a utils file)
+const formatDate = (date: Date | string | null | undefined) => {
+  if (!date) return '';
+  return format(new Date(date), "MMM dd, yyyy");
 };
 
-async function getUpcomingEvents() {
-  try {
-    const upcomingEvents = await db.query.events.findMany({
-      columns: { 
-          id: true,
-          title: true,
-          date: true,
-          thumbnailUrl: true,
-      },
-      with: {
-        venue: { columns: { name: true } },
-        region: { columns: { name: true } },
-      },
-      orderBy: [desc(events.date)],
-      where: (eventsTable, { gte }) => gte(eventsTable.date, new Date()),
-      limit: 3,
-    });
-    return upcomingEvents;
-  } catch (error) {
-    console.error("Error fetching upcoming events:", error);
-    return [];
-  }
-}
+// Define types for the fetched data
+type EventType = RouterOutputs["event"]["getUpcoming"][number];
+type FighterType = RouterOutputs["fighter"]["getFeatured"][number];
+type CourseType = RouterOutputs["trainingCourse"]["getFeatured"][number];
+type VenueType = RouterOutputs["venue"]["getFeatured"][number];
+type PostType = RouterOutputs["post"]["getFeatured"][number];
 
-type UpcomingEvent = {
-  id: string;
-  title: string;
-  date: Date;
-  thumbnailUrl: string | null;
-  venue: { name: string } | null;
-  region: { name: string } | null;
-};
+export default async function Home() {
+  // Fetch all data in parallel
+  const [upcomingEvents, featuredFighters, featuredCourses, featuredVenues, featuredPosts] = await Promise.all([
+    api.event.getUpcoming({ limit: 3 }), // Assuming this router/procedure exists now
+    api.fighter.getFeatured({ limit: 3 }),
+    api.trainingCourse.getFeatured({ limit: 2 }),
+    api.venue.getFeatured({ limit: 4 }),
+    api.post.getFeatured({ limit: 2 })
+  ]);
 
-export default async function Home({ searchParams }: HomePageProps) {
-  const session = await auth();
-  const resolvedParams = await searchParams;
-  const { region: regionId } = resolvedParams;
-  
-  const upcomingEvents: UpcomingEvent[] = await getUpcomingEvents();
-  
-  // Format date
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric"
-    });
-  };
-
-  // Featured fighters (ideally from database)
-  const featuredFighters = [
-    {
-      id: "1",
-      name: "Buakaw Banchamek",
-      image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/49/Buakaw_Por_Pramuk_2011.jpg/640px-Buakaw_Por_Pramuk_2011.jpg",
-      record: "240-24-12",
-      gym: "Banchamek Gym"
-    },
-    {
-      id: "2",
-      name: "Saenchai",
-      image: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Saenchai_2014.jpg/640px-Saenchai_2014.jpg",
-      record: "299-42-4",
-      gym: "Yokkao Training Center"
-    },
-    {
-      id: "3",
-      name: "Rodtang Jitmuangnon",
-      image: "https://upload.wikimedia.org/wikipedia/commons/c/c9/Rodtang_Jitmuangnon.jpg",
-      record: "267-42-10",
-      gym: "Jitmuangnon Gym"
-    }
-  ];
+  // --- REMOVE HARDCODED DATA ---
+  // const featuredFighters = [ ... ];
+  // const featuredPosts = [ ... ];
 
   return (
     <main className="flex min-h-screen flex-col items-center bg-gradient-to-b from-[#2e026d] to-[#15162c] text-white">
@@ -92,386 +53,171 @@ export default async function Home({ searchParams }: HomePageProps) {
         <h1 className="text-5xl font-extrabold tracking-tight text-center sm:text-[5rem]">
           <span className="text-[hsl(280,100%,70%)]">Thai</span>Boxing
           <span className="text-[hsl(280,100%,70%)]">Hub</span>
-          </h1>
-        
+        </h1>
         <p className="text-xl text-center max-w-2xl mb-4">
           Your ultimate destination for authentic Muay Thai in Thailand. Find fights, book training sessions, learn techniques, and follow top fighters.
         </p>
-        
-        {/* Featured Events Section */}
+
+        {/* Upcoming Events Section */}
         <section className="w-full max-w-5xl mt-8">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-3xl font-bold">
-              {regionId ? "Events In Your Region" : "Upcoming Events"}
-            </h2>
-            <Link
-              href="/events" 
-              className="text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]"
-            >
-              View All &rarr;
-            </Link>
+            <h2 className="text-3xl font-bold">Upcoming Events</h2>
+            <Link href="/events" className="text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]">View All &rarr;</Link>
           </div>
-          
-          {upcomingEvents.length > 0 ? (
+          {upcomingEvents && upcomingEvents.length > 0 ? (
             <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-              {upcomingEvents.map((event) => (
-                <Link 
-                  key={event.id} 
-                  href={`/events/${event.id}`}
-                  className="block bg-white/10 rounded-lg overflow-hidden hover:bg-white/20 transition-colors shadow-lg group"
-                >
+              {upcomingEvents.map((event: EventType) => (
+                 // --- USING SIMPLE DISPLAY HERE - REPLACE WITH <EventCard /> IF AVAILABLE ---
+                <Link key={event.id} href={`/events/${event.id}`} className="block bg-white/10 rounded-lg overflow-hidden hover:bg-white/20 transition-colors shadow-lg group">
                   <div className="relative w-full h-48 bg-white/5">
                     {event.thumbnailUrl ? (
-                      <Image
-                        src={event.thumbnailUrl}
-                        alt={`${event.title} thumbnail`}
-                        fill
-                        className="object-cover" 
-                        unoptimized
-                      />
+                      <Image src={event.thumbnailUrl} alt={`${event.title} thumbnail`} fill className="object-cover" unoptimized />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-white/10 text-gray-400">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                      </div>
+                      <div className="w-full h-full flex items-center justify-center bg-white/10 text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg></div>
                     )}
                   </div>
                   <div className="p-5">
-                    <div className="text-sm text-[hsl(280,100%,70%)] mb-2">
-                      {formatDate(event.date)}
-                    </div>
+                    <div className="text-sm text-[hsl(280,100%,70%)] mb-2">{formatDate(event.date)}</div>
                     <h3 className="text-xl font-bold mb-3 group-hover:text-[hsl(280,100%,70%)] transition-colors">{event.title}</h3>
-                    {event.venue && (
-                      <div className="flex items-center text-gray-300 text-sm mb-1">
-                        <BuildingLibraryIcon className="w-4 h-4 mr-1 flex-shrink-0" />
-                        {event.venue.name}
-                      </div>
-                    )}
-                    {event.region && (
-                      <div className="flex items-center text-gray-300 text-sm">
-                        <MapPinIcon className="w-4 h-4 mr-1 flex-shrink-0" />
-                        {event.region.name}
-                      </div>
-                    )}
+                    {event.venue && <div className="flex items-center text-gray-300 text-sm mb-1"><BuildingLibraryIcon className="w-4 h-4 mr-1 shrink-0" /> {event.venue.name}</div>}
+                    {event.region && <div className="flex items-center text-gray-300 text-sm"><MapPinIcon className="w-4 h-4 mr-1 shrink-0" /> {event.region.name}</div>}
                   </div>
                 </Link>
               ))}
             </div>
           ) : (
             <div className="bg-white/10 rounded-lg p-8 text-center">
-              <h3 className="text-xl font-medium mb-2">No upcoming events found</h3>
-              <p className="text-gray-300 mb-4">
-                {regionId 
-                  ? "There are no scheduled events in this region at the moment." 
-                  : "There are no scheduled events at the moment."}
-              </p>
-              <Link 
-                href="/events" 
-                className="text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]"
-              >
-                Browse all events
-              </Link>
+              <p className="text-gray-300">No upcoming events found.</p>
             </div>
           )}
         </section>
 
-        {/* Featured Fighters Section */}
+        {/* Featured Fighters Section - DYNAMIC */}
         <section className="w-full max-w-5xl mt-16">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-3xl font-bold">Featured Fighters</h2>
-            <Link
-              href="/fighters" 
-              className="text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]"
-            >
-              View All Fighters &rarr;
-            </Link>
+            <Link href="/fighters" className="text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]">View All &rarr;</Link>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {featuredFighters.map((fighter) => (
-              <div key={fighter.id} className="bg-white/10 rounded-lg overflow-hidden hover:bg-white/20 transition-colors">
-                <div className="h-48 overflow-hidden">
-                  <Image
-                    src={fighter.image}
-                    alt={fighter.name}
-                    width={200}
-                    height={200}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="p-5">
-                  <h3 className="text-xl font-bold mb-2">{fighter.name}</h3>
-                  <div className="flex flex-col space-y-1 text-gray-300 text-sm">
-                    <div className="flex items-center">
-                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
-                      </svg>
-                      <span>Record: {fighter.record}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                      </svg>
-                      <span>{fighter.gym}</span>
-                    </div>
-                  </div>
-                  <div className="mt-4">
-                    <Link
-                      href={`/fighters/${fighter.id}`}
-                      className="inline-flex items-center text-sm font-medium text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]"
-                    >
-                      View Profile
-                      <svg className="w-3.5 h-3.5 ms-2" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
-                        <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M1 5h12m0 0L9 1m4 4L9 9"/>
-                      </svg>
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-        
-        {/* Training and Experience Section */}
-        <section className="w-full max-w-5xl mt-16 bg-white/10 rounded-lg p-8">
-          <h2 className="text-3xl font-bold mb-4">Experience Authentic Muay Thai</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div>
-              <h3 className="text-xl font-bold mb-3 text-[hsl(280,100%,70%)]">Training Packages</h3>
-              <p className="text-gray-300 mb-4">
-                Train with champion fighters and experienced coaches at Thailand&apos;s top Muay Thai gyms. 
-                We offer various training packages from beginner to advanced levels.
-              </p>
-              <ul className="space-y-2 text-gray-300 mb-4">
-                <li className="flex items-start">
-                  <svg className="w-5 h-5 mr-2 text-[hsl(280,100%,70%)] mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                  </svg>
-                  <span>Single day sessions</span>
-                </li>
-                <li className="flex items-start">
-                  <svg className="w-5 h-5 mr-2 text-[hsl(280,100%,70%)] mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                  </svg>
-                  <span>Weekly training packages</span>
-                </li>
-                <li className="flex items-start">
-                  <svg className="w-5 h-5 mr-2 text-[hsl(280,100%,70%)] mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                  </svg>
-                  <span>Monthly memberships</span>
-                </li>
-                <li className="flex items-start">
-                  <svg className="w-5 h-5 mr-2 text-[hsl(280,100%,70%)] mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                  </svg>
-                  <span>Private 1-on-1 sessions</span>
-                </li>
-              </ul>
-              <Link 
-                href="/training"
-                className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-[hsl(280,100%,70%)] rounded-lg hover:bg-[hsl(280,100%,60%)] focus:ring-4 focus:ring-purple-300"
-              >
-                Book Training
-                <svg className="w-3.5 h-3.5 ms-2" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
-                  <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M1 5h12m0 0L9 1m4 4L9 9"/>
-                </svg>
-              </Link>
+          {featuredFighters && featuredFighters.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {featuredFighters.map((fighter: FighterType) => (
+                 // --- REPLACE WITH <FighterCard /> IF AVAILABLE ---
+                 <div key={fighter.id} className="bg-white/10 rounded-lg overflow-hidden hover:bg-white/20 transition-colors">
+                   {fighter.imageUrl && (
+                     <div className="relative h-48 overflow-hidden bg-white/5">
+                       <Image src={fighter.imageUrl} alt={fighter.name} fill className="object-cover" />
+                     </div>
+                   )}
+                   <div className="p-5">
+                     <h3 className="text-xl font-bold mb-2">{fighter.name}</h3>
+                     <div className="flex flex-col space-y-1 text-gray-300 text-sm">
+                        {fighter.record && <p>Record: {fighter.record}</p>}
+                        {fighter.weightClass && <p>Class: {fighter.weightClass}</p>}
+                        {/* Add Gym/Venue if available in query */} 
+                     </div>
+                     <div className="mt-4">
+                       <Link href={`/fighters/${fighter.id}`} className="inline-flex items-center text-sm font-medium text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]">
+                         View Profile &rarr;
+                       </Link>
+                     </div>
+                   </div>
+                 </div>
+              ))}
             </div>
-            <div>
-              <h3 className="text-xl font-bold mb-3 text-[hsl(280,100%,70%)]">Muay Thai Experiences</h3>
-              <p className="text-gray-300 mb-4">
-                Immerse yourself in Thailand&apos;s national sport with our curated Muay Thai experiences designed for tourists and enthusiasts alike.
-              </p>
-              <ul className="space-y-2 text-gray-300 mb-4">
-                <li className="flex items-start">
-                  <svg className="w-5 h-5 mr-2 text-[hsl(280,100%,70%)] mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                  </svg>
-                  <span>VIP event tickets with fighter meet &amp; greet</span>
-                </li>
-                <li className="flex items-start">
-                  <svg className="w-5 h-5 mr-2 text-[hsl(280,100%,70%)] mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                  </svg>
-                  <span>Guided gym tours</span>
-                </li>
-                <li className="flex items-start">
-                  <svg className="w-5 h-5 mr-2 text-[hsl(280,100%,70%)] mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                  </svg>
-                  <span>Cultural Muay Thai history tours</span>
-                </li>
-                <li className="flex items-start">
-                  <svg className="w-5 h-5 mr-2 text-[hsl(280,100%,70%)] mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                  </svg>
-                  <span>Photography packages at events</span>
-                </li>
-              </ul>
-              <Link 
-                href="/experiences"
-                className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-[hsl(280,100%,70%)] rounded-lg hover:bg-[hsl(280,100%,60%)] focus:ring-4 focus:ring-purple-300"
-              >
-                Explore Experiences
-                <svg className="w-3.5 h-3.5 ms-2" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
-                  <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M1 5h12m0 0L9 1m4 4L9 9"/>
-                </svg>
-              </Link>
+          ) : (
+            <div className="bg-white/10 rounded-lg p-8 text-center">
+              <p className="text-gray-300">No featured fighters available right now.</p>
             </div>
-          </div>
+          )}
         </section>
-        
-        {/* Latest Muay Thai News & Articles */}
+
+        {/* Featured Training Courses Section - DYNAMIC */}
+        <section className="w-full max-w-5xl mt-16">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-3xl font-bold">Featured Training Courses</h2>
+            <Link href="/training" className="text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]">View All &rarr;</Link>
+          </div>
+          {featuredCourses && featuredCourses.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {featuredCourses.map((course: CourseType) => (
+                // --- REPLACE WITH <CourseCard /> IF AVAILABLE ---
+                <Link key={course.id} href={`/training/${course.slug}`} className="block bg-white/10 rounded-lg p-6 hover:bg-white/20 transition-colors">
+                  <h3 className="text-xl font-bold mb-2 text-[hsl(280,100%,70%)]">{course.title}</h3>
+                  <p className="text-gray-300 mb-3 line-clamp-3">{course.description}</p>
+                  <div className="text-sm text-gray-400">
+                    {course.venue && <p>Venue: {course.venue.name}</p>}
+                    {course.instructor && <p>Instructor: {course.instructor.name}</p>}
+                    {course.duration && <p>Duration: {course.duration}</p>}
+                    <p>Price: ${course.price.toFixed(2)}</p>
+                  </div>
+                  <div className="mt-4 text-[hsl(280,100%,70%)] font-medium">Learn More &rarr;</div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white/10 rounded-lg p-8 text-center">
+              <p className="text-gray-300">No featured training courses available right now.</p>
+            </div>
+          )}
+        </section>
+
+        {/* Featured Gyms Section - NEW & DYNAMIC */}
+        <section className="w-full max-w-5xl mt-16">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-3xl font-bold">Recommended Gyms</h2>
+            <Link href="/venues" className="text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]">View All &rarr;</Link>
+          </div>
+          {featuredVenues && featuredVenues.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+              {featuredVenues.map((venue: VenueType) => (
+                // --- REPLACE WITH <VenueCard /> IF AVAILABLE ---
+                <Link key={venue.id} href={`/venues/${venue.id}`} className="block bg-white/10 rounded-lg overflow-hidden hover:bg-white/20 transition-colors">
+                   {venue.thumbnailUrl && (
+                     <div className="relative h-36 overflow-hidden bg-white/5">
+                       <Image src={venue.thumbnailUrl} alt={venue.name} fill className="object-cover" />
+                     </div>
+                   )}
+                   <div className="p-4">
+                     <h3 className="text-lg font-bold mb-1 truncate">{venue.name}</h3>
+                     {venue.region && <p className="text-sm text-gray-400 truncate">{venue.region.name}</p>}
+                   </div>
+                 </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white/10 rounded-lg p-8 text-center">
+              <p className="text-gray-300">No featured gyms available right now.</p>
+            </div>
+          )}
+        </section>
+
+        {/* Latest Muay Thai News Section - DYNAMIC */}
         <section className="w-full max-w-5xl mt-16">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-3xl font-bold">Latest Muay Thai News</h2>
-            <Link 
-              href="/blog" 
-              className="text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]"
-            >
-              Read All Articles &rarr;
-            </Link>
+            <Link href="/blog" className="text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]">Read All &rarr;</Link>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <article className="bg-white/10 rounded-lg overflow-hidden hover:bg-white/20 transition-colors">
-              <div className="p-5">
-                <span className="text-xs text-gray-300">March 15, 2023</span>
-                <h3 className="text-xl font-bold my-2">The Top 10 Techniques Every Muay Thai Fighter Should Master</h3>
-                <p className="text-gray-300 text-sm line-clamp-3">
-                  From the devastating roundhouse kick to the powerful teep, these fundamental Muay Thai techniques are essential for any fighter looking to excel in the art of eight limbs...
-                </p>
-                <Link 
-                  href="/blog/top-muay-thai-techniques"
-                  className="inline-flex items-center mt-4 text-sm font-medium text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]"
-                >
-                  Read More
-                  <svg className="w-3.5 h-3.5 ms-2" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
-                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M1 5h12m0 0L9 1m4 4L9 9"/>
-                  </svg>
-                </Link>
-              </div>
-            </article>
-            
-            <article className="bg-white/10 rounded-lg overflow-hidden hover:bg-white/20 transition-colors">
-              <div className="p-5">
-                <span className="text-xs text-gray-300">March 8, 2023</span>
-                <h3 className="text-xl font-bold my-2">Training Muay Thai in Thailand: An Ultimate Guide for Beginners</h3>
-                <p className="text-gray-300 text-sm line-clamp-3">
-                  Thinking about training Muay Thai in Thailand? This comprehensive guide covers everything from choosing the right gym to understanding Thai training culture...
-                </p>
-                <Link 
-                  href="/blog/beginner-guide-thailand"
-                  className="inline-flex items-center mt-4 text-sm font-medium text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]"
-                >
-                  Read More
-                  <svg className="w-3.5 h-3.5 ms-2" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
-                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M1 5h12m0 0L9 1m4 4L9 9"/>
-                  </svg>
-                </Link>
-              </div>
-            </article>
-          </div>
+          {featuredPosts && featuredPosts.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+               {featuredPosts.map((post: PostType) => (
+                 // --- REPLACE WITH <BlogPostCard /> IF AVAILABLE ---
+                 <Link key={post.id} href={`/blog/${post.slug}`} className="block bg-white/10 rounded-lg p-5 hover:bg-white/20 transition-colors">
+                   <span className="text-xs text-gray-300">{formatDate(post.publishedAt ?? post.createdAt)}</span>
+                   <h3 className="text-xl font-bold my-2 line-clamp-2">{post.title}</h3>
+                   {post.excerpt && <p className="text-gray-300 text-sm line-clamp-3">{post.excerpt}</p>}
+                   <div className="inline-flex items-center mt-4 text-sm font-medium text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]">
+                     Read More &rarr;
+                   </div>
+                 </Link>
+               ))}
+            </div>
+          ) : (
+            <div className="bg-white/10 rounded-lg p-8 text-center">
+              <p className="text-gray-300">No news articles available right now.</p>
+            </div>
+          )}
         </section>
-        
-        {/* Main Navigation Cards */}
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-3 max-w-5xl mt-16">
-          <Link
-            className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 hover:bg-white/20"
-            href="/events"
-          >
-            <h3 className="text-2xl font-bold">Events &rarr;</h3>
-            <div className="text-lg">
-              Browse upcoming Muay Thai events, check fight cards, and purchase tickets.
-            </div>
-          </Link>
-          
-          <Link
-            className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 hover:bg-white/20"
-            href="/fighters"
-          >
-            <h3 className="text-2xl font-bold">Fighters &rarr;</h3>
-            <div className="text-lg">
-              Explore profiles of Muay Thai fighters, their stats, and upcoming fights.
-            </div>
-          </Link>
-          
-          <Link
-            className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 hover:bg-white/20"
-            href="/venues"
-          >
-            <h3 className="text-2xl font-bold">Venues &rarr;</h3>
-            <div className="text-lg">
-              Discover locations where events are held and find information about each venue.
-            </div>
-          </Link>
-        </div>
-        
-        {/* SEO-Friendly Content Section */}
-        <section className="w-full max-w-5xl mt-16 bg-white/5 rounded-lg p-8">
-          <h2 className="text-2xl font-bold mb-4">About Muay Thai Boxing in Thailand</h2>
-          <div className="text-gray-300">
-            <p className="mb-4">
-              Muay Thai, known as the &quot;Art of Eight Limbs,&quot; is Thailand&apos;s national sport and cultural martial art. It uses the entire body as a weapon, incorporating punches, kicks, elbows, and knee strikes. Dating back several hundred years, Muay Thai has evolved from a battlefield combat system to a beloved spectator sport and effective fitness regimen.
-            </p>
-            <p className="mb-4">
-              Today, authentic Muay Thai matches can be witnessed throughout Thailand, with the most prestigious events held in Bangkok&apos;s Lumpinee and Rajadamnern Stadiums. The sport embodies Thailand&apos;s cultural heritage, with each match featuring the traditional Wai Kru Ram Muay ritual where fighters pay respect to their teachers.
-            </p>
-            <p>
-              Whether you&apos;re a tourist looking to experience the excitement of live Muay Thai, a fitness enthusiast wanting to train, or a serious practitioner aiming to test your skills, Thailand offers unparalleled opportunities to connect with this ancient martial art. ThaiBoxingHub is your comprehensive guide to finding the best events, training facilities, and Muay Thai experiences throughout Thailand.
-            </p>
-          </div>
-        </section>
-        
-        {/* Testimonials Section */}
-        <section className="w-full max-w-5xl mt-16">
-          <h2 className="text-3xl font-bold mb-6 text-center">What Our Users Say</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white/10 rounded-lg p-6">
-              <div className="flex items-center mb-4">
-                <div className="w-10 h-10 rounded-full bg-purple-700 flex items-center justify-center text-white font-bold mr-3">
-                  J
-                </div>
-                <div>
-                  <h3 className="font-medium">John Smith</h3>
-                  <p className="text-xs text-gray-400">Tourist from Australia</p>
-                </div>
-              </div>
-              <p className="text-gray-300">
-                &quot;ThaiBoxingHub made finding authentic Muay Thai events in Phuket so easy. The event tickets were waiting at my hotel and the fights were incredible!&quot;
-              </p>
-            </div>
-            <div className="bg-white/10 rounded-lg p-6">
-              <div className="flex items-center mb-4">
-                <div className="w-10 h-10 rounded-full bg-purple-700 flex items-center justify-center text-white font-bold mr-3">
-                  S
-                </div>
-                <div>
-                  <h3 className="font-medium">Sarah Johnson</h3>
-                  <p className="text-xs text-gray-400">Muay Thai Practitioner</p>
-                </div>
-              </div>
-              <p className="text-gray-300">
-                &quot;I booked a week of training through ThaiBoxingHub and it exceeded all my expectations. The gym was authentic and the coaches were world-class.&quot;
-              </p>
-            </div>
-            <div className="bg-white/10 rounded-lg p-6">
-              <div className="flex items-center mb-4">
-                <div className="w-10 h-10 rounded-full bg-purple-700 flex items-center justify-center text-white font-bold mr-3">
-                  D
-                </div>
-                <div>
-                  <h3 className="font-medium">David Lee</h3>
-                  <p className="text-xs text-gray-400">Fight Fan from Singapore</p>
-                </div>
-              </div>
-              <p className="text-gray-300">
-                &quot;The VIP experience package was worth every penny. Getting to meet the fighters and having ringside seats made for an unforgettable night in Bangkok.&quot;
-              </p>
-            </div>
-          </div>
-        </section>
-        </div>
-      </main>
+      </div>
+    </main>
   );
 }

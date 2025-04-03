@@ -239,4 +239,31 @@ export const trainingCourseRouter = createTRPCRouter({
   //          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to delete course' });
   //      }
   //   }),
+
+  getFeatured: publicProcedure
+    .input(z.object({
+        limit: z.number().min(1).max(10).default(3),
+    }).optional())
+    .query(async ({ ctx, input }) => {
+        const limit = input?.limit ?? 3;
+        try {
+            const featuredCourses = await ctx.db.query.trainingCourses.findMany({
+                where: and(
+                    eq(trainingCourses.isFeatured, true),
+                    eq(trainingCourses.isActive, true) // Also ensure course is active
+                ),
+                orderBy: [desc(trainingCourses.createdAt)], // Or some other order
+                limit: limit,
+                with: {
+                    region: { columns: { name: true, slug: true } },
+                    instructor: { columns: { name: true, imageUrl: true } },
+                    venue: { columns: { name: true } }
+                },
+            });
+            return featuredCourses;
+        } catch (error) {
+            console.error("Failed to fetch featured training courses:", error);
+            throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch featured courses' });
+        }
+    }),
 }); 
