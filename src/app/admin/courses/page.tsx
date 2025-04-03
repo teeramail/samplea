@@ -6,7 +6,18 @@ import { useState } from "react";
 // import toast from "react-hot-toast"; // Optional
 
 // Define the type for a single course based on the router output
-type CourseType = ReturnType<typeof api.trainingCourse.list.useQuery>['data'] extends { items: (infer T)[] } ? T : never;
+type CourseType = {
+  id: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  price: number;
+  isActive: boolean;
+  isFeatured: boolean;
+  region?: { name: string } | null;
+  instructor?: { name: string } | null;
+  venue?: { name: string } | null;
+};
 
 // Mobile-friendly toggle switch
 function ToggleSwitch({ enabled, onChange }: { enabled: boolean; onChange: (enabled: boolean) => void }) {
@@ -67,8 +78,8 @@ export default function AdminCoursesPage() {
   if (isLoading) return <div className="p-4">Loading courses...</div>;
   if (error) return <div className="p-4 text-red-600">Error loading courses: {error.message}</div>;
   
-  // Adjust based on list procedure return type ({ items, nextCursor } or just array)
-  const allCourses = coursesData?.items ?? coursesData ?? [];
+  // Adjust based on list procedure return type
+  const allCourses = coursesData?.items || [];
   const courses = filterCourses(allCourses);
   const featuredCount = allCourses.filter(course => course.isFeatured).length;
 
