@@ -2,30 +2,35 @@
 
 import Link from "next/link";
 import { api } from "~/trpc/react";
+import { useState } from "react";
 // import toast from "react-hot-toast"; // Optional
 
 // Define the type for a single venue based on the router output
 type VenueType = ReturnType<typeof api.venue.list.useQuery>['data'] extends (infer T)[] ? T : never; // Adjust if list returns { items, ... }
 
-// Reuse or import the ToggleSwitch component
+// Mobile-friendly toggle switch
 function ToggleSwitch({ enabled, onChange }: { enabled: boolean; onChange: (enabled: boolean) => void }) {
   return (
     <button
       type="button"
-      className={`${enabled ? 'bg-indigo-600' : 'bg-gray-200'} relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2`}
+      className={`${enabled ? 'bg-indigo-600' : 'bg-gray-300'} relative inline-flex items-center h-6 rounded-full w-11 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2`}
       role="switch"
       aria-checked={enabled}
       onClick={() => onChange(!enabled)}
     >
+      <span className="sr-only">{enabled ? 'Disable' : 'Enable'}</span>
       <span
-        aria-hidden="true"
-        className={`${enabled ? 'translate-x-5' : 'translate-x-0'} pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out`}
+        className={`${enabled ? 'translate-x-6' : 'translate-x-1'} inline-block w-4 h-4 transform bg-white rounded-full transition-transform`}
       />
     </button>
   );
 }
 
 export default function AdminVenuesPage() {
+  // State for filtering
+  const [showFeaturedOnly, setShowFeaturedOnly] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
   // Fetch the list of venues
   const { data: venuesData, isLoading, error, refetch } = api.venue.list.useQuery(); // Ensure list procedure exists
 
@@ -46,22 +51,112 @@ export default function AdminVenuesPage() {
     toggleFeaturedMutation.mutate({ id: venue.id, isFeatured: !venue.isFeatured });
   };
 
+  // Filter venues based on search and featured filter
+  const filterVenues = (venues: VenueType[]) => {
+    return venues.filter(venue => {
+      const matchesSearch = !searchQuery || 
+        venue.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        (venue.region?.name && venue.region.name.toLowerCase().includes(searchQuery.toLowerCase()));
+      
+      const matchesFeatured = !showFeaturedOnly || venue.isFeatured;
+      
+      return matchesSearch && matchesFeatured;
+    });
+  };
+
   if (isLoading) return <div className="p-4">Loading venues...</div>;
   if (error) return <div className="p-4 text-red-600">Error loading venues: {error.message}</div>;
   
   // Adjust based on list procedure return type ({ items, nextCursor } or just array)
-  const venues = venuesData?.items ?? venuesData ?? [];
+  const allVenues = venuesData?.items ?? venuesData ?? [];
+  const venues = filterVenues(allVenues);
+  const featuredCount = allVenues.filter(venue => venue.isFeatured).length;
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
+    <div>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <h1 className="text-2xl font-bold text-gray-800">Manage Venues / Gyms</h1>
-        <Link href="/admin/venues/new" className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md">
+        <Link href="/admin/venues/new" className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md flex items-center">
+          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+          </svg>
           Add New Venue
         </Link>
       </div>
 
-      <div className="overflow-x-auto shadow-md rounded-lg">
+      {/* Filters & Search */}
+      <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center">
+            <span className="text-gray-700 font-medium mr-2">Featured Gyms:</span>
+            <span className="bg-indigo-100 text-indigo-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+              {featuredCount} of {allVenues.length}
+            </span>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            {/* Featured Filter */}
+            <div className="flex items-center">
+              <label htmlFor="featured-filter" className="text-sm text-gray-700 mr-2">
+                Show Featured Only
+              </label>
+              <ToggleSwitch 
+                enabled={showFeaturedOnly} 
+                onChange={setShowFeaturedOnly} 
+              />
+            </div>
+            
+            {/* Search */}
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search venues..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 pr-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+              />
+              <svg 
+                className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile view - card layout */}
+      <div className="lg:hidden space-y-4">
+        {venues.map((venue) => (
+          <div key={venue.id} className="bg-white rounded-lg shadow-sm p-4">
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">{venue.name}</h3>
+                <p className="text-sm text-gray-500 mb-2">{venue.region?.name ?? 'N/A'}</p>
+                <p className="text-sm text-gray-500 truncate max-w-xs">{venue.address}</p>
+              </div>
+              <div className="flex flex-col items-end">
+                <div className="flex items-center mb-2">
+                  <span className="text-sm text-gray-600 mr-2">Featured</span>
+                  <ToggleSwitch
+                    enabled={!!venue.isFeatured}
+                    onChange={() => handleToggleFeatured(venue)}
+                  />
+                </div>
+                <Link href={`/admin/venues/${venue.id}/edit`} className="text-indigo-600 hover:text-indigo-900 text-sm font-medium">
+                  Edit
+                </Link>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop view - table layout */}
+      <div className="hidden lg:block overflow-x-auto shadow-sm rounded-lg">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -74,7 +169,7 @@ export default function AdminVenuesPage() {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {venues.map((venue) => (
-              <tr key={venue.id}>
+              <tr key={venue.id} className={`${venue.isFeatured ? 'bg-indigo-50' : ''} hover:bg-gray-50`}>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{venue.name}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{venue.region?.name ?? 'N/A'}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-xs">{venue.address}</td>
@@ -94,7 +189,21 @@ export default function AdminVenuesPage() {
         </table>
       </div>
        {venues.length === 0 && (
-          <div className="text-center py-4 text-gray-500">No venues found.</div>
+          <div className="text-center py-8 bg-white rounded-lg shadow-sm">
+            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+            </svg>
+            <h3 className="mt-2 text-sm font-medium text-gray-900">No venues found</h3>
+            {searchQuery && (
+              <p className="mt-1 text-sm text-gray-500">Try adjusting your search or filter.</p>
+            )}
+            {!searchQuery && showFeaturedOnly && (
+              <p className="mt-1 text-sm text-gray-500">No featured venues yet. Toggle the switch to feature a venue.</p>
+            )}
+            {!searchQuery && !showFeaturedOnly && (
+              <p className="mt-1 text-sm text-gray-500">Get started by adding a new venue.</p>
+            )}
+          </div>
       )}
     </div>
   );

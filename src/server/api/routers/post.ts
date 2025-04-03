@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { v4 as uuidv4 } from "uuid";
+import { createId } from "@paralleldrive/cuid2";
 import { eq, desc, and, like } from "drizzle-orm";
 
 import {
@@ -7,8 +7,12 @@ import {
   protectedProcedure,
   publicProcedure,
 } from "~/server/api/trpc";
-import { events, posts } from "~/server/db/schema";
+import { posts } from "~/server/db/schema";
 import { TRPCError } from "@trpc/server";
+
+// Define a status enum for blog posts
+const PostStatus = z.enum(['DRAFT', 'PUBLISHED']);
+type PostStatus = z.infer<typeof PostStatus>;
 
 export const postRouter = createTRPCRouter({
   hello: publicProcedure
@@ -19,25 +23,90 @@ export const postRouter = createTRPCRouter({
       };
     }),
 
-  create: protectedProcedure
-    .input(z.object({ title: z.string().min(1), description: z.string().optional() }))
+  create: protectedProcedure // TODO: Change to adminProcedure
+    .input(z.object({
+      title: z.string().min(1),
+      slug: z.string().min(1),
+      content: z.string(),
+      excerpt: z.string().optional(),
+      seoTitle: z.string().optional(),
+      seoDescription: z.string().optional(),
+      isFeatured: z.boolean().default(false),
+      status: PostStatus.default('DRAFT'),
+    }))
     .mutation(async ({ ctx, input }) => {
-      // Create a new event with default date and time values for now
-      await ctx.db.insert(events).values({
-        id: uuidv4(),
-        title: input.title,
-        description: input.description ?? null,
-        date: new Date(),
-        startTime: new Date(),
-      });
+      try {
+        // Create a new post
+        const result = await ctx.db.insert(posts).values({
+          id: createId(),
+          title: input.title,
+          slug: input.slug,
+          content: input.content,
+          excerpt: input.excerpt || null,
+          seoTitle: input.seoTitle || null,
+          seoDescription: input.seoDescription || null,
+          isFeatured: input.isFeatured,
+          status: input.status,
+          publishedAt: input.status === 'PUBLISHED' ? new Date() : null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+        
+        return { success: true, id: result.insertId };
+      } catch (error) {
+        console.error("Failed to create post:", error);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to create post' });
+      }
     }),
 
-  getLatest: protectedProcedure.query(async ({ ctx }) => {
-    const event = await ctx.db.query.events.findFirst({
-      orderBy: (events, { desc }) => [desc(events.createdAt)],
+  list: publicProcedure // TODO: For admin view, change to adminProcedure
+    .input(z.object({
+      status: z.enum(['DRAFT', 'PUBLISHED', 'ALL']).default('PUBLISHED'),
+      limit: z.number().min(1).max(50).default(20),
+      cursor: z.string().nullish(),
+      query: z.string().optional(),
+    }).optional())
+    .query(async ({ ctx, input }) => {
+      const limit = input?.limit ?? 20;
+      const status = input?.status ?? 'PUBLISHED';
+      const query = input?.query;
+      
+      try {
+        // Build the where clause
+        let whereClause = undefined;
+        
+        if (status !== 'ALL') {
+          whereClause = eq(posts.status, status);
+        }
+        
+        if (query) {
+          whereClause = and(
+            whereClause ?? undefined,
+            like(posts.title, `%${query}%`)
+          );
+        }
+        
+        // Get the posts
+        const items = await ctx.db.query.posts.findMany({
+          where: whereClause,
+          orderBy: [desc(posts.updatedAt)],
+          limit: limit,
+        });
+        
+        return items;
+      } catch (error) {
+        console.error("Failed to fetch posts:", error);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch posts' });
+      }
+    }),
+
+  getLatest: publicProcedure.query(async ({ ctx }) => {
+    const post = await ctx.db.query.posts.findFirst({
+      where: eq(posts.status, 'PUBLISHED'),
+      orderBy: [desc(posts.publishedAt), desc(posts.createdAt)],
     });
 
-    return event ?? null;
+    return post ?? null;
   }),
 
   getSecretMessage: protectedProcedure.query(() => {
@@ -63,7 +132,6 @@ export const postRouter = createTRPCRouter({
             return featuredPosts;
         } catch (error) {
             console.error("Failed to fetch featured posts:", error);
-            // Ensure isFeatured exists in your schema.ts for posts
             throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch featured posts' });
         }
     }),
