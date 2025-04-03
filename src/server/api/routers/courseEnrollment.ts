@@ -31,7 +31,7 @@ export const courseEnrollmentRouter = createTRPCRouter({
       // In development without auth, use guest details if provided, otherwise use placeholders
       if (input.guestEmail && input.guestName) {
           // Try to find existing customer by email (useful for testing guest checkout)
-          let customer = await ctx.db.query.customers.findFirst({
+          const customer = await ctx.db.query.customers.findFirst({
               where: eq(customers.email, input.guestEmail)
           });
           if (!customer) {

@@ -7,14 +7,21 @@ import { api } from "~/trpc/react";
 type FighterType = {
   id: string;
   name: string;
-  record?: string;
+  nickname: string | null;
+  weightClass: string | null;
+  record: string | null;
+  imageUrl: string | null;
+  country: string | null;
   isFeatured: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 };
 
 // Define the possible response shape from the fighters list query
-type FightersResponse = { items: FighterType[] } | FighterType[];
+type FightersResponse = FighterType[];
 
 // Explicitly type the TRPC query result to prevent unsafe member access
+/* 
 const useFighterListQuery = () =>
   api.fighter.list.useQuery() as {
     data: FightersResponse | undefined;
@@ -22,6 +29,7 @@ const useFighterListQuery = () =>
     error: unknown;
     refetch: () => void;
   };
+*/
 
 // Simple Toggle Switch Component
 function ToggleSwitch({
@@ -52,8 +60,8 @@ function ToggleSwitch({
 }
 
 export default function AdminFightersPage() {
-  // Destructure the TRPC query result with explicit types
-  const { data: fightersData, isLoading, error, refetch } = useFighterListQuery();
+  // Use the fighter list query directly instead of through a custom hook
+  const { data: fighters = [], isLoading, error, refetch } = api.fighter.list.useQuery();
 
   // Mutation for toggling the featured status with safe error handling
   const toggleFeaturedMutation = api.fighter.toggleFeatured.useMutation({
@@ -78,7 +86,9 @@ export default function AdminFightersPage() {
     });
   };
 
+  // Check loading/error states first
   if (isLoading) return <div className="p-4">Loading fighters...</div>;
+  
   if (error) {
     const errorMessage =
       typeof error === "object" && error !== null && "message" in error
@@ -90,12 +100,9 @@ export default function AdminFightersPage() {
       </div>
     );
   }
-  if (!fightersData) return <div className="p-4">No fighters found.</div>;
-
-  // Determine fighters list from response shape
-  const fighters: FighterType[] = Array.isArray(fightersData)
-    ? fightersData
-    : fightersData?.items ?? [];
+  
+  // Now check if fighters were found
+  if (fighters.length === 0) return <div className="p-4">No fighters found.</div>;
 
   return (
     <div className="p-6">

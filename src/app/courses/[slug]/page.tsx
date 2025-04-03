@@ -7,7 +7,7 @@ import type { Metadata, ResolvingMetadata } from 'next';
 // Define a standard PageProps interface for dynamic route segments
 interface PageProps {
   params: Promise<{ slug: string }>;
-  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>; // Include searchParams even if not used
+  searchParams?: Promise<Record<string, string | string[] | undefined>>; // Changed to Record type
 }
 
 // Generate dynamic metadata for SEO

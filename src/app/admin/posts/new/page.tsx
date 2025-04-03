@@ -63,7 +63,7 @@ export default function CreatePostPage() {
     setIsSubmitting(true);
     
     try {
-      await createPostMutation.mutate(formData);
+      createPostMutation.mutate(formData);
     } catch (error) {
       setIsSubmitting(false);
       console.error('Error submitting form:', error);

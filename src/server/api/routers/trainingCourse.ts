@@ -14,7 +14,7 @@ import { eq, desc, asc, and, isNull, ne } from "drizzle-orm";
 
 // Helper function to generate unique slugs
 async function generateUniqueSlug(db: any, title: string, idToExclude?: string): Promise<string> {
-  let slug = slugify(title, { lower: true, strict: true });
+  const slug = slugify(title, { lower: true, strict: true });
   let counter = 1;
   let uniqueSlug = slug;
 

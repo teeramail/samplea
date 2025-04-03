@@ -5,8 +5,28 @@ import { api } from "~/trpc/react";
 import { useState } from "react";
 // import toast from "react-hot-toast"; // Optional
 
-// Define the type for a single venue based on the router output
-type VenueType = ReturnType<typeof api.venue.list.useQuery>['data'] extends (infer T)[] ? T : never; // Adjust if list returns { items, ... }
+// Define the interface for a venue
+interface Venue {
+  id: string;
+  name: string;
+  isFeatured: boolean;
+  address?: string;
+  region?: {
+    name?: string;
+  } | null;
+  // Add other properties as needed
+}
+
+// Define the response type from the API
+interface VenuesResponse {
+  items?: Venue[];
+  nextCursor?: string;
+}
+
+// Type guard to check if the response has items property
+function hasItems(data: Venue[] | VenuesResponse | undefined): data is VenuesResponse {
+  return !!data && 'items' in data;
+}
 
 // Mobile-friendly toggle switch
 function ToggleSwitch({ enabled, onChange }: { enabled: boolean; onChange: (enabled: boolean) => void }) {
@@ -32,7 +52,7 @@ export default function AdminVenuesPage() {
   const [searchQuery, setSearchQuery] = useState("");
 
   // Fetch the list of venues
-  const { data: venuesData, isLoading, error, refetch } = api.venue.list.useQuery(); // Ensure list procedure exists
+  const { data: venuesData, isLoading, error, refetch } = api.venue.list.useQuery();
 
   // Mutation for toggling the featured status
   const toggleFeaturedMutation = api.venue.toggleFeatured.useMutation({
@@ -46,19 +66,19 @@ export default function AdminVenuesPage() {
     },
   });
 
-  const handleToggleFeatured = (venue: VenueType) => {
+  const handleToggleFeatured = (venue: Venue) => {
     if (!venue) return;
     toggleFeaturedMutation.mutate({ id: venue.id, isFeatured: !venue.isFeatured });
   };
 
   // Filter venues based on search and featured filter
-  const filterVenues = (venues: VenueType[]) => {
-    return venues.filter(venue => {
-      const matchesSearch = !searchQuery || 
-        venue.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        (venue.region?.name && venue.region.name.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filterVenues = (venues: Venue[]): Venue[] => {
+    return venues.filter((venue) => {
+      const matchesSearch = searchQuery === '' || 
+        (venue.name?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
+        (venue.region?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
       
-      const matchesFeatured = !showFeaturedOnly || venue.isFeatured;
+      const matchesFeatured = !showFeaturedOnly || !!venue.isFeatured;
       
       return matchesSearch && matchesFeatured;
     });
@@ -67,8 +87,14 @@ export default function AdminVenuesPage() {
   if (isLoading) return <div className="p-4">Loading venues...</div>;
   if (error) return <div className="p-4 text-red-600">Error loading venues: {error.message}</div>;
   
-  // Adjust based on list procedure return type ({ items, nextCursor } or just array)
-  const allVenues = venuesData?.items ?? venuesData ?? [];
+  // Process the venues data safely
+  let allVenues: Venue[] = [];
+  if (hasItems(venuesData)) {
+    allVenues = venuesData.items ?? [];
+  } else if (Array.isArray(venuesData)) {
+    allVenues = venuesData;
+  }
+  
   const venues = filterVenues(allVenues);
   const featuredCount = allVenues.filter(venue => venue.isFeatured).length;
 
