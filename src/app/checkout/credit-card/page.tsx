@@ -3,6 +3,18 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+// Define expected API response types
+interface ChillPaySuccessResponse {
+  paymentUrl: string;
+}
+
+interface ChillPayErrorResponse {
+  error: string;
+  details?: string;
+}
+
+type ChillPayApiResponse = ChillPaySuccessResponse | ChillPayErrorResponse;
+
 export default function CreditCardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -11,10 +23,10 @@ export default function CreditCardPage() {
 
   const bookingId = searchParams.get('bookingId');
   // Get additional parameters from URL if they exist
-  const amount = Number(searchParams.get('amount') || '0');
-  const email = searchParams.get('email') || '';
-  const phone = searchParams.get('phone') || '';
-  const eventTitle = searchParams.get('eventTitle') || '';
+  const amount = Number(searchParams.get('amount') ?? '0');
+  const email = searchParams.get('email') ?? '';
+  const phone = searchParams.get('phone') ?? '';
+  const eventTitle = searchParams.get('eventTitle') ?? '';
 
   useEffect(() => {
     if (!bookingId || !amount || !email) {
@@ -40,18 +52,24 @@ export default function CreditCardPage() {
           }),
         });
 
-        const data = await response.json();
+        const data = await response.json() as ChillPayApiResponse;
 
         if (!response.ok) {
-          throw new Error(data.error || data.details || 'Failed to initiate payment.');
+          // Type guard for error response
+          if ('error' in data) {
+            throw new Error(data.error ?? data.details ?? 'Failed to initiate payment.');
+          } else {
+            throw new Error('Failed to initiate payment. Unexpected response format.');
+          }
         }
 
-        if (data.paymentUrl) {
+        // Type guard for success response
+        if ('paymentUrl' in data && data.paymentUrl) {
           // Redirect user to ChillPay's payment page
           window.location.href = data.paymentUrl;
           // Keep loading state until redirect happens
         } else {
-          throw new Error("Payment URL not received from server.");
+          throw new Error("Payment URL not received or invalid in server response.");
         }
 
       } catch (err) {

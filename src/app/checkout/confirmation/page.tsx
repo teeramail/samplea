@@ -30,7 +30,7 @@ export default function ConfirmationPage() {
   }
 
   // Generate a confirmation number from the bookingId
-  const confirmationNumber = bookingId?.substring(0, 8).toUpperCase() || 'N/A';
+  const confirmationNumber = bookingId?.substring(0, 8).toUpperCase() ?? 'N/A';
   
   // Determine if payment was successful
   const isSuccess = !status || status === 'success';
@@ -63,7 +63,7 @@ export default function ConfirmationPage() {
             
             <h1 className="text-2xl font-bold text-gray-800 mb-2">Payment Failed</h1>
             <p className="text-gray-600 mb-6">
-              {errorMessage || "We couldn't process your payment. You can try again or use a different payment method."}
+              {errorMessage ?? "We couldn't process your payment. You can try again or use a different payment method."}
             </p>
             
             <Link href="/checkout" className="inline-block w-full py-3 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 focus:ring-4 focus:ring-red-300 text-center">

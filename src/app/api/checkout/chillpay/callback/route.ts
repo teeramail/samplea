@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
-import { redirect } from "next/navigation";
+// import { NextResponse } from "next/server"; // Unused
+// import { redirect } from "next/navigation"; // Unused
 
 // In a real-world application, you would connect to your database here
 // import { db } from "@/server/db";
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
   const amount = params.get('Amount');
   const orderNo = params.get('OrderNo'); // This is our bookingId
   const customerId = params.get('CustomerId');
-  const bookingId = params.get('bookingId') || orderNo; // Fallback to orderNo if bookingId isn't in query
+  const bookingId = params.get('bookingId') ?? orderNo; // Use ?? instead of ||
   
   console.log("ChillPay Payment Result:", { 
     status, code, message, transactionId, amount, orderNo, customerId, bookingId 
@@ -59,7 +59,7 @@ export async function GET(request: Request) {
     const redirectBase = `${url.origin}/checkout/confirmation`;
     const redirectUrl = isSuccess 
       ? `${redirectBase}?paymentMethod=credit-card&bookingId=${bookingId}&status=success` 
-      : `${redirectBase}?paymentMethod=credit-card&bookingId=${bookingId}&status=failed&message=${encodeURIComponent(message || 'Payment failed')}`;
+      : `${redirectBase}?paymentMethod=credit-card&bookingId=${bookingId}&status=failed&message=${encodeURIComponent(message ?? 'Payment failed')}`;
 
     // Return a redirect response
     return new Response(null, {

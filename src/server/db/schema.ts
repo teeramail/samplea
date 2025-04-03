@@ -129,6 +129,25 @@ export const fighters = createTable(
   }
 );
 
+// NEW Instructor Table
+export const instructors = createTable(
+  "Instructor",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    bio: text("bio"),
+    imageUrl: text("imageUrl"),
+    expertise: text("expertise").array(), // Array of strings like ["Clinch", "Kicks"]
+    userId: text("userId").references(() => users.id), // Optional link to a user account
+    createdAt: timestamp("createdAt", { withTimezone: false })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updatedAt", { withTimezone: false })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  }
+);
+
 export const users = createTable(
   "User",
   {
@@ -139,6 +158,34 @@ export const users = createTable(
     emailVerified: timestamp("emailVerified", { mode: "date" }),
     image: text("image"),
     role: text("role").default("user"),
+    createdAt: timestamp("createdAt", { withTimezone: false })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updatedAt", { withTimezone: false })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  }
+);
+
+// NEW Training Course Table
+export const trainingCourses = createTable(
+  "TrainingCourse",
+  {
+    id: text("id").primaryKey(),
+    title: text("title").notNull(),
+    slug: text("slug").notNull().unique(), // For SEO-friendly URLs
+    description: text("description"),
+    skillLevel: text("skillLevel"), // e.g., "Beginner", "Intermediate", "Advanced", "All Levels"
+    duration: text("duration"), // e.g., "1 Week", "1 Month", "90 minutes"
+    scheduleDetails: text("scheduleDetails"), // e.g., "Mon-Fri 9am-11am"
+    price: doublePrecision("price").notNull(),
+    capacity: integer("capacity"),
+    venueId: text("venueId").references(() => venues.id), // Optional, if venue-specific
+    regionId: text("regionId").references(() => regions.id).notNull(), // Course belongs to a region
+    instructorId: text("instructorId").references(() => instructors.id), // Link to instructor
+    imageUrls: text("imageUrls").array(),
+    primaryImageIndex: integer("primaryImageIndex").default(0),
+    isActive: boolean("isActive").default(true).notNull(),
     createdAt: timestamp("createdAt", { withTimezone: false })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
@@ -212,6 +259,32 @@ export const tickets = createTable(
   }
 );
 
+// NEW Course Enrollment Table
+export const courseEnrollments = createTable(
+  "CourseEnrollment",
+  {
+    id: text("id").primaryKey(),
+    customerId: text("customerId").references(() => customers.id).notNull(),
+    courseId: text("courseId").references(() => trainingCourses.id).notNull(),
+    pricePaid: doublePrecision("pricePaid").notNull(),
+    status: text("status").notNull().default("PENDING_PAYMENT"), // e.g., CONFIRMED, CANCELLED
+    enrollmentDate: timestamp("enrollmentDate", { withTimezone: false })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    startDate: timestamp("startDate", { withTimezone: false }), // Optional specific start date
+    // Snapshot fields
+    courseTitleSnapshot: text("courseTitleSnapshot"),
+    customerNameSnapshot: text("customerNameSnapshot"),
+    customerEmailSnapshot: text("customerEmailSnapshot"),
+    createdAt: timestamp("createdAt", { withTimezone: false })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updatedAt", { withTimezone: false })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  }
+);
+
 // NEW Event Template table
 export const eventTemplates = createTable(
   "EventTemplate",
@@ -259,12 +332,14 @@ export const regionsRelations = relations(regions, ({ one: _one, many }) => ({
   venues: many(venues),
   events: many(events),
   eventTemplates: many(eventTemplates),
+  trainingCourses: many(trainingCourses),
 }));
 
 export const venuesRelations = relations(venues, ({ one, many }) => ({
   events: many(events),
   region: one(regions, { fields: [venues.regionId], references: [regions.id] }),
   eventTemplates: many(eventTemplates),
+  trainingCourses: many(trainingCourses),
 }));
 
 export const eventsRelations = relations(events, ({ one, many }) => ({
@@ -310,6 +385,41 @@ export const eventTemplateTicketsRelations = relations(eventTemplateTickets, ({ 
     fields: [eventTemplateTickets.eventTemplateId],
     references: [eventTemplates.id],
   }),
+}));
+
+// NEW relations for Instructor
+export const instructorsRelations = relations(instructors, ({ one, many }) => ({
+  user: one(users, { fields: [instructors.userId], references: [users.id] }),
+  trainingCourses: many(trainingCourses),
+}));
+
+// NEW relations for TrainingCourse
+export const trainingCoursesRelations = relations(trainingCourses, ({ one, many }) => ({
+  venue: one(venues, { fields: [trainingCourses.venueId], references: [venues.id] }),
+  region: one(regions, { fields: [trainingCourses.regionId], references: [regions.id] }),
+  instructor: one(instructors, { fields: [trainingCourses.instructorId], references: [instructors.id] }),
+  enrollments: many(courseEnrollments),
+}));
+
+// NEW relations for CourseEnrollment
+export const courseEnrollmentsRelations = relations(courseEnrollments, ({ one }) => ({
+  customer: one(customers, { fields: [courseEnrollments.customerId], references: [customers.id] }),
+  course: one(trainingCourses, { fields: [courseEnrollments.courseId], references: [trainingCourses.id] }),
+}));
+
+// Add relation back from Customer to CourseEnrollment
+export const customersRelations = relations(customers, ({ one, many }) => ({
+  user: one(users, { fields: [customers.userId], references: [users.id] }),
+  bookings: many(bookings),
+  courseEnrollments: many(courseEnrollments),
+}));
+
+// Add relation back from User to Instructor
+export const usersRelations = relations(users, ({ one, many }) => ({
+  accounts: many(accounts),
+  sessions: many(sessions),
+  customerProfile: one(customers, { fields: [users.id], references: [customers.userId] }),
+  instructorProfile: one(instructors, { fields: [users.id], references: [instructors.userId] }),
 }));
 
 // Keep the existing NextAuth tables

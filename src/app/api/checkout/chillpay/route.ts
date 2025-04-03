@@ -67,7 +67,7 @@ export async function POST(request: Request) {
     // ChillPay requires amount without decimals (e.g., ฿250.00 becomes 25000)
     const amountFormatted = Math.round(amount * 100);
     const custEmail = email;
-    const phoneNumber = phone || '';
+    const phoneNumber = phone ?? '';
     const apiKey = CHILLPAY_API_KEY;
     const langCode = "EN"; // Or "TH"
     const description = `Booking ${orderNo}`; // Optional description
@@ -121,7 +121,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ paymentUrl: result.PaymentUrl });
     } else {
       console.error("ChillPay payment initiation failed:", result);
-      return NextResponse.json({ error: "Failed to initiate payment.", details: result.Message || "Unknown ChillPay error" }, { status: 500 });
+      return NextResponse.json({ error: "Failed to initiate payment.", details: result.Message ?? "Unknown ChillPay error" }, { status: 500 });
     }
 
   } catch (error) {
