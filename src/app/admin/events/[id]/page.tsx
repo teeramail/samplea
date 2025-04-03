@@ -17,22 +17,13 @@ export default async function EventDetailPage({
     with: {
       venue: true,
       region: true,
-      tickets: true, // Use tickets relation as defined in the schema
+      eventTickets: true, // Correct relation name from schema
     },
   });
 
   if (!event) {
     notFound();
   }
-
-  // For the template, we'll rename tickets to eventTickets for consistency
-  const { tickets, ...eventData } = event;
-  const eventWithTickets = {
-    ...eventData,
-    venue: event.venue,
-    region: event.region,
-    eventTickets: tickets,
-  };
 
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString();
@@ -55,7 +46,7 @@ export default async function EventDetailPage({
     }
   };
 
-  const status = getEventStatus(eventWithTickets.date);
+  const status = getEventStatus(event.date);
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
@@ -63,13 +54,13 @@ export default async function EventDetailPage({
         <h1 className="text-2xl font-bold text-gray-800">Event Details</h1>
         <div className="space-x-2">
           <Link
-            href={`/admin/events/${eventWithTickets.id}/edit`}
+            href={`/admin/events/${event.id}/edit`}
             className="bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-md"
           >
             Edit Event
           </Link>
           <Link
-            href={`/admin/events/${eventWithTickets.id}/delete`}
+            href={`/admin/events/${event.id}/delete`}
             className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-md"
           >
             Delete Event
@@ -86,20 +77,20 @@ export default async function EventDetailPage({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="md:col-span-2">
           <div className="bg-gray-50 p-4 rounded-lg">
-            <h2 className="text-xl font-semibold mb-4">{eventWithTickets.title}</h2>
+            <h2 className="text-xl font-semibold mb-4">{event.title}</h2>
             <div className="flex items-center mb-2">
               <span className="font-medium text-gray-700 w-24">Date:</span>
-              <span>{formatDate(eventWithTickets.date)}</span>
+              <span>{formatDate(event.date)}</span>
             </div>
             <div className="flex items-center mb-2">
               <span className="font-medium text-gray-700 w-24">Time:</span>
-              <span>{formatTime(eventWithTickets.startTime)} - {formatTime(eventWithTickets.endTime)}</span>
+              <span>{formatTime(event.startTime)} - {formatTime(event.endTime)}</span>
             </div>
             <div className="flex items-center mb-2">
               <span className="font-medium text-gray-700 w-24">Venue:</span>
-              {eventWithTickets.venue ? (
-                <Link href={`/admin/venues/${eventWithTickets.venue.id}`} className="text-blue-600 hover:underline">
-                  {eventWithTickets.venue.name ?? "N/A"}
+              {event.venue ? (
+                <Link href={`/admin/venues/${event.venue.id}`} className="text-blue-600 hover:underline">
+                  {event.venue.name ?? "N/A"}
                 </Link>
               ) : (
                 "N/A"
@@ -107,9 +98,9 @@ export default async function EventDetailPage({
             </div>
             <div className="flex items-center mb-2">
               <span className="font-medium text-gray-700 w-24">Region:</span>
-              {eventWithTickets.region ? (
-                <Link href={`/admin/regions/${eventWithTickets.region.id}`} className="text-blue-600 hover:underline">
-                  {eventWithTickets.region.name ?? "N/A"}
+              {event.region ? (
+                <Link href={`/admin/regions/${event.region.id}`} className="text-blue-600 hover:underline">
+                  {event.region.name ?? "N/A"}
                 </Link>
               ) : (
                 "N/A"
@@ -123,17 +114,17 @@ export default async function EventDetailPage({
             </div>
             <div>
               <span className="font-medium text-gray-700 block mb-2">Description:</span>
-              <p className="text-gray-600 whitespace-pre-line">{eventWithTickets.description}</p>
+              <p className="text-gray-600 whitespace-pre-line">{event.description}</p>
             </div>
           </div>
         </div>
         <div>
-          {eventWithTickets.imageUrl && (
+          {event.imageUrl && (
             <div className="bg-gray-50 p-4 rounded-lg">
               <h3 className="text-lg font-semibold mb-4">Event Poster</h3>
               <Image
-                src={eventWithTickets.imageUrl}
-                alt={`${eventWithTickets.title} poster`}
+                src={event.imageUrl}
+                alt={`${event.title} poster`}
                 width={300}
                 height={400}
                 className="rounded-lg shadow-md mb-6 object-cover"
@@ -145,7 +136,7 @@ export default async function EventDetailPage({
 
       <div className="bg-gray-50 p-4 rounded-lg mb-6">
         <h3 className="text-lg font-semibold mb-4">Ticket Types</h3>
-        {eventWithTickets.eventTickets && eventWithTickets.eventTickets.length > 0 ? (
+        {event.eventTickets && event.eventTickets.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-100">
@@ -168,7 +159,7 @@ export default async function EventDetailPage({
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {eventWithTickets.eventTickets.map((ticket) => (
+                {event.eventTickets.map((ticket) => (
                   <tr key={ticket.id}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{ticket.seatType}</div>
