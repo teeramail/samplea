@@ -6,15 +6,13 @@ import type { Metadata, ResolvingMetadata } from 'next';
 
 // Define a standard PageProps interface for dynamic route segments
 interface PageProps {
-  params: { slug: string };
-  searchParams?: { [key: string]: string | string[] | undefined }; // Include searchParams even if not used
+  params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>; // Include searchParams even if not used
 }
 
 // Generate dynamic metadata for SEO
-export async function generateMetadata(
-  { params }: PageProps, // Use the PageProps interface
-  parent: ResolvingMetadata
-): Promise<Metadata> {
+export async function generateMetadata(props: PageProps, parent: ResolvingMetadata): Promise<Metadata> {
+  const params = await props.params;
   const slug = params.slug;
   const course = await api.trainingCourse.getBySlug({ slug });
 
@@ -42,7 +40,9 @@ export async function generateMetadata(
   };
 }
 
-export default async function CourseDetailPage({ params }: PageProps) { // Use the PageProps interface
+export default async function CourseDetailPage(props: PageProps) {
+  const params = await props.params;
+  // Use the PageProps interface
   const course = await api.trainingCourse.getBySlug({ slug: params.slug });
 
   if (!course) {
