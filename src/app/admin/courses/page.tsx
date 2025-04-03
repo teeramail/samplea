@@ -87,7 +87,7 @@ export default function AdminCoursesPage() {
     <div>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <h1 className="text-2xl font-bold text-gray-800">Manage Training Courses</h1>
-        <Link href="/admin/courses/new" className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-md flex items-center">
+        <Link href="/admin/courses/create" className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-md flex items-center">
           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
           </svg>
