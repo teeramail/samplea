@@ -36,6 +36,25 @@ export const fighterRouter = createTRPCRouter({
         }
     }),
 
+  // Add toggleFeatured mutation
+  toggleFeatured: publicProcedure // TODO: Change to adminProcedure
+    .input(z.object({
+      id: z.string(),
+      isFeatured: z.boolean(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        await ctx.db
+          .update(fighters)
+          .set({ isFeatured: input.isFeatured, updatedAt: new Date() })
+          .where(eq(fighters.id, input.id));
+        return { success: true };
+      } catch (error) {
+        console.error("Failed to toggle fighter featured status:", error);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to update fighter' });
+      }
+    }),
+
   // TODO: Add create, update, delete procedures (marked for admin)
   // TODO: Add toggleFeatured procedure (marked for admin)
 

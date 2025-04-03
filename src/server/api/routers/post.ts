@@ -67,4 +67,24 @@ export const postRouter = createTRPCRouter({
             throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch featured posts' });
         }
     }),
+
+  toggleFeatured: publicProcedure // TODO: Change to adminProcedure
+    .input(z.object({
+      id: z.string(),
+      isFeatured: z.boolean(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        await ctx.db
+          .update(posts)
+          .set({ isFeatured: input.isFeatured, updatedAt: new Date() })
+          .where(eq(posts.id, input.id));
+        return { success: true };
+      } catch (error) {
+        console.error("Failed to toggle post featured status:", error);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to update post' });
+      }
+    }),
+
+  // TODO: Add delete procedure
 });

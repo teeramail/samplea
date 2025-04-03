@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect, ChangeEvent } from "react";
+import { useState, useEffect } from "react";
+import type { ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,12 +19,10 @@ const venueSchema = z.object({
 
 type VenueFormData = Omit<z.infer<typeof venueSchema>, 'thumbnailUrl' | 'imageUrls'>;
 
-// Define type for the upload API response
 type UploadResponse = {
   urls: string[];
 };
 
-// Helper function to upload a single file
 async function uploadFile(file: File, entityType: string): Promise<string | null> {
   const formData = new FormData();
   formData.append("image", file);
@@ -41,11 +41,9 @@ async function uploadFile(file: File, entityType: string): Promise<string | null
       return null;
     }
 
-    // Use type assertion here
-    const result = await response.json() as UploadResponse;
-    // Check result.urls and return first, or null
+    const result = (await response.json()) as UploadResponse;
     if (result.urls && Array.isArray(result.urls) && result.urls.length > 0) {
-      return result.urls[0] ?? null; // Use ?? to handle potential undefined
+      return result.urls[0] ?? null;
     } else {
       console.error("Upload API response missing urls or urls array is empty:", result);
       return null;
@@ -83,7 +81,6 @@ export default function CreateVenuePage() {
     },
   });
 
-  // Fetch regions when component mounts
   useEffect(() => {
     const fetchRegions = async () => {
       setIsLoadingRegions(true);
@@ -92,7 +89,7 @@ export default function CreateVenuePage() {
         if (!response.ok) {
           throw new Error("Failed to fetch regions");
         }
-        const data = await response.json() as { id: string; name: string }[];
+        const data = (await response.json()) as { id: string; name: string }[];
         setRegions(data);
       } catch (error) {
         console.error("Error fetching regions:", error);
@@ -105,7 +102,6 @@ export default function CreateVenuePage() {
     void fetchRegions();
   }, []);
 
-  // Handle Thumbnail File Selection
   const handleThumbnailChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -121,7 +117,6 @@ export default function CreateVenuePage() {
     }
   };
 
-  // Handle Multiple Image File Selection
   const handleImagesChange = (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files ? Array.from(e.target.files) : [];
     setImageFiles(files);
@@ -131,16 +126,14 @@ export default function CreateVenuePage() {
       const reader = new FileReader();
       reader.onloadend = () => {
         newPreviews.push(reader.result as string);
-        // Only update state when all files are read
         if (newPreviews.length === files.length) {
-           setImagePreviews(newPreviews);
+          setImagePreviews(newPreviews);
         }
       };
       reader.readAsDataURL(file);
     });
-     // If no files selected, clear previews
     if (files.length === 0) {
-       setImagePreviews([]);
+      setImagePreviews([]);
     }
   };
 
@@ -152,7 +145,6 @@ export default function CreateVenuePage() {
     const uploadedImageUrls: string[] = [];
 
     try {
-      // 1. Upload Thumbnail (if selected)
       if (thumbnailFile) {
         uploadedThumbnailUrl = await uploadFile(thumbnailFile, "venue");
         if (!uploadedThumbnailUrl) {
@@ -160,7 +152,6 @@ export default function CreateVenuePage() {
         }
       }
 
-      // 2. Upload Venue Images (if selected)
       if (imageFiles.length > 0) {
         const results: (string | null)[] = [];
         for (const file of imageFiles) {
@@ -168,15 +159,15 @@ export default function CreateVenuePage() {
           results.push(url);
         }
         
-        // Check if all uploads were successful
         if (results.some(url => url === null)) {
-           const failedIndices = results.map((url, index) => url === null ? index + 1 : -1).filter(i => i !== -1);
-           throw new Error(`Failed to upload venue image(s): #${failedIndices.join(', ')}. Please try again.`);
+          const failedIndices = results
+            .map((url, index) => url === null ? index + 1 : -1)
+            .filter(i => i !== -1);
+          throw new Error(`Failed to upload venue image(s): #${failedIndices.join(', ')}. Please try again.`);
         }
-        uploadedImageUrls.push(...results.filter(url => url !== null)); 
+        uploadedImageUrls.push(...results.filter((url): url is string => url !== null));
       }
 
-      // 3. Prepare final data for venue creation API
       const venueData = {
         ...data,
         latitude: data.latitude === undefined || isNaN(data.latitude) ? null : data.latitude,
@@ -187,7 +178,6 @@ export default function CreateVenuePage() {
       
       console.log("Submitting final venue data:", venueData);
 
-      // 4. Send data to venue creation API
       const response = await fetch("/api/venues", {
         method: "POST",
         headers: {
@@ -197,12 +187,11 @@ export default function CreateVenuePage() {
       });
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to create venue");
+        const errorData = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(errorData.error ?? "Failed to create venue");
       }
       
       router.push("/admin/venues");
-
     } catch (error) {
       console.error("Error creating venue:", error);
       setError(error instanceof Error ? error.message : "Failed to create venue. Please check uploads and try again.");
@@ -355,7 +344,14 @@ export default function CreateVenuePage() {
           />
           {thumbnailPreview && (
             <div className="mt-2">
-              <img src={thumbnailPreview} alt="Thumbnail preview" className="h-24 w-auto rounded-md object-cover"/>
+              <Image 
+                src={thumbnailPreview} 
+                alt="Thumbnail preview" 
+                width={150} 
+                height={96} 
+                unoptimized 
+                className="rounded-md object-cover"
+              />
             </div>
           )}
         </div>
@@ -375,7 +371,15 @@ export default function CreateVenuePage() {
           {imagePreviews.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-2">
               {imagePreviews.map((preview, index) => (
-                <img key={index} src={preview} alt={`Venue image preview ${index + 1}`} className="h-24 w-auto rounded-md object-cover"/>
+                <Image 
+                  key={index} 
+                  src={preview} 
+                  alt={`Venue image preview ${index + 1}`} 
+                  width={150} 
+                  height={96} 
+                  unoptimized 
+                  className="rounded-md object-cover"
+                />
               ))}
             </div>
           )}
@@ -400,4 +404,4 @@ export default function CreateVenuePage() {
       </form>
     </div>
   );
-} 
+}

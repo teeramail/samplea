@@ -266,4 +266,23 @@ export const trainingCourseRouter = createTRPCRouter({
             throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch featured courses' });
         }
     }),
+
+  // Add toggleFeatured mutation
+  toggleFeatured: publicProcedure // TODO: Change to adminProcedure
+    .input(z.object({
+      id: z.string(),
+      isFeatured: z.boolean(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        await ctx.db
+          .update(trainingCourses)
+          .set({ isFeatured: input.isFeatured, updatedAt: new Date() })
+          .where(eq(trainingCourses.id, input.id));
+        return { success: true };
+      } catch (error) {
+        console.error("Failed to toggle course featured status:", error);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to update course' });
+      }
+    }),
 }); 

@@ -44,7 +44,7 @@ export async function GET(
       with: {
         venue: true,
         region: true,
-        tickets: true, // This refers to eventTickets via the relation name in schema
+        eventTickets: true, // Corrected relation name
       },
     });
 
@@ -56,14 +56,7 @@ export async function GET(
       );
     }
 
-    // Create a new object with eventTickets instead of tickets
-    const { tickets, ...eventData } = event;
-    const response = {
-      ...eventData,
-      eventTickets: tickets || [],
-    };
-
-    return NextResponse.json(response);
+    return NextResponse.json(event); // Return the event object directly
   } catch (error) {
     console.error("Error fetching event:", error);
     return NextResponse.json(
@@ -88,7 +81,7 @@ export async function PATCH(
     const existingEvent = await db.query.events.findFirst({
       where: eq(events.id, id),
       with: {
-        tickets: true, // This refers to eventTickets via the relation name in schema
+        eventTickets: true, // Corrected relation name
       },
     });
 
@@ -130,8 +123,8 @@ export async function PATCH(
         updatedAt: now,
       }).where(eq(events.id, id));
       
-      // Process ticket types - convert from event.tickets to existing ticket IDs
-      const existingTicketIds = new Set(existingEvent.tickets.map(t => t.id));
+      // Process ticket types - convert from event.eventTickets to existing ticket IDs
+      const existingTicketIds = new Set(existingEvent.eventTickets.map(t => t.id));
       const updatedTicketIds = new Set(body.ticketTypes.filter(t => t.id).map(t => t.id!));
       
       console.log(`Processing ${body.ticketTypes.length} ticket types`);
@@ -183,7 +176,7 @@ export async function PATCH(
       with: {
         venue: true,
         region: true,
-        tickets: true, // This refers to eventTickets via the relation name in schema
+        eventTickets: true, // Corrected relation name
       },
     });
     
@@ -194,14 +187,7 @@ export async function PATCH(
       );
     }
 
-    // Create a new object with eventTickets instead of tickets
-    const { tickets, ...eventData } = updatedEvent;
-    const response = {
-      ...eventData,
-      eventTickets: tickets || [],
-    };
-
-    return NextResponse.json(response);
+    return NextResponse.json(updatedEvent); // Return the updated event directly
   } catch (error) {
     console.error("Error updating event:", error);
     

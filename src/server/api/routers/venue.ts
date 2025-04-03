@@ -46,6 +46,25 @@ export const venueRouter = createTRPCRouter({
         }
     }),
 
+  // Add toggleFeatured mutation
+  toggleFeatured: publicProcedure // TODO: Change to adminProcedure
+    .input(z.object({
+      id: z.string(),
+      isFeatured: z.boolean(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        await ctx.db
+          .update(venues)
+          .set({ isFeatured: input.isFeatured, updatedAt: new Date() })
+          .where(eq(venues.id, input.id));
+        return { success: true };
+      } catch (error) {
+        console.error("Failed to toggle venue featured status:", error);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to update venue' });
+      }
+    }),
+
   // TODO: Add create, update, delete procedures (marked for admin)
   // TODO: Add toggleFeatured procedure (marked for admin)
 }); 
