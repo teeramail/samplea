@@ -13,7 +13,20 @@ import { eq, desc, and } from "drizzle-orm";
 // TODO: Add input schemas for create/update if not already present
 
 export const fighterRouter = createTRPCRouter({
-  // ... existing procedures like list, getById ...
+  // Add a new list procedure
+  list: publicProcedure
+    .query(async ({ ctx }) => {
+      try {
+        const allFighters = await ctx.db.query.fighters.findMany({
+          orderBy: [desc(fighters.createdAt)],
+          // Add '.with(...)' here if you need related data in the list
+        });
+        return allFighters;
+      } catch (error) {
+        console.error("Failed to fetch fighters list:", error);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch fighters' });
+      }
+    }),
 
   // Add this new procedure
   getFeatured: publicProcedure
