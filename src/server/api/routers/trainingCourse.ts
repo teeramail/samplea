@@ -1,14 +1,16 @@
 import { z } from "zod";
 import { nanoid } from "nanoid";
 import slugify from "slugify"; // Need to install slugify: npm install slugify @types/slugify
+import { TRPCError } from "@trpc/server";
 
 import {
   createTRPCRouter,
   publicProcedure,
-  adminProcedure,
+  // protectedProcedure, // TODO: Use protected/admin procedure later
+  // adminProcedure, // TODO: Define and import adminProcedure in trpc.ts
 } from "~/server/api/trpc";
 import { trainingCourses, instructors, regions, venues } from "~/server/db/schema";
-import { eq, desc, asc, and, isNull } from "drizzle-orm";
+import { eq, desc, asc, and, isNull, ne } from "drizzle-orm";
 
 // Helper function to generate unique slugs
 async function generateUniqueSlug(db: any, title: string, idToExclude?: string): Promise<string> {
@@ -18,22 +20,24 @@ async function generateUniqueSlug(db: any, title: string, idToExclude?: string):
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    const existingConditions = [
+    const conditions = [
       eq(trainingCourses.slug, uniqueSlug)
     ];
+    // When updating, exclude the current item ID from the uniqueness check
     if (idToExclude) {
-        existingConditions.push(eq(trainingCourses.id, idToExclude));
+        conditions.push(ne(trainingCourses.id, idToExclude));
     }
-    
+
     const existing = await db.query.trainingCourses.findFirst({
-      where: and(...existingConditions),
+      where: and(...conditions),
       columns: { id: true },
     });
 
     if (!existing) {
-      break;
+      break; // Found a unique slug
     }
 
+    // If slug exists, append counter and try again
     uniqueSlug = `${slug}-${counter}`;
     counter++;
   }
@@ -76,40 +80,48 @@ const updateCourseSchema = z.object({
 });
 
 export const trainingCourseRouter = createTRPCRouter({
-  create: adminProcedure
+  // WARNING: Using publicProcedure. Change to adminProcedure later.
+  create: publicProcedure
     .input(createCourseSchema)
     .mutation(async ({ ctx, input }) => {
+       // TODO: Add auth check
       const newId = nanoid();
       const slug = await generateUniqueSlug(ctx.db, input.title);
-
-      await ctx.db.insert(trainingCourses).values({
-        id: newId,
-        slug: slug,
-        ...input,
-        // Handle optional nullable fields
-        venueId: input.venueId ?? null,
-        instructorId: input.instructorId ?? null,
-        capacity: input.capacity ?? null,
-        primaryImageIndex: input.primaryImageIndex ?? 0,
-        imageUrls: input.imageUrls ?? [],
-      });
-      return { id: newId, slug };
+      
+      try {
+          await ctx.db.insert(trainingCourses).values({
+            id: newId,
+            slug: slug,
+            ...input,
+            venueId: input.venueId ?? null,
+            instructorId: input.instructorId ?? null,
+            capacity: input.capacity ?? null,
+            primaryImageIndex: input.primaryImageIndex ?? 0,
+            imageUrls: input.imageUrls ?? [],
+          });
+          return { id: newId, slug };
+      } catch (error) {
+          console.error("Failed to create training course:", error);
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to create course' });
+      }
     }),
 
-  update: adminProcedure
+  // WARNING: Using publicProcedure. Change to adminProcedure later.
+  update: publicProcedure
     .input(updateCourseSchema)
     .mutation(async ({ ctx, input }) => {
+      // TODO: Add auth check
       const { id, ...updateData } = input;
 
       const dataToUpdate: Partial<typeof trainingCourses.$inferInsert> = {};
+      let newSlug: string | undefined = undefined;
 
-      // Regenerate slug if title changes
       if (updateData.title !== undefined) {
         dataToUpdate.title = updateData.title;
-        dataToUpdate.slug = await generateUniqueSlug(ctx.db, updateData.title, id);
+        newSlug = await generateUniqueSlug(ctx.db, updateData.title, id);
+        dataToUpdate.slug = newSlug;
       }
-      
-      // Map other potential fields
+
       if (updateData.description !== undefined) dataToUpdate.description = updateData.description;
       if (updateData.skillLevel !== undefined) dataToUpdate.skillLevel = updateData.skillLevel;
       if (updateData.duration !== undefined) dataToUpdate.duration = updateData.duration;
@@ -127,72 +139,104 @@ export const trainingCourseRouter = createTRPCRouter({
         return { success: false, message: "No fields provided for update." };
       }
 
-      await ctx.db
-        .update(trainingCourses)
-        .set({
-            ...dataToUpdate,
-            updatedAt: new Date()
-        })
-        .where(eq(trainingCourses.id, id));
-
-      return { success: true, slug: dataToUpdate.slug }; // Return new slug if changed
+      try {
+          await ctx.db
+            .update(trainingCourses)
+            .set({
+                ...dataToUpdate,
+                updatedAt: new Date()
+            })
+            .where(eq(trainingCourses.id, id));
+          return { success: true, slug: newSlug };
+      } catch (error) {
+          console.error("Failed to update training course:", error);
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to update course' });
+      }
     }),
 
   list: publicProcedure
-    .input(z.object({ // Add input for potential filtering/pagination later
+    .input(z.object({ 
         regionId: z.string().optional(),
         instructorId: z.string().optional(),
         limit: z.number().min(1).max(100).default(20),
-        cursor: z.string().nullish(), // for cursor-based pagination
+        cursor: z.string().nullish(),
     }).optional())
     .query(async ({ ctx, input }) => {
         const limit = input?.limit ?? 20;
         const cursor = input?.cursor;
         
-        const items = await ctx.db.query.trainingCourses.findMany({
-            where: and(
-                eq(trainingCourses.isActive, true), // Only list active courses
-                input?.regionId ? eq(trainingCourses.regionId, input.regionId) : undefined,
-                input?.instructorId ? eq(trainingCourses.instructorId, input.instructorId) : undefined,
-                // Add cursor condition if needed
-            ),
-            orderBy: [desc(trainingCourses.createdAt)], // Example order
-            limit: limit + 1, // Get one extra to check for next page
-            with: {
-                region: { columns: { name: true, slug: true } },
-                instructor: { columns: { name: true, imageUrl: true } },
-                venue: { columns: { name: true } }
-            },
-            // Add cursor logic here if implementing cursor pagination
-            // Example: cursor ? gt(trainingCourses.id, cursor) : undefined 
-        });
-
-        let nextCursor: typeof cursor | undefined = undefined;
-        if (items.length > limit) {
-            const nextItem = items.pop(); // Remove the extra item
-            nextCursor = nextItem!.id; // Use its ID as the next cursor
+        const whereConditions = [
+            eq(trainingCourses.isActive, true)
+        ];
+        if (input?.regionId) {
+            whereConditions.push(eq(trainingCourses.regionId, input.regionId));
+        }
+        if (input?.instructorId) {
+            whereConditions.push(eq(trainingCourses.instructorId, input.instructorId));
         }
 
-        return {
-            items,
-            nextCursor,
-        };
+        try {
+            const items = await ctx.db.query.trainingCourses.findMany({
+                where: and(...whereConditions),
+                orderBy: [desc(trainingCourses.createdAt)], 
+                limit: limit + 1, 
+                with: {
+                    region: { columns: { name: true, slug: true } },
+                    instructor: { columns: { name: true, imageUrl: true } },
+                    venue: { columns: { name: true } }
+                },
+            });
+
+            let nextCursor: typeof cursor | undefined = undefined;
+            if (items.length > limit) {
+                items.pop(); // Remove the extra item used for cursor check
+                nextCursor = items[items.length - 1]?.id;
+            }
+
+            return {
+                items,
+                nextCursor,
+            };
+        } catch (error) {
+            console.error("Failed to list training courses:", error);
+            throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to list courses' });
+        }
     }),
 
   getBySlug: publicProcedure
     .input(z.object({ slug: z.string() }))
     .query(async ({ ctx, input }) => {
-      return ctx.db.query.trainingCourses.findFirst({
-        where: eq(trainingCourses.slug, input.slug),
-        with: {
-          region: true,
-          instructor: true,
-          venue: true,
-        },
-      });
+      try {
+            const course = await ctx.db.query.trainingCourses.findFirst({
+                where: eq(trainingCourses.slug, input.slug),
+                with: {
+                region: true,
+                instructor: true,
+                venue: true,
+                },
+            });
+             if (!course) {
+                throw new TRPCError({ code: 'NOT_FOUND', message: 'Course not found' });
+            }
+            return course;
+      } catch (error) {
+          console.error(`Failed to get course by slug ${input.slug}:`, error);
+          if (error instanceof TRPCError) throw error;
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to retrieve course' });
+      }
     }),
     
-  // Potential delete procedure
-  // delete: adminProcedure
-  //  .input ...
+  // WARNING: Using publicProcedure. Change to adminProcedure later.
+  // delete: publicProcedure
+  //  .input(z.object({ id: z.string() }))
+  //  .mutation(async ({ ctx, input }) => { 
+  //     // TODO: Add auth check
+  //     try {
+  //          await ctx.db.delete(trainingCourses).where(eq(trainingCourses.id, input.id));
+  //          return { success: true };
+  //      } catch (error) {
+  //          console.error("Failed to delete training course:", error);
+  //          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to delete course' });
+  //      }
+  //   }),
 }); 

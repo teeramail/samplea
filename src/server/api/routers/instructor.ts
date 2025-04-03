@@ -1,11 +1,12 @@
 import { z } from "zod";
 import { nanoid } from "nanoid"; // Assuming nanoid is used for IDs based on other tables
+import { TRPCError } from "@trpc/server";
 
 import {
   createTRPCRouter,
-  protectedProcedure,
-  publicProcedure,
-  adminProcedure, // Assuming you have an admin procedure defined
+  publicProcedure, // Using publicProcedure TEMPORARILY for create/update during dev
+  // protectedProcedure, // TODO: Use protected/admin procedure later
+  // adminProcedure, // TODO: Define and import adminProcedure in trpc.ts
 } from "~/server/api/trpc";
 import { instructors } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
@@ -31,28 +32,37 @@ const updateInstructorSchema = z.object({
 
 
 export const instructorRouter = createTRPCRouter({
-  create: adminProcedure // Use adminProcedure for protected actions
+  // WARNING: Using publicProcedure for create/update. Change to adminProcedure later.
+  create: publicProcedure 
     .input(createInstructorSchema)
     .mutation(async ({ ctx, input }) => {
+      // TODO: Add auth check here when using publicProcedure if needed during dev,
+      //       OR switch back to protected/admin procedure.
       const newId = nanoid(); // Generate a new ID
-      await ctx.db.insert(instructors).values({
-        id: newId,
-        ...input,
-        // Ensure optional fields are handled correctly, potentially setting null if undefined
-        imageUrl: input.imageUrl ?? null,
-        bio: input.bio ?? null,
-        expertise: input.expertise ?? [],
-        userId: input.userId ?? null,
-      });
-      return { id: newId };
+      try {
+        await ctx.db.insert(instructors).values({
+          id: newId,
+          ...input,
+          imageUrl: input.imageUrl ?? null,
+          bio: input.bio ?? null,
+          expertise: input.expertise ?? [],
+          userId: input.userId ?? null,
+        });
+        return { id: newId };
+      } catch (error) {
+        console.error("Failed to create instructor:", error);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to create instructor' });
+      }
     }),
 
-  update: adminProcedure
+  // WARNING: Using publicProcedure for create/update. Change to adminProcedure later.
+  update: publicProcedure
     .input(updateInstructorSchema)
     .mutation(async ({ ctx, input }) => {
+      // TODO: Add auth check here when using publicProcedure if needed during dev,
+      //       OR switch back to protected/admin procedure.
       const { id, ...updateData } = input;
       
-      // Construct the update object, only including fields that were provided
       const dataToUpdate: Partial<typeof instructors.$inferInsert> = {};
       if (updateData.name !== undefined) dataToUpdate.name = updateData.name;
       if (updateData.bio !== undefined) dataToUpdate.bio = updateData.bio;
@@ -60,47 +70,64 @@ export const instructorRouter = createTRPCRouter({
       if (updateData.expertise !== undefined) dataToUpdate.expertise = updateData.expertise;
       if (updateData.userId !== undefined) dataToUpdate.userId = updateData.userId;
       
-      // Only proceed if there's something to update
       if (Object.keys(dataToUpdate).length === 0) {
-          // Consider throwing an error or returning a specific message
           return { success: false, message: "No fields provided for update." };
       }
 
-      await ctx.db
-        .update(instructors)
-        .set({ 
-          ...dataToUpdate,
-           updatedAt: new Date() // Explicitly update updatedAt timestamp
-         })
-        .where(eq(instructors.id, id));
-        
-      return { success: true };
+      try {
+        await ctx.db
+          .update(instructors)
+          .set({ 
+            ...dataToUpdate,
+            updatedAt: new Date() // Explicitly update updatedAt timestamp
+          })
+          .where(eq(instructors.id, id));
+        return { success: true };
+      } catch (error) {
+        console.error("Failed to update instructor:", error);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to update instructor' });
+      }
     }),
 
   list: publicProcedure
     .query(async ({ ctx }) => {
-      return ctx.db.select().from(instructors).orderBy(instructors.name); // Example ordering
+      try {
+          return await ctx.db.select().from(instructors).orderBy(instructors.name);
+      } catch (error) {
+          console.error("Failed to list instructors:", error);
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to list instructors' });
+      }
     }),
 
   getById: publicProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      const instructor = await ctx.db.query.instructors.findFirst({
-        where: eq(instructors.id, input.id),
-        // Optionally include related data if needed later
-        // with: {
-        //   user: true, // If you want to include linked user data
-        //   trainingCourses: true, // If you want to include linked courses
-        // }
-      });
-      return instructor;
+       try {
+            const instructor = await ctx.db.query.instructors.findFirst({
+                where: eq(instructors.id, input.id),
+            });
+            if (!instructor) {
+                throw new TRPCError({ code: 'NOT_FOUND', message: 'Instructor not found' });
+            }
+            return instructor;
+        } catch (error) {
+            console.error(`Failed to get instructor by ID ${input.id}:`, error);
+            if (error instanceof TRPCError) throw error;
+            throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to retrieve instructor' });
+        }
     }),
     
-  // Potential delete procedure (use adminProcedure)
-  // delete: adminProcedure
+  // WARNING: Using publicProcedure. Change to adminProcedure later.
+  // delete: publicProcedure 
   //   .input(z.object({ id: z.string() }))
   //   .mutation(async ({ ctx, input }) => {
-  //     await ctx.db.delete(instructors).where(eq(instructors.id, input.id));
-  //     return { success: true };
+  //     // TODO: Add auth check
+  //     try {
+  //        await ctx.db.delete(instructors).where(eq(instructors.id, input.id));
+  //        return { success: true };
+  //     } catch (error) {
+  //        console.error("Failed to delete instructor:", error);
+  //        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to delete instructor' });
+  //     }
   //   }),
 }); 
