@@ -4,14 +4,15 @@ import { notFound } from 'next/navigation';
 import { api } from '~/trpc/server';
 import type { Metadata, ResolvingMetadata } from 'next';
 
-// Define Params type based on folder structure - Removed custom Props type
-// type Props = {
-//   params: { slug: string };
-// };
+// Define a standard PageProps interface for dynamic route segments
+interface PageProps {
+  params: { slug: string };
+  searchParams?: { [key: string]: string | string[] | undefined }; // Include searchParams even if not used
+}
 
 // Generate dynamic metadata for SEO
 export async function generateMetadata(
-  { params }: { params: { slug: string } }, // Use inline type
+  { params }: PageProps, // Use the PageProps interface
   parent: ResolvingMetadata
 ): Promise<Metadata> {
   const slug = params.slug;
@@ -41,7 +42,7 @@ export async function generateMetadata(
   };
 }
 
-export default async function CourseDetailPage({ params }: { params: { slug: string } }) { // Use inline type
+export default async function CourseDetailPage({ params }: PageProps) { // Use the PageProps interface
   const course = await api.trainingCourse.getBySlug({ slug: params.slug });
 
   if (!course) {
