@@ -63,7 +63,7 @@ export default function AdminPostsPage() {
   if (error) return <div className="p-4 text-red-600">Error loading posts: {error.message}</div>;
   
   // Adjust based on list procedure return type ({ items, nextCursor } or just array)
-  const posts = postsData?.items ?? postsData ?? [];
+  const posts = postsData ?? [];
 
   return (
     <div className="p-6">
