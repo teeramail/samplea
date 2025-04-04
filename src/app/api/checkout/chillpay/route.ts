@@ -199,14 +199,20 @@ export async function POST(request: NextRequest) {
     
     console.log("Sending request to ChillPay API with payload:", payload);
 
-    // Make API call to ChillPay
+    // Create URLSearchParams manually to avoid type issues
+    const params = new URLSearchParams();
+    // Add all payload properties to params
+    Object.entries(payload).forEach(([key, value]) => {
+      params.append(key, value);
+    });
+    
     const chillPayResponse = await fetch(process.env.CHILLPAY_API_ENDPOINT, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
         "Cache-Control": "no-cache",
       },
-      body: new URLSearchParams(payload).toString(),
+      body: params.toString(),
     });
 
     // Get the raw response for logging
