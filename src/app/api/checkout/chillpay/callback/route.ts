@@ -1,10 +1,9 @@
 // import { NextResponse } from "next/server"; // Unused
 // import { redirect } from "next/navigation"; // Unused
 
-// In a real-world application, you would connect to your database here
-// import { db } from "@/server/db";
-// import { bookings } from "@/server/db/schema";
-// import { eq } from "drizzle-orm";
+import { db } from "~/server/db";
+import { bookings } from "~/server/db/schema";
+import { eq } from "drizzle-orm";
 
 // ChillPay sends various parameters back to the merchant's server
 export async function GET(request: Request) {
@@ -20,7 +19,7 @@ export async function GET(request: Request) {
   const amount = params.get('Amount');
   const orderNo = params.get('OrderNo'); // This is our bookingId
   const customerId = params.get('CustomerId');
-  const bookingId = params.get('bookingId') ?? orderNo; // Use ?? instead of ||
+  const bookingId = params.get('bookingId') ?? orderNo; 
   
   console.log("ChillPay Payment Result:", { 
     status, code, message, transactionId, amount, orderNo, customerId, bookingId 
@@ -30,32 +29,24 @@ export async function GET(request: Request) {
   const isSuccess = status === '0' && code === '200';
 
   try {
-    // In a real application, you would update the booking status in your database
-    // Example:
-    // if (isSuccess) {
-    //   await db.update(bookings)
-    //     .set({ 
-    //       paymentStatus: 'COMPLETED',
-    //       paymentTransactionId: transactionId,
-    //       updatedAt: new Date()
-    //     })
-    //     .where(eq(bookings.id, bookingId));
-    // } else {
-    //   await db.update(bookings)
-    //     .set({ 
-    //       paymentStatus: 'FAILED',
-    //       paymentErrorMessage: message,
-    //       updatedAt: new Date()
-    //     })
-    //     .where(eq(bookings.id, bookingId));
-    // }
+    // Update the booking status in database
+    if (bookingId) {
+      await db.update(bookings)
+        .set({ 
+          paymentStatus: isSuccess ? 'COMPLETED' : 'FAILED',
+          updatedAt: new Date()
+        })
+        .where(eq(bookings.id, bookingId));
+      
+      console.log(`Updated booking ${bookingId} status to ${isSuccess ? 'COMPLETED' : 'FAILED'}`);
+    }
     
-    // To properly handle this in a real application, you should also:
-    // 1. Verify the payment with ChillPay's payment verification API
-    // 2. Send success/failure emails to the customer
-    // 3. Update your inventory/tickets as needed
+    // For a production application, you should:
+    // 1. Send confirmation emails to the customer
+    // 2. Update ticket status
+    // 3. Log detailed payment information
     
-    // For now, just redirect to the confirmation page with success or failure status
+    // Redirect to the confirmation page with success or failure status
     const redirectBase = `${url.origin}/checkout/confirmation`;
     const redirectUrl = isSuccess 
       ? `${redirectBase}?paymentMethod=credit-card&bookingId=${bookingId}&status=success` 

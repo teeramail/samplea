@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Script from "next/script";
 
 // Define expected API response types
 interface ChillPaySuccessResponse {
@@ -11,6 +12,8 @@ interface ChillPaySuccessResponse {
 interface ChillPayErrorResponse {
   error: string;
   details?: string;
+  code?: number; // Add code field to capture ChillPay error codes
+  status?: number; // Add status field to capture ChillPay status
 }
 
 type ChillPayApiResponse = ChillPaySuccessResponse | ChillPayErrorResponse;
@@ -20,6 +23,8 @@ export default function CreditCardPage() {
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<{code?: number, status?: number} | null>(null);
+  const [orderNo, setOrderNo] = useState<string>("");
 
   const bookingId = searchParams.get('bookingId');
   // Get additional parameters from URL if they exist
@@ -35,62 +40,57 @@ export default function CreditCardPage() {
       return;
     }
 
-    const initiateChillPay = async () => {
-      setIsLoading(true);
-      setError(null);
+    // Generate a unique order ID using the booking ID and timestamp
+    const alphaNumericId = bookingId.replace(/[^a-zA-Z0-9]/g, '').substring(0, 6);
+    const timestamp = Date.now().toString().slice(-10);
+    const orderId = `CP${alphaNumericId}${timestamp}`;
+    setOrderNo(orderId);
+
+    // Mark the booking as processing
+    const updateBookingStatus = async () => {
       try {
-        const response = await fetch('/api/checkout/chillpay', {
+        const response = await fetch('/api/checkout/update-status', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ 
             bookingId,
-            amount,
-            email,
-            phone
+            status: 'PROCESSING',
+            orderNo: orderId
           }),
         });
-
-        const data = await response.json() as ChillPayApiResponse;
-
+        
         if (!response.ok) {
-          // Type guard for error response
-          if ('error' in data) {
-            throw new Error(data.error ?? data.details ?? 'Failed to initiate payment.');
-          } else {
-            throw new Error('Failed to initiate payment. Unexpected response format.');
-          }
+          console.error("Could not update booking status");
         }
-
-        // Type guard for success response
-        if ('paymentUrl' in data && data.paymentUrl) {
-          // Redirect user to ChillPay's payment page
-          window.location.href = data.paymentUrl;
-          // Keep loading state until redirect happens
-        } else {
-          throw new Error("Payment URL not received or invalid in server response.");
-        }
-
       } catch (err) {
-        console.error("Error initiating ChillPay payment:", err);
-        setError(err instanceof Error ? err.message : "An unexpected error occurred. Please try again or contact support.");
-        setIsLoading(false);
+        console.error("Error updating booking status:", err);
       }
     };
 
-    void initiateChillPay();
+    void updateBookingStatus();
+  }, [bookingId, amount, email]);
 
-  }, [bookingId, amount, email, phone, router]);
+  // Script load handler
+  const handleScriptLoad = () => {
+    console.log("ChillPay widget script loaded");
+    setIsLoading(false);
+  };
+
+  // Script error handler
+  const handleScriptError = () => {
+    setError("Failed to load payment widget. Please try again or contact support.");
+    setIsLoading(false);
+  };
 
   return (
     <main className="container mx-auto px-4 py-12">
       <div className="max-w-md mx-auto bg-white p-8 rounded-lg shadow-md text-center">
         {isLoading && (
           <>
-            <h1 className="text-xl font-semibold mb-4">Redirecting to Payment Gateway...</h1>
-            <p className="text-gray-600">Please wait while we securely redirect you to complete your payment for {eventTitle || 'your booking'}.</p>
-            {/* Optional: Add a spinner */}
+            <h1 className="text-xl font-semibold mb-4">Preparing Payment Form...</h1>
+            <p className="text-gray-600">Please wait while we set up the payment gateway for {eventTitle || 'your booking'}.</p>
             <div className="mt-6 flex justify-center items-center">
                <svg className="animate-spin h-8 w-8 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -99,10 +99,56 @@ export default function CreditCardPage() {
             </div>
           </>
         )}
+
+        {!isLoading && !error && (
+          <>
+            <h1 className="text-xl font-semibold mb-4">Complete Your Payment</h1>
+            <p className="text-gray-600 mb-6">
+              Please complete the payment form below to finalize your booking for {eventTitle || 'your event'}.
+            </p>
+            
+            <form 
+              id="payment-form"
+              action="https://cdn.chillpay.co/Payment/"
+              method="post"
+              role="form"
+              className="form-horizontal"
+            >
+              <div id="modernpay-widget-container"
+                data-merchantid="M033598"
+                data-amount={amount * 100}
+                data-orderno={orderNo}
+                data-customerid={bookingId}
+                data-clientip="127.0.0.1"
+                data-routeno="1"
+                data-currency="764"
+                data-description={eventTitle || 'Booking payment'}
+                data-apikey="7ynsXqBl3e0vFPfI1fivU9VSAZ8UZTQmta7vz4b6heptCXrrEja8ub1Z8YW6VnDX"
+              />
+            </form>
+
+            <div className="mt-4 text-sm text-gray-500">
+              You will be redirected to the secure ChillPay payment gateway.
+            </div>
+          </>
+        )}
+        
         {error && (
           <>
             <h1 className="text-xl font-semibold mb-4 text-red-600">Payment Error</h1>
             <p className="text-gray-600 mb-4">{error}</p>
+            
+            {errorDetails && (
+              <div className="mb-4 p-4 bg-gray-100 rounded-md text-left">
+                <h2 className="font-medium text-gray-800">Technical Details:</h2>
+                {errorDetails.status && <p className="text-sm">Status: {errorDetails.status}</p>}
+                {errorDetails.code && <p className="text-sm">Error Code: {errorDetails.code}</p>}
+                {errorDetails.code === 1005 && (
+                  <p className="text-sm mt-2">Note: Error code 1005 "Invalid Route No" often indicates an issue with the merchant configuration for this payment method.</p>
+                )}
+              </div>
+            )}
+            
             <button
               onClick={() => router.back()} // Go back to previous page (likely checkout)
               className="w-full py-2 px-4 rounded-md text-white font-medium bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
@@ -112,6 +158,16 @@ export default function CreditCardPage() {
           </>
         )}
       </div>
+
+      {/* ChillPay widget script */}
+      {!error && (
+        <Script 
+          src="https://cdn.chillpay.co/js/widgets.js?v=1.00" 
+          strategy="afterInteractive"
+          onLoad={handleScriptLoad}
+          onError={handleScriptError}
+        />
+      )}
     </main>
   );
 } 

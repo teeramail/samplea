@@ -264,6 +264,7 @@ export const bookings = createTable(
     eventId: text("eventId").references(() => events.id, { onDelete: 'cascade' }).notNull(), // Cascade delete if event deleted
     totalAmount: doublePrecision("totalAmount").notNull(),
     paymentStatus: text("paymentStatus").notNull().default("PENDING"), // Consider pgEnum
+    paymentOrderNo: text("paymentOrderNo"), // Track ChillPay order number
     createdAt: timestamp("createdAt", { withTimezone: false })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),

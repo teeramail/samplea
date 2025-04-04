@@ -254,32 +254,33 @@ export default function CheckoutPage() {
               
               {/* Payment Method Selection */}
               <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-                <h2 className="text-lg font-semibold mb-4">Payment Method</h2>
+                <h2 className="text-lg font-semibold mb-6">Payment Method</h2>
                 <div className="space-y-4">
-                  <div className="flex items-center">
+                  <div className="flex items-center space-x-3">
                     <input
-                      id="paypal"
-                      name="paymentMethod"
                       type="radio"
+                      id="payment-paypal"
+                      name="paymentMethod"
                       checked={paymentMethod === 'paypal'}
                       onChange={() => setPaymentMethod('paypal')}
-                      className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300"
+                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
                     />
-                    <label htmlFor="paypal" className="ml-3 block text-sm font-medium text-gray-700">
+                    <label htmlFor="payment-paypal" className="text-gray-700">
                       PayPal
                     </label>
                   </div>
-                  <div className="flex items-center">
+                  <div className="flex items-center space-x-3">
                     <input
-                      id="credit-card"
-                      name="paymentMethod"
                       type="radio"
+                      id="payment-credit-card"
+                      name="paymentMethod"
                       checked={paymentMethod === 'credit-card'}
                       onChange={() => setPaymentMethod('credit-card')}
-                      className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300"
+                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
                     />
-                    <label htmlFor="credit-card" className="ml-3 block text-sm font-medium text-gray-700">
+                    <label htmlFor="payment-credit-card" className="text-gray-700 flex items-center">
                       Credit Card
+                      <span className="ml-2 bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">ChillPay</span>
                     </label>
                   </div>
                 </div>
