@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Script from "next/script";
 
@@ -25,6 +25,7 @@ export default function CreditCardPage() {
   const [error, setError] = useState<string | null>(null);
   const [errorDetails, setErrorDetails] = useState<{code?: number, status?: number} | null>(null);
   const [orderNo, setOrderNo] = useState<string>("");
+  const widgetContainerRef = useRef<HTMLDivElement>(null);
 
   const bookingId = searchParams.get('bookingId');
   // Get additional parameters from URL if they exist
@@ -72,10 +73,30 @@ export default function CreditCardPage() {
     void updateBookingStatus();
   }, [bookingId, amount, email]);
 
+  // Initialize the ChillPay widget when the script loads
+  const initializeWidget = () => {
+    if (typeof window !== 'undefined' && window.modernpay && widgetContainerRef.current) {
+      // The widget is loaded through a global modernpay object
+      console.log("Initializing ChillPay widget");
+      try {
+        // Force initial render of the widget
+        window.modernpay.initWidget();
+        setIsLoading(false);
+      } catch (err) {
+        console.error("Error initializing widget:", err);
+        setError("Failed to initialize payment widget. Please try again later.");
+        setIsLoading(false);
+      }
+    }
+  };
+
   // Script load handler
   const handleScriptLoad = () => {
     console.log("ChillPay widget script loaded");
-    setIsLoading(false);
+    // Add a slight delay to ensure script is fully initialized
+    setTimeout(() => {
+      initializeWidget();
+    }, 500);
   };
 
   // Script error handler
@@ -114,7 +135,9 @@ export default function CreditCardPage() {
               role="form"
               className="form-horizontal"
             >
-              <div id="modernpay-widget-container"
+              <div 
+                ref={widgetContainerRef}
+                id="modernpay-widget-container"
                 data-merchantid="M033598"
                 data-amount={amount * 100}
                 data-orderno={orderNo}
@@ -124,7 +147,7 @@ export default function CreditCardPage() {
                 data-currency="764"
                 data-description={eventTitle || 'Booking payment'}
                 data-apikey="7ynsXqBl3e0vFPfI1fivU9VSAZ8UZTQmta7vz4b6heptCXrrEja8ub1Z8YW6VnDX"
-              />
+              ></div>
             </form>
 
             <div className="mt-4 text-sm text-gray-500">
@@ -159,7 +182,7 @@ export default function CreditCardPage() {
         )}
       </div>
 
-      {/* ChillPay widget script */}
+      {/* Add a window type definition for TypeScript */}
       {!error && (
         <Script 
           src="https://cdn.chillpay.co/js/widgets.js?v=1.00" 
@@ -170,4 +193,13 @@ export default function CreditCardPage() {
       )}
     </main>
   );
+}
+
+// Add TypeScript declaration for the window object with modernpay property
+declare global {
+  interface Window {
+    modernpay: {
+      initWidget: () => void;
+    };
+  }
 } 

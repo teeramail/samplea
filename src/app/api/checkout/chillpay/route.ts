@@ -60,8 +60,8 @@ export async function POST(request: NextRequest) {
     console.log("ChillPay Configuration:", {
       merchantCode: process.env.CHILLPAY_MERCHANT_CODE ? "Set" : "Not set",
       apiKey: process.env.CHILLPAY_API_KEY ? "Set" : "Not set",
-      md5Secret: process.env.CHILLPAY_MD5_SECRET ? "Set (length: " + process.env.CHILLPAY_MD5_SECRET.length + ")" : "Not set",
-      apiEndpoint: process.env.CHILLPAY_API_ENDPOINT || "Not set",
+      md5Secret: process.env.CHILLPAY_MD5_SECRET ? "Set (length: " + process.env.CHILLPAY_MD5_SECRET?.length + ")" : "Not set",
+      apiEndpoint: process.env.CHILLPAY_API_ENDPOINT ?? "Not set",
     });
 
     // Check required environment variables
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     const cleanedMd5Secret = process.env.CHILLPAY_MD5_SECRET.trim();
 
     // Parse and validate the request body
-    const body = await request.json();
+    const body = await request.json() as Record<string, unknown>;
     console.log("Received request to initiate ChillPay payment:", body);
     
     const validatedData = RequestSchema.parse(body);
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
     console.log("Updated booking status to processing:", updateResult);
 
     // Get the origin to use for return URL
-    const origin = request.headers.get("origin") || "http://localhost:3000";
+    const origin = request.headers.get("origin") ?? "http://localhost:3000";
     
     // Prepare return and callback URLs
     const returnUrl = `${origin}/events/${booking.eventId}?payment=success`;
@@ -126,8 +126,8 @@ export async function POST(request: NextRequest) {
     console.log("Generated OrderNo:", orderId, "Length:", orderId.length);
     
     // Get client IP address
-    const clientIP = request.headers.get('x-forwarded-for') || 
-                    request.headers.get('x-real-ip') || 
+    const clientIP = request.headers.get('x-forwarded-for') ?? 
+                    request.headers.get('x-real-ip') ?? 
                     '127.0.0.1';
                     
     console.log("Client IP address:", clientIP);
@@ -138,8 +138,8 @@ export async function POST(request: NextRequest) {
       OrderNo: orderId,
       CustomerId: booking.customerId,
       Amount: formattedAmount.toString(),
-      Description: eventTitle || `Booking for event ${booking.eventId}`,
-      PhoneNumber: companyPhoneNumber, // Use company phone number instead of customer's
+      Description: eventTitle ?? `Booking for event ${booking.eventId}`,
+      PhoneNumber: companyPhoneNumber,
       CustEmail: email,
       ApiKey: process.env.CHILLPAY_API_KEY,
       ReturnUrl: returnUrl,
@@ -200,13 +200,13 @@ export async function POST(request: NextRequest) {
     console.log("Sending request to ChillPay API with payload:", payload);
 
     // Make API call to ChillPay
-    const chillPayResponse = await fetch(process.env.CHILLPAY_API_ENDPOINT!, {
+    const chillPayResponse = await fetch(process.env.CHILLPAY_API_ENDPOINT, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
         "Cache-Control": "no-cache",
       },
-      body: new URLSearchParams(Object.entries(payload)).toString(),
+      body: new URLSearchParams(payload).toString(),
     });
 
     // Get the raw response for logging
