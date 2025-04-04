@@ -6,7 +6,14 @@ import { format } from 'date-fns';
 // import toast from "react-hot-toast"; // Optional
 
 // Define the type for a single post based on the router output
-type PostType = ReturnType<typeof api.post.list.useQuery>['data'] extends { items: (infer T)[] } ? T : never; // Adjust if list returns array directly
+type PostType = {
+  id: string;
+  title: string;
+  status: string;
+  publishedAt?: Date | string | null;
+  isFeatured: boolean;
+  // Add other required properties
+};
 
 // Reuse or import the ToggleSwitch component
 function ToggleSwitch({ enabled, onChange }: { enabled: boolean; onChange: (enabled: boolean) => void }) {
