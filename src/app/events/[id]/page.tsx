@@ -17,7 +17,7 @@ export default async function EventDetailPage({
     with: {
       venue: true,
       region: true,
-      tickets: true,
+      eventTickets: true,
     },
   });
 
@@ -25,7 +25,7 @@ export default async function EventDetailPage({
     return notFound();
   }
 
-  const { tickets: eventTickets } = event;
+  const eventTickets = event.eventTickets;
 
   const formatDate = (date: Date | null) => {
     if (!date) return 'N/A';
