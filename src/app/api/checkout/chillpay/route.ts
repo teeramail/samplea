@@ -5,10 +5,7 @@ import { and, eq } from "drizzle-orm";
 // import CryptoJS from 'crypto-js';
 import { z } from "zod";
 import crypto from 'crypto';
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
 import { env } from "~/env";
-import * as schema from "./schema";
 
 // Define a schema for the request body
 const RequestSchema = z.object({
@@ -57,27 +54,6 @@ interface ChillPayPayload {
   IPAddress: string; // Add IP Address field
   CheckSum?: string; // Optional as we'll add it later
 }
-
-// Configure connection pooling options
-const connectionOptions = {
-  max: 10,                 // Max 10 connections
-  idle_timeout: 20,        // Close idle connections after 20 seconds
-  connect_timeout: 10,     // Connection timeout after 10 seconds
-  prepare: false,          // Disable prepared statements for better connection reuse
-};
-
-// Cache the database connection
-const globalForDb = globalThis as unknown as {
-  conn: postgres.Sql | undefined;
-};
-
-// Create a single connection instance
-const conn = globalForDb.conn ?? postgres(env.DATABASE_URL, connectionOptions);
-
-// Cache in all environments, not just development
-globalForDb.conn = conn;
-
-export const db = drizzle(conn, { schema });
 
 export async function POST(request: NextRequest) {
   try {
