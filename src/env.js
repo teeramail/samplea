@@ -23,6 +23,15 @@ export const env = createEnv({
     AWS_S3_BUCKET: z.string().optional(),
     AWS_REGION: z.string().optional(),
     AWS_ENDPOINT: z.string().optional(),
+    // PayPal configuration
+    PAYPAL_CLIENT_ID: z.string().optional(),
+    PAYPAL_SECRET: z.string().optional(),
+    PAYPAL_API_URL: z.string().optional(),
+    // ChillPay configuration
+    CHILLPAY_MERCHANT_CODE: z.string().optional(),
+    CHILLPAY_API_KEY: z.string().optional(),
+    CHILLPAY_MD5_SECRET: z.string().optional(),
+    CHILLPAY_API_ENDPOINT: z.string().optional(),
   },
 
   /**
@@ -46,10 +55,16 @@ export const env = createEnv({
     NODE_ENV: process.env.NODE_ENV,
     AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
     AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
-
     AWS_S3_BUCKET: process.env.AWS_S3_BUCKET,
     AWS_REGION: process.env.AWS_REGION,
     AWS_ENDPOINT: process.env.AWS_ENDPOINT,
+    PAYPAL_CLIENT_ID: process.env.PAYPAL_CLIENT_ID,
+    PAYPAL_SECRET: process.env.PAYPAL_SECRET,
+    PAYPAL_API_URL: process.env.PAYPAL_API_URL,
+    CHILLPAY_MERCHANT_CODE: process.env.CHILLPAY_MERCHANT_CODE,
+    CHILLPAY_API_KEY: process.env.CHILLPAY_API_KEY,
+    CHILLPAY_MD5_SECRET: process.env.CHILLPAY_MD5_SECRET,
+    CHILLPAY_API_ENDPOINT: process.env.CHILLPAY_API_ENDPOINT,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

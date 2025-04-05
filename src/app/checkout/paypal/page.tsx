@@ -1,34 +1,113 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
+
+// Define expected API response types
+interface PayPalSuccessResponse {
+  paymentUrl: string;
+}
+
+interface PayPalErrorResponse {
+  error: string;
+  details?: string;
+}
+
+type PayPalApiResponse = PayPalSuccessResponse | PayPalErrorResponse;
 
 export default function PayPalPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   const bookingId = searchParams.get('bookingId');
+  const amount = Number(searchParams.get('amount') ?? '0');
+  const customerName = searchParams.get('customerName') ?? '';
+  const email = searchParams.get('email') ?? '';
+  const phone = searchParams.get('phone') ?? '';
+  const eventTitle = searchParams.get('eventTitle') ?? '';
+
+  useEffect(() => {
+    if (!bookingId || !amount || !customerName || !email) {
+      setError("Missing booking information. Please return to checkout.");
+      return;
+    }
+
+    // Automatically initiate the PayPal payment when the page loads
+    initiatePayment();
+  }, []);
   
-  // Mock PayPal checkout process
-  const handlePayment = async () => {
+  const initiatePayment = async () => {
+    if (isProcessing) return;
     setIsProcessing(true);
     
-    // Simulate API call to update payment status
     try {
-      // In a real app, you would make an API call to your backend
-      // to process the payment with PayPal and update the booking status
+      console.log(`Initiating PayPal payment for booking ${bookingId}:`, {
+        bookingId, amount, customerName, email, phone, eventTitle
+      });
+
+      const response = await fetch('/api/checkout/paypal', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          bookingId,
+          amount,
+          customerName,
+          email,
+          phone,
+          eventTitle
+        }),
+      });
       
-      // Simulate processing delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Redirect to confirmation page
-      router.push(`/checkout/confirmation?paymentMethod=paypal&bookingId=${bookingId}`);
-    } catch (error) {
-      console.error("Payment error:", error);
+      // Get the raw response text for better error handling
+      const responseText = await response.text();
+      let data: PayPalApiResponse;
+
+      try {
+        // Try to parse JSON response
+        data = JSON.parse(responseText) as PayPalApiResponse;
+      } catch (parseError) {
+        console.error('Error parsing response:', parseError);
+        // Show part of the raw response for debugging
+        const responsePreview = responseText.length > 100 
+          ? responseText.substring(0, 100) + "..." 
+          : responseText;
+        throw new Error(`Invalid response from server: ${responsePreview}`);
+      }
+
+      if (!response.ok) {
+        // Check if there's an error object
+        if ('error' in data) {
+          const errorResponse = data as PayPalErrorResponse;
+          
+          // Format a detailed error message
+          let detailedError = errorResponse.error;
+          if (errorResponse.details) {
+            detailedError += `: ${errorResponse.details}`;
+          }
+          
+          throw new Error(detailedError);
+        } else {
+          throw new Error(`Payment initiation failed with status ${response.status}`);
+        }
+      }
+
+      // If we got here, we have a success response with a payment URL
+      if ('paymentUrl' in data) {
+        const paymentUrl = data.paymentUrl;
+        console.log('Redirecting to PayPal checkout URL:', paymentUrl);
+        window.location.href = paymentUrl;
+      } else {
+        throw new Error('Payment response missing payment URL');
+      }
+    } catch (err) {
+      console.error('Payment initiation error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to initiate payment');
       setIsProcessing(false);
-      alert("Payment failed. Please try again.");
     }
   };
   
@@ -48,55 +127,63 @@ export default function PayPalPage() {
         
         <h1 className="text-2xl font-bold text-center mb-6">PayPal Checkout</h1>
         
-        <div className="border-b border-gray-200 pb-4 mb-4">
-          <p className="text-gray-600 text-center">
-            Complete your purchase securely with PayPal
-          </p>
-        </div>
-        
-        <div className="space-y-4 mb-6">
-          <div className="bg-gray-50 p-4 rounded">
-            <p className="text-sm text-gray-600">Sign in to PayPal to complete this transaction.</p>
-          </div>
-          
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input 
-                type="email" 
-                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                placeholder="email@example.com"
-              />
+        {error ? (
+          <>
+            <div className="bg-red-100 p-4 rounded-md text-red-700 mb-6">
+              {error}
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-              <input 
-                type="password" 
-                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                placeholder="Password"
-              />
+            
+            <button
+              onClick={() => router.back()}
+              className="w-full py-3 px-4 rounded-md text-white font-medium bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+            >
+              Return to Checkout
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="border-b border-gray-200 pb-4 mb-4">
+              <p className="text-gray-600 text-center">
+                {isProcessing 
+                  ? "Preparing your payment with PayPal..."
+                  : "Complete your purchase securely with PayPal"}
+              </p>
             </div>
-          </div>
-        </div>
-        
-        <button
-          onClick={handlePayment}
-          disabled={isProcessing}
-          className={`w-full py-3 px-4 rounded-md text-white font-medium ${
-            isProcessing ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'
-          } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2`}
-        >
-          {isProcessing ? 'Processing...' : 'Pay Now'}
-        </button>
-        
-        <div className="mt-4">
-          <button
-            onClick={() => router.back()}
-            className="w-full text-sm text-gray-600 hover:text-gray-800"
-          >
-            Cancel and return to checkout
-          </button>
-        </div>
+            
+            {isProcessing ? (
+              <div className="flex flex-col items-center justify-center py-6">
+                <svg className="animate-spin h-8 w-8 text-blue-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p className="text-sm text-gray-600">
+                  Please wait while we redirect you to PayPal...
+                </p>
+              </div>
+            ) : (
+              <>
+                <button
+                  onClick={initiatePayment}
+                  disabled={isProcessing}
+                  className={`w-full py-3 px-4 rounded-md text-white font-medium ${
+                    isProcessing ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'
+                  } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2`}
+                >
+                  {isProcessing ? 'Processing...' : 'Continue to PayPal'}
+                </button>
+                
+                <div className="mt-4">
+                  <button
+                    onClick={() => router.back()}
+                    className="w-full text-sm text-gray-600 hover:text-gray-800"
+                  >
+                    Cancel and return to checkout
+                  </button>
+                </div>
+              </>
+            )}
+          </>
+        )}
       </div>
     </main>
   );
