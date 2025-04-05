@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
-import { bookings } from "~/server/db/schema";
+import { bookings, customers } from "~/server/db/schema";
 import { and, eq } from "drizzle-orm";
 // import CryptoJS from 'crypto-js';
 import { z } from "zod";
@@ -11,6 +11,7 @@ import { env } from "~/env";
 const RequestSchema = z.object({
   bookingId: z.string(),
   amount: z.number(),
+  customerName: z.string(),
   email: z.string().email(),
   phone: z.string().optional(),
   eventTitle: z.string().optional(),
@@ -82,25 +83,66 @@ export async function POST(request: NextRequest) {
     console.log("Received request to initiate ChillPay payment:", body);
     
     const validatedData = RequestSchema.parse(body);
-    const { bookingId, amount, email, phone, eventTitle } = validatedData;
+    const { bookingId, amount, customerName, email, phone, eventTitle } = validatedData;
 
     // Always use the company phone number for ChillPay to avoid format issues
     const companyPhoneNumber = "0815350971";
     console.log("Using company phone number for ChillPay:", companyPhoneNumber);
 
-    // Fetch the booking to ensure it exists and get more details if needed
+    // Fetch the booking to ensure it exists
     const booking = await db.query.bookings.findFirst({
-      where: and(eq(bookings.id, bookingId), eq(bookings.paymentStatus, "PENDING")),
+      where: eq(bookings.id, bookingId),
     });
 
     if (!booking) {
       return NextResponse.json(
-        { error: "Booking not found or already processed" },
+        { error: "Booking not found" },
         { status: 404 }
       );
     }
 
-    // Update booking status to 'processing'
+    // STEP 1: Ensure customer information is saved/updated
+    console.log(`Ensuring customer information is saved for booking ${bookingId}`);
+    
+    // Check if customer exists and update information
+    const customerExists = await db.query.customers.findFirst({
+      where: eq(customers.id, booking.customerId)
+    });
+    
+    if (customerExists) {
+      // Update customer information
+      await db
+        .update(customers)
+        .set({ 
+          name: customerName,
+          email: email,
+          phone: phone || null,
+          updatedAt: new Date()
+        })
+        .where(eq(customers.id, booking.customerId));
+      
+      console.log(`Updated customer information for ${booking.customerId}`);
+    } else {
+      console.error(`Customer ${booking.customerId} not found for booking ${bookingId}`);
+      return NextResponse.json(
+        { error: "Customer record not found" },
+        { status: 404 }
+      );
+    }
+    
+    // Update booking snapshot information
+    await db
+      .update(bookings)
+      .set({ 
+        customerNameSnapshot: customerName,
+        customerEmailSnapshot: email,
+        customerPhoneSnapshot: phone || null
+      })
+      .where(eq(bookings.id, bookingId));
+    
+    console.log(`Updated booking snapshot information for ${bookingId}`);
+
+    // STEP 2: Now update booking status to 'processing'
     const updateResult = await db
       .update(bookings)
       .set({ paymentStatus: "PROCESSING" })
@@ -119,12 +161,17 @@ export async function POST(request: NextRequest) {
     // Format amount properly (cents/satang)
     const formattedAmount = Math.round(amount * 100);
     
-    // Generate a unique order ID using the booking ID and timestamp
-    // Format: CP + first 6 chars of alphanumeric booking ID + timestamp slice (20 chars max)
+    // Generate a unique order ID
     const alphaNumericId = bookingId.replace(/[^a-zA-Z0-9]/g, '').substring(0, 6);
     const timestamp = Date.now().toString().slice(-10);
     const orderId = `CP${alphaNumericId}${timestamp}`;
     console.log("Generated OrderNo:", orderId, "Length:", orderId.length);
+    
+    // Update order number in booking
+    await db
+      .update(bookings)
+      .set({ paymentOrderNo: orderId })
+      .where(eq(bookings.id, bookingId));
     
     // Get client IP address
     const clientIP = request.headers.get('x-forwarded-for') ?? 
@@ -133,7 +180,7 @@ export async function POST(request: NextRequest) {
                     
     console.log("Client IP address:", clientIP);
 
-    // Prepare the payload for ChillPay
+    // STEP 3: Prepare the payload for ChillPay
     const payload: ChillPayPayload = {
       MerchantCode: process.env.CHILLPAY_MERCHANT_CODE,
       OrderNo: orderId,
@@ -153,11 +200,6 @@ export async function POST(request: NextRequest) {
     };
 
     // Calculate checksum
-    // According to ChillPay docs, the checksum should include ALL these fields in this exact order:
-    // MerchantCode + OrderNo + CustomerId + Amount + PhoneNumber + Description + ChannelCode + 
-    // Currency + LangCode + RouteNo + IPAddress + ApiKey + TokenFlag + CreditToken + CreditMonth + 
-    // ShopID + ProductImageUrl + CustEmail + CardType + MD5 Secret Key
-    
     // Include empty strings for optional fields we're not using
     const tokenFlag = "N"; // N means pay without token (default)
     const creditToken = "";
@@ -200,9 +242,8 @@ export async function POST(request: NextRequest) {
     
     console.log("Sending request to ChillPay API with payload:", payload);
 
-    // Create URLSearchParams manually to avoid type issues
+    // STEP 4: Send request to ChillPay API
     const params = new URLSearchParams();
-    // Add all payload properties to params
     Object.entries(payload).forEach(([key, value]) => {
       params.append(key, value);
     });
@@ -226,6 +267,13 @@ export async function POST(request: NextRequest) {
       responseData = JSON.parse(responseText);
     } catch (error) {
       console.error("Error parsing ChillPay response:", error);
+      
+      // Update booking status back to pending
+      await db
+        .update(bookings)
+        .set({ paymentStatus: "PENDING" })
+        .where(eq(bookings.id, bookingId));
+        
       return NextResponse.json(
         { 
           error: "Error processing payment gateway response",
@@ -235,7 +283,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if the response indicates success
+    // STEP 5: Handle the response
     if (responseData.Status === 0 && responseData.Code === 200) {
       // Payment initiated successfully
       return NextResponse.json({

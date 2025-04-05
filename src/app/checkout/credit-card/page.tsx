@@ -12,8 +12,8 @@ interface ChillPaySuccessResponse {
 interface ChillPayErrorResponse {
   error: string;
   details?: string;
-  code?: number; // Add code field to capture ChillPay error codes
-  status?: number; // Add status field to capture ChillPay status
+  code?: number;
+  status?: number;
 }
 
 type ChillPayApiResponse = ChillPaySuccessResponse | ChillPayErrorResponse;
@@ -28,14 +28,14 @@ export default function CreditCardPage() {
   const widgetContainerRef = useRef<HTMLDivElement>(null);
 
   const bookingId = searchParams.get('bookingId');
-  // Get additional parameters from URL if they exist
   const amount = Number(searchParams.get('amount') ?? '0');
   const email = searchParams.get('email') ?? '';
   const phone = searchParams.get('phone') ?? '';
+  const customerName = searchParams.get('customerName') ?? '';
   const eventTitle = searchParams.get('eventTitle') ?? '';
 
   useEffect(() => {
-    if (!bookingId || !amount || !email) {
+    if (!bookingId || !amount || !email || !customerName) {
       setError("Missing booking information. Please return to checkout.");
       setIsLoading(false);
       return;
@@ -47,31 +47,85 @@ export default function CreditCardPage() {
     const orderId = `CP${alphaNumericId}${timestamp}`;
     setOrderNo(orderId);
 
-    // Mark the booking as processing
-    const updateBookingStatus = async () => {
+    // Initiate ChillPay payment process
+    console.log(`Initiating ChillPay payment process for booking ${bookingId}:`, {
+      bookingId, amount, email, phone, customerName, eventTitle
+    });
+
+    const initiatePayment = async () => {
       try {
-        const response = await fetch('/api/checkout/update-status', {
+        // First ensure customer information is saved and then process payment
+        const response = await fetch('/api/checkout/chillpay', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ 
+          body: JSON.stringify({
             bookingId,
-            status: 'PROCESSING',
-            orderNo: orderId
+            amount,
+            customerName,
+            email,
+            phone,
+            eventTitle
           }),
         });
-        
+
+        // Get the raw response text for better error handling
+        const responseText = await response.text();
+        let data: ChillPayApiResponse;
+
+        try {
+          // Try to parse JSON response
+          data = JSON.parse(responseText) as ChillPayApiResponse;
+        } catch (parseError) {
+          console.error('Error parsing response:', parseError);
+          // Show part of the raw response for debugging
+          const responsePreview = responseText.length > 100 
+            ? responseText.substring(0, 100) + "..." 
+            : responseText;
+          throw new Error(`Invalid response from server: ${responsePreview}`);
+        }
+
         if (!response.ok) {
-          console.error("Could not update booking status");
+          // Check if there's an error object
+          if ('error' in data) {
+            const errorResponse = data as ChillPayErrorResponse;
+            
+            // Set error details if available
+            setErrorDetails({
+              code: errorResponse.code,
+              status: errorResponse.status
+            });
+            
+            // Format a detailed error message
+            let detailedError = errorResponse.error;
+            if (errorResponse.details) {
+              detailedError += `: ${errorResponse.details}`;
+            }
+            
+            throw new Error(detailedError);
+          } else {
+            throw new Error(`Payment initiation failed with status ${response.status}`);
+          }
+        }
+
+        // If we got here, we have a success response with a payment URL
+        if ('paymentUrl' in data) {
+          const paymentUrl = data.paymentUrl;
+          console.log('Redirecting to ChillPay payment URL:', paymentUrl);
+          window.location.href = paymentUrl;
+        } else {
+          throw new Error('Payment response missing payment URL');
         }
       } catch (err) {
-        console.error("Error updating booking status:", err);
+        console.error('Payment initiation error:', err);
+        setError(err instanceof Error ? err.message : 'Failed to initiate payment');
+        setIsLoading(false);
       }
     };
 
-    void updateBookingStatus();
-  }, [bookingId, amount, email]);
+    void initiatePayment();
+  }, [bookingId, amount, email, phone, customerName, eventTitle]);
 
   // Initialize the ChillPay widget when the script loads
   const initializeWidget = () => {
