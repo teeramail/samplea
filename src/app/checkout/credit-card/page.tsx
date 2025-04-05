@@ -76,7 +76,7 @@ export default function CreditCardPage() {
 
         try {
           // Try to parse JSON response
-          data = JSON.parse(responseText) as ChillPayApiResponse;
+          data = JSON.parse(responseText);
         } catch (parseError) {
           console.error('Error parsing response:', parseError);
           // Show part of the raw response for debugging
@@ -221,7 +221,7 @@ export default function CreditCardPage() {
                 {errorDetails.status && <p className="text-sm">Status: {errorDetails.status}</p>}
                 {errorDetails.code && <p className="text-sm">Error Code: {errorDetails.code}</p>}
                 {errorDetails.code === 1005 && (
-                  <p className="text-sm mt-2">Note: Error code 1005 "Invalid Route No" often indicates an issue with the merchant configuration for this payment method.</p>
+                  <p className="text-sm mt-2">Note: Error code 1005 &quot;Invalid Route No&quot; often indicates an issue with the merchant configuration for this payment method.</p>
                 )}
               </div>
             )}

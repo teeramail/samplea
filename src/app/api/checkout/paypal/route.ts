@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { bookings, customers } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
@@ -14,8 +14,42 @@ const RequestSchema = z.object({
   eventTitle: z.string().optional(),
 });
 
+// Types for PayPal API responses
+interface PayPalAccessTokenResponse {
+  access_token: string;
+  token_type: string;
+  app_id: string;
+  expires_in: number;
+  nonce: string;
+  scope: string;
+}
+
+interface PayPalOrderLink {
+  href: string;
+  rel: string;
+  method: string;
+}
+
+interface PayPalAmount {
+  currency_code: string;
+  value: string;
+}
+
+interface PayPalPurchaseUnit {
+  reference_id: string;
+  description: string;
+  amount: PayPalAmount;
+}
+
+interface PayPalOrder {
+  id: string;
+  status: string;
+  links: PayPalOrderLink[];
+  purchase_units: PayPalPurchaseUnit[];
+}
+
 // Function to get PayPal access token
-async function getPayPalAccessToken() {
+async function getPayPalAccessToken(): Promise<string> {
   const clientId = process.env.PAYPAL_CLIENT_ID;
   const secret = process.env.PAYPAL_SECRET;
   const apiUrl = process.env.PAYPAL_API_URL;
@@ -41,12 +75,12 @@ async function getPayPalAccessToken() {
     throw new Error(`Failed to get PayPal access token: ${response.status}`);
   }
 
-  const data = await response.json();
+  const data = await response.json() as PayPalAccessTokenResponse;
   return data.access_token;
 }
 
 // Function to create PayPal order
-async function createPayPalOrder(accessToken: string, amount: number, orderId: string, description: string) {
+async function createPayPalOrder(accessToken: string, amount: number, orderId: string, description: string): Promise<PayPalOrder> {
   const apiUrl = process.env.PAYPAL_API_URL;
   
   if (!apiUrl) {
@@ -69,8 +103,8 @@ async function createPayPalOrder(accessToken: string, amount: number, orderId: s
       },
     ],
     application_context: {
-      return_url: `${process.env.NEXTAUTH_URL}/api/checkout/paypal/callback`,
-      cancel_url: `${process.env.NEXTAUTH_URL}/checkout?canceled=true`,
+      return_url: `${process.env.NEXTAUTH_URL ?? "http://localhost:3000"}/api/checkout/paypal/callback`,
+      cancel_url: `${process.env.NEXTAUTH_URL ?? "http://localhost:3000"}/checkout?canceled=true`,
       brand_name: "ThaiBoxingHub",
       user_action: "PAY_NOW",
       shipping_preference: "NO_SHIPPING",
@@ -93,7 +127,7 @@ async function createPayPalOrder(accessToken: string, amount: number, orderId: s
     throw new Error(`Failed to create PayPal order: ${response.status}`);
   }
 
-  return await response.json();
+  return await response.json() as PayPalOrder;
 }
 
 export async function POST(request: NextRequest) {
@@ -141,7 +175,7 @@ export async function POST(request: NextRequest) {
         .set({ 
           name: customerName,
           email: email,
-          phone: phone || null,
+          phone: phone ?? null,
           updatedAt: new Date()
         })
         .where(eq(customers.id, booking.customerId));
@@ -161,7 +195,7 @@ export async function POST(request: NextRequest) {
       .set({ 
         customerNameSnapshot: customerName,
         customerEmailSnapshot: email,
-        customerPhoneSnapshot: phone || null
+        customerPhoneSnapshot: phone ?? null
       })
       .where(eq(bookings.id, bookingId));
     
@@ -195,12 +229,12 @@ export async function POST(request: NextRequest) {
     console.log("Obtained PayPal access token");
 
     // STEP 5: Create PayPal order
-    const description = eventTitle || `Booking for event ${booking.eventId}`;
+    const description = eventTitle ?? `Booking for event ${booking.eventId}`;
     const paypalOrder = await createPayPalOrder(accessToken, amount, orderId, description);
     console.log("Created PayPal order:", paypalOrder.id);
 
     // STEP 6: Find the approval URL
-    const approvalLink = paypalOrder.links.find((link: { rel: string }) => link.rel === "approve");
+    const approvalLink = paypalOrder.links.find((link: PayPalOrderLink) => link.rel === "approve");
     if (!approvalLink) {
       throw new Error("No approval URL found in PayPal response");
     }

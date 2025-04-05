@@ -2,8 +2,49 @@ import { db } from "~/server/db";
 import { bookings } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
 
+// Types for PayPal API responses
+interface PayPalAccessTokenResponse {
+  access_token: string;
+  token_type: string;
+  app_id: string;
+  expires_in: number;
+  nonce: string;
+  scope: string;
+}
+
+interface PayPalAmount {
+  currency_code: string;
+  value: string;
+}
+
+interface PayPalCapturePurchaseUnit {
+  reference_id: string;
+  shipping?: {
+    address?: Record<string, string>;
+  };
+  payments?: {
+    captures?: Array<{
+      id: string;
+      status: string;
+      amount: PayPalAmount;
+    }>;
+  };
+}
+
+interface PayPalCaptureResponse {
+  id: string;
+  status: string;
+  purchase_units: PayPalCapturePurchaseUnit[];
+  payer?: {
+    email_address?: string;
+    payer_id?: string;
+  };
+  create_time?: string;
+  update_time?: string;
+}
+
 // Function to get PayPal access token
-async function getPayPalAccessToken() {
+async function getPayPalAccessToken(): Promise<string> {
   const clientId = process.env.PAYPAL_CLIENT_ID;
   const secret = process.env.PAYPAL_SECRET;
   const apiUrl = process.env.PAYPAL_API_URL;
@@ -29,12 +70,12 @@ async function getPayPalAccessToken() {
     throw new Error(`Failed to get PayPal access token: ${response.status}`);
   }
 
-  const data = await response.json();
+  const data = await response.json() as PayPalAccessTokenResponse;
   return data.access_token;
 }
 
 // Function to capture a PayPal payment
-async function capturePayPalPayment(accessToken: string, orderId: string) {
+async function capturePayPalPayment(accessToken: string, orderId: string): Promise<PayPalCaptureResponse> {
   const apiUrl = process.env.PAYPAL_API_URL;
   
   if (!apiUrl) {
@@ -56,7 +97,7 @@ async function capturePayPalPayment(accessToken: string, orderId: string) {
     throw new Error(`Failed to capture PayPal payment: ${response.status}`);
   }
 
-  return await response.json();
+  return await response.json() as PayPalCaptureResponse;
 }
 
 // Handler for PayPal callbacks
