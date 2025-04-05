@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 
@@ -29,17 +29,8 @@ export default function PayPalPage() {
   const phone = searchParams.get('phone') ?? '';
   const eventTitle = searchParams.get('eventTitle') ?? '';
 
-  useEffect(() => {
-    if (!bookingId || !amount || !customerName || !email) {
-      setError("Missing booking information. Please return to checkout.");
-      return;
-    }
-
-    // Automatically initiate the PayPal payment when the page loads
-    initiatePayment();
-  }, []);
-  
-  const initiatePayment = async () => {
+  // Define initiatePayment outside useEffect, but use useCallback to handle dependencies properly
+  const initiatePayment = useCallback(async () => {
     if (isProcessing) return;
     setIsProcessing(true);
     
@@ -69,7 +60,7 @@ export default function PayPalPage() {
 
       try {
         // Try to parse JSON response
-        data = JSON.parse(responseText) as PayPalApiResponse;
+        data = JSON.parse(responseText);
       } catch (parseError) {
         console.error('Error parsing response:', parseError);
         // Show part of the raw response for debugging
@@ -109,7 +100,18 @@ export default function PayPalPage() {
       setError(err instanceof Error ? err.message : 'Failed to initiate payment');
       setIsProcessing(false);
     }
-  };
+  }, [bookingId, amount, customerName, email, phone, eventTitle, isProcessing, setIsProcessing, setError]);
+
+  // Then in useEffect
+  useEffect(() => {
+    if (!bookingId || !amount || !customerName || !email) {
+      setError("Missing booking information. Please return to checkout.");
+      return;
+    }
+
+    // Automatically initiate the PayPal payment when the page loads
+    void initiatePayment();
+  }, [bookingId, amount, customerName, email, initiatePayment]);
   
   return (
     <main className="container mx-auto px-4 py-12">
