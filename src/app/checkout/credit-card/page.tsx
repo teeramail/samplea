@@ -89,7 +89,7 @@ export default function CreditCardPage() {
         if (!response.ok) {
           // Check if there's an error object
           if ('error' in data) {
-            const errorResponse = data as ChillPayErrorResponse;
+            const errorResponse = data;
             
             // Set error details if available
             setErrorDetails({

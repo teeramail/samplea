@@ -73,7 +73,7 @@ export default function PayPalPage() {
       if (!response.ok) {
         // Check if there's an error object
         if ('error' in data) {
-          const errorResponse = data as PayPalErrorResponse;
+          const errorResponse = data;
           
           // Format a detailed error message
           let detailedError = errorResponse.error;
