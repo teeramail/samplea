@@ -174,11 +174,8 @@ export async function POST(request: NextRequest) {
       .where(eq(bookings.id, bookingId));
     
     // Get client IP address
-    const clientIP = request.headers.get('x-forwarded-for') ?? 
-                    request.headers.get('x-real-ip') ?? 
-                    '127.0.0.1';
-                    
-    console.log("Client IP address:", clientIP);
+    const clientIP = '58.11.97.209'; // Use a consistent IP address
+    console.log("Using fixed IP address for ChillPay:", clientIP);
 
     // STEP 3: Prepare the payload for ChillPay
     const payload: ChillPayPayload = {
@@ -194,7 +191,7 @@ export async function POST(request: NextRequest) {
       NotifyUrl: callbackUrl,
       LangCode: "EN",
       ChannelCode: "creditcard",
-      RouteNo: "1",
+      RouteNo: "2",
       Currency: "764",
       IPAddress: clientIP,
     };
@@ -208,7 +205,8 @@ export async function POST(request: NextRequest) {
     const productImageUrl = "";
     const cardType = "";
     
-    const checksumString = `${payload.MerchantCode}${payload.OrderNo}${payload.CustomerId}${payload.Amount}${payload.PhoneNumber}${payload.Description}${payload.ChannelCode}${payload.Currency}${payload.LangCode}${payload.RouteNo}${payload.IPAddress}${payload.ApiKey}${tokenFlag}${creditToken}${creditMonth}${shopID}${productImageUrl}${payload.CustEmail}${cardType}${cleanedMd5Secret}`;
+    // Update the checksum string order to match the correct parameter order
+    const checksumString = `${payload.MerchantCode}${payload.OrderNo}${payload.CustomerId}${payload.Amount}${payload.PhoneNumber}${payload.Description}${payload.ChannelCode}${payload.Currency}${payload.LangCode}${payload.RouteNo}${payload.IPAddress}${payload.ApiKey}${payload.CustEmail}${cleanedMd5Secret}`;
     
     console.log("Checksum string components:", {
       merchantCode: payload.MerchantCode,
@@ -216,15 +214,14 @@ export async function POST(request: NextRequest) {
       customerId: payload.CustomerId,
       amount: payload.Amount,
       phoneNumber: payload.PhoneNumber,
-      description: payload.Description.substring(0, 10) + "...", // Show part of description
+      description: payload.Description,
       channelCode: payload.ChannelCode,
       currency: payload.Currency,
       langCode: payload.LangCode,
       routeNo: payload.RouteNo,
       ipAddress: payload.IPAddress,
-      tokenFlag,
-      email: payload.CustEmail,
       apiKey: payload.ApiKey.substring(0, 10) + "...", // Only show part of API key
+      email: payload.CustEmail,
       md5Secret: cleanedMd5Secret.substring(0, 10) + "..." // Only log first few chars for security
     });
     

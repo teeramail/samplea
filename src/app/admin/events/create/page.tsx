@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, ChangeEvent } from "react";
+import { useState, useEffect } from "react";
+import type { ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { useForm, useFieldArray } from "react-hook-form";

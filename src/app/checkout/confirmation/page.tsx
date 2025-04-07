@@ -33,7 +33,7 @@ export default function ConfirmationPage() {
   const confirmationNumber = bookingId?.substring(0, 8).toUpperCase() ?? 'N/A';
   
   // Determine if payment was successful
-  const isSuccess = !status || status === 'success';
+  const isSuccess = status === null || status === undefined || status === 'success';
 
   return (
     <main className="container mx-auto px-4 py-12">

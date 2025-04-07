@@ -76,7 +76,7 @@ export default function CreateCoursePage() {
     register,
     handleSubmit,
     formState: { errors },
-    reset,
+    reset: _reset,
   } = useForm<CourseFormData>({
     resolver: zodResolver(courseSchema),
     defaultValues: {
@@ -109,18 +109,18 @@ export default function CreateCoursePage() {
         body: JSON.stringify({
           ...data,
           // Clean up optional fields
-          venueId: data.venueId || null,
-          instructorId: data.instructorId || null,
-          description: data.description || null,
-          skillLevel: data.skillLevel || null,
-          duration: data.duration || null,
-          scheduleDetails: data.scheduleDetails || null,
+          venueId: data.venueId ?? null,
+          instructorId: data.instructorId ?? null,
+          description: data.description ?? null,
+          skillLevel: data.skillLevel ?? null,
+          duration: data.duration ?? null,
+          scheduleDetails: data.scheduleDetails ?? null,
         }),
       });
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to create course');
+        throw new Error(errorData.error ?? 'Failed to create course');
       }
       
       // Redirect on success

@@ -40,7 +40,7 @@ export default function AdminPostsPage() {
   // Mutation for toggling the featured status
   const toggleFeaturedMutation = api.post.toggleFeatured.useMutation({
     onSuccess: () => {
-      refetch();
+      void refetch();
       // toast.success("Post featured status updated");
     },
     onError: (error) => {

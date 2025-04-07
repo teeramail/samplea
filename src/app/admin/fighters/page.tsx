@@ -66,7 +66,7 @@ export default function AdminFightersPage() {
   // Mutation for toggling the featured status with safe error handling
   const toggleFeaturedMutation = api.fighter.toggleFeatured.useMutation({
     onSuccess: () => {
-      refetch(); // Refetch the list after successful update
+      void refetch(); // Refetch the list after successful update
       // Optionally, display a success message
     },
     onError: (err: unknown) => {

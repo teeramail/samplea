@@ -17,8 +17,7 @@ export default function ImageWithFallback({
   className = '',
   rounded = false
 }: ImageWithFallbackProps) {
-  const [imgSrc, setImgSrc] = useState<string>(src || fallbackSrc);
-  const [hasError, setHasError] = useState<boolean>(!src);
+  const [imgSrc, setImgSrc] = useState<string>(src ?? fallbackSrc);
 
   return (
     <img
@@ -27,7 +26,6 @@ export default function ImageWithFallback({
       className={`${className} ${rounded ? 'rounded-full' : ''}`}
       onError={() => {
         setImgSrc(fallbackSrc);
-        setHasError(true);
       }}
     />
   );

@@ -100,7 +100,7 @@ export default async function RegionsListPage() {
             ) : (
               <tr>
                 <td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500">
-                  No regions found. Click "Add New Region" to create one.
+                  No regions found. Click &quot;Add New Region&quot; to create one.
                 </td>
               </tr>
             )}

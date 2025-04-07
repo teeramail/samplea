@@ -57,7 +57,7 @@ export default function AdminVenuesPage() {
   // Mutation for toggling the featured status
   const toggleFeaturedMutation = api.venue.toggleFeatured.useMutation({
     onSuccess: () => {
-      refetch();
+      void refetch();
       // toast.success("Venue featured status updated");
     },
     onError: (error) => {

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { api } from "~/trpc/server";
+import type { api } from "~/trpc/server";
 
 // Define the expected shape of a course item based on the API response
 // We get this from the 'list' procedure's return type including the 'with' clause
