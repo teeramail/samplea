@@ -191,7 +191,7 @@ export async function POST(request: NextRequest) {
       NotifyUrl: callbackUrl,
       LangCode: "EN",
       ChannelCode: "creditcard",
-      RouteNo: "2",
+      RouteNo: "1",
       Currency: "764",
       IPAddress: clientIP,
     };
