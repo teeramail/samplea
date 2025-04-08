@@ -265,6 +265,14 @@ export const bookings = createTable(
     totalAmount: doublePrecision("totalAmount").notNull(),
     paymentStatus: text("paymentStatus").notNull().default("PENDING"), // Consider pgEnum
     paymentOrderNo: text("paymentOrderNo"), // Track ChillPay order number
+    
+    // Add ChillPay payment related fields
+    paymentTransactionId: text("paymentTransactionId"), // ChillPay transaction ID
+    paymentBankCode: text("paymentBankCode"), // Bank code from ChillPay (e.g., internetbank_bay)
+    paymentBankRefCode: text("paymentBankRefCode"), // Reference code from the bank
+    paymentDate: text("paymentDate"), // Payment transaction date from ChillPay
+    paymentMethod: text("paymentMethod"), // Payment method (creditcard, qrcode, etc.)
+    
     createdAt: timestamp("createdAt", { withTimezone: false })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
