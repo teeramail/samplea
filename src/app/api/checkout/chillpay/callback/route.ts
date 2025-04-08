@@ -86,21 +86,27 @@ export async function POST(request: Request) {
     console.log("Received ChillPay callback with data:", Object.fromEntries(formData.entries()));
     
     // Extract all parameters from the form data according to the ChillPay manual
-    const transactionId = formData.get('TransactionId')?.toString() || '';
-    const amount = formData.get('Amount')?.toString() || '';
-    const orderNo = formData.get('OrderNo')?.toString() || '';
-    const customerId = formData.get('CustomerId')?.toString() || '';
-    const bankCode = formData.get('BankCode')?.toString() || '';
-    const paymentDate = formData.get('PaymentDate')?.toString() || '';
-    const paymentStatus = formData.get('PaymentStatus')?.toString() || '';
-    const bankRefCode = formData.get('BankRefCode')?.toString() || '';
-    const currentDate = formData.get('CurrentDate')?.toString() || '';
-    const currentTime = formData.get('CurrentTime')?.toString() || '';
-    const paymentDescription = formData.get('PaymentDescription')?.toString() || '';
-    const creditCardToken = formData.get('CreditCardToken')?.toString() || '';
-    const currency = formData.get('Currency')?.toString() || '';
-    const customerName = formData.get('CustomerName')?.toString() || '';
-    const receivedChecksum = formData.get('CheckSum')?.toString() || '';
+    // Use proper type handling with parentheses and nullish coalescing
+    const getValue = (key: string): string => {
+      const value = formData.get(key);
+      return value === null || value === undefined ? '' : String(value);
+    };
+    
+    const transactionId = getValue('TransactionId');
+    const amount = getValue('Amount');
+    const orderNo = getValue('OrderNo');
+    const customerId = getValue('CustomerId');
+    const bankCode = getValue('BankCode');
+    const paymentDate = getValue('PaymentDate');
+    const paymentStatus = getValue('PaymentStatus');
+    const bankRefCode = getValue('BankRefCode');
+    const currentDate = getValue('CurrentDate');
+    const currentTime = getValue('CurrentTime');
+    const paymentDescription = getValue('PaymentDescription');
+    const creditCardToken = getValue('CreditCardToken');
+    const currency = getValue('Currency');
+    const customerName = getValue('CustomerName');
+    const receivedChecksum = getValue('CheckSum');
     
     // Verify the received data with checksum validation
     if (!process.env.CHILLPAY_MD5_SECRET) {
