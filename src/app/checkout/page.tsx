@@ -134,9 +134,7 @@ export default function CheckoutPage() {
         },
         body: JSON.stringify({
           eventId,
-          eventTitle,
           contactInfo,
-          paymentMethod,
           tickets: ticketInfo.ticketDetails,
           totalCost,
         }),
