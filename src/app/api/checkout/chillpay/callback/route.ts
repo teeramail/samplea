@@ -89,7 +89,23 @@ export async function POST(request: Request) {
     // Use proper type handling with parentheses and nullish coalescing
     const getValue = (key: string): string => {
       const value = formData.get(key);
-      return value === null || value === undefined ? '' : String(value);
+      if (value === null || value === undefined) {
+        return '';
+      }
+      // Handle different types of values properly
+      if (typeof value === 'string') {
+        return value;
+      }
+      if (value instanceof File) {
+        return value.name; // For File objects, return the name
+      }
+      // For safety, use JSON.stringify for objects or other types
+      try {
+        return String(value);
+      } catch (e) {
+        console.warn(`Unable to convert ${key} value to string properly`);
+        return '';
+      }
     };
     
     const transactionId = getValue('TransactionId');
