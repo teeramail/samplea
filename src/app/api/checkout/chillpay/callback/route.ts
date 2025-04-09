@@ -84,22 +84,44 @@ export async function POST(request: Request) {
     
     // Extract status and orderNo with safe type handling
     const statusValue = formData.get('status');
-    const status = statusValue === null || statusValue === undefined 
-      ? undefined 
-      : typeof statusValue === 'string' 
-        ? statusValue 
-        : typeof statusValue === 'object'
-          ? JSON.stringify(statusValue)
-          : String(statusValue);
-        
+    let status: string | undefined;
+    if (statusValue === null || statusValue === undefined) {
+      status = undefined;
+    } else if (typeof statusValue === 'string') {
+      status = statusValue;
+    } else if (statusValue instanceof File) {
+      status = statusValue.name;
+    } else {
+      try {
+        // Use a try-catch to safely convert to string or use JSON for objects
+        status = typeof statusValue === 'object' 
+          ? JSON.stringify(statusValue) 
+          : `${statusValue}`;
+      } catch (err) {
+        console.warn('[Callback] Could not convert status value to string:', statusValue);
+        status = undefined;
+      }
+    }
+    
     const orderNoValue = formData.get('orderNo');
-    const orderNo = orderNoValue === null || orderNoValue === undefined 
-      ? undefined 
-      : typeof orderNoValue === 'string' 
-        ? orderNoValue 
-        : typeof orderNoValue === 'object'
-          ? JSON.stringify(orderNoValue)
-          : String(orderNoValue);
+    let orderNo: string | undefined;
+    if (orderNoValue === null || orderNoValue === undefined) {
+      orderNo = undefined;
+    } else if (typeof orderNoValue === 'string') {
+      orderNo = orderNoValue;
+    } else if (orderNoValue instanceof File) {
+      orderNo = orderNoValue.name;
+    } else {
+      try {
+        // Use a try-catch to safely convert to string or use JSON for objects
+        orderNo = typeof orderNoValue === 'object' 
+          ? JSON.stringify(orderNoValue) 
+          : `${orderNoValue}`;
+      } catch (err) {
+        console.warn('[Callback] Could not convert orderNo value to string:', orderNoValue);
+        orderNo = undefined;
+      }
+    }
     
     if (!orderNo) {
       return NextResponse.json({ 
