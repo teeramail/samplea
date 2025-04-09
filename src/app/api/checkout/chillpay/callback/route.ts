@@ -88,14 +88,18 @@ export async function POST(request: Request) {
       ? undefined 
       : typeof statusValue === 'string' 
         ? statusValue 
-        : String(statusValue);
+        : typeof statusValue === 'object'
+          ? JSON.stringify(statusValue)
+          : String(statusValue);
         
     const orderNoValue = formData.get('orderNo');
     const orderNo = orderNoValue === null || orderNoValue === undefined 
       ? undefined 
       : typeof orderNoValue === 'string' 
         ? orderNoValue 
-        : String(orderNoValue);
+        : typeof orderNoValue === 'object'
+          ? JSON.stringify(orderNoValue)
+          : String(orderNoValue);
     
     if (!orderNo) {
       return NextResponse.json({ 
