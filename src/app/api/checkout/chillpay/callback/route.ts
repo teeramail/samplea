@@ -177,6 +177,10 @@ export async function POST(request: Request) {
     await db.update(bookings)
       .set({ 
         paymentStatus: newStatus,
+        paymentTransactionId: transactionId,
+        paymentBankCode: bankCode, 
+        paymentBankRefCode: bankRefCode,
+        paymentDate: paymentDate,
         updatedAt: new Date()
       })
       .where(eq(bookings.id, booking.id));
