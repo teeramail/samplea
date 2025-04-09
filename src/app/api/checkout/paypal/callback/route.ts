@@ -1,6 +1,8 @@
 import { db } from "~/server/db";
 import { bookings } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
+// Import email service functions
+import { sendPaymentConfirmationEmail, sendPaymentFailureEmail } from "~/server/email/emailService";
 
 // Types for PayPal API responses
 interface PayPalAccessTokenResponse {
@@ -145,6 +147,11 @@ export async function GET(request: Request) {
     const bookingId = captureResult.purchase_units[0]?.reference_id;
     
     if (bookingId) {
+      // Get the booking after update to have all the fields
+      const booking = await db.query.bookings.findFirst({
+        where: eq(bookings.id, bookingId),
+      });
+      
       // Update the booking status in the database
       await db.update(bookings)
         .set({ 
@@ -154,6 +161,15 @@ export async function GET(request: Request) {
         .where(eq(bookings.id, bookingId));
       
       console.log(`Updated booking ${bookingId} status to ${isSuccess ? 'COMPLETED' : 'FAILED'}`);
+      
+      // Send the appropriate email based on payment status
+      if (booking) {
+        if (isSuccess) {
+          await sendPaymentConfirmationEmail(booking);
+        } else {
+          await sendPaymentFailureEmail(booking);
+        }
+      }
     } else {
       console.error("Could not find booking ID in PayPal response");
     }

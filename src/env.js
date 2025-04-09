@@ -32,6 +32,9 @@ export const env = createEnv({
     CHILLPAY_API_KEY: z.string().optional(),
     CHILLPAY_MD5_SECRET: z.string().optional(),
     CHILLPAY_API_ENDPOINT: z.string().optional(),
+    // Email configuration
+    EMAIL_USER: z.string().optional(),
+    EMAIL_PASSWORD: z.string().optional(),
   },
 
   /**
@@ -65,6 +68,8 @@ export const env = createEnv({
     CHILLPAY_API_KEY: process.env.CHILLPAY_API_KEY,
     CHILLPAY_MD5_SECRET: process.env.CHILLPAY_MD5_SECRET,
     CHILLPAY_API_ENDPOINT: process.env.CHILLPAY_API_ENDPOINT,
+    EMAIL_USER: process.env.EMAIL_USER,
+    EMAIL_PASSWORD: process.env.EMAIL_PASSWORD,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

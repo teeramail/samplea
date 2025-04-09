@@ -3,6 +3,8 @@ import { bookings } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import crypto from "crypto";
+// Import email service functions
+import { sendPaymentConfirmationEmail, sendPaymentFailureEmail } from "~/server/email/emailService";
 
 // Handle ChillPay background notifications (webhook) 
 // This is meant for server-to-server communication for reliable payment status updates
@@ -112,6 +114,13 @@ export async function POST(request: Request) {
       .where(eq(bookings.id, booking.id));
     
     console.log(`[Webhook] Updated booking ${booking.id} payment status to ${newStatus}`);
+    
+    // Send email notification based on payment status
+    if (isSuccess) {
+      await sendPaymentConfirmationEmail(booking);
+    } else {
+      await sendPaymentFailureEmail(booking);
+    }
     
     // For production application:
     // 1. Send confirmation emails to customers
