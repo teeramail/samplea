@@ -5,7 +5,6 @@ import { db } from "~/server/db";
 import { bookings } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import crypto from "crypto";
 
 // ChillPay Customer Redirect Endpoint
 // This endpoint handles when customers are redirected from ChillPay back to our site
@@ -83,9 +82,20 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     console.log("Received POST to callback endpoint:", Object.fromEntries(formData.entries()));
     
-    // Extract status and orderNo
-    const status = formData.get('status')?.toString();
-    const orderNo = formData.get('orderNo')?.toString();
+    // Extract status and orderNo with safe type handling
+    const statusValue = formData.get('status');
+    const status = statusValue === null || statusValue === undefined 
+      ? undefined 
+      : typeof statusValue === 'string' 
+        ? statusValue 
+        : String(statusValue);
+        
+    const orderNoValue = formData.get('orderNo');
+    const orderNo = orderNoValue === null || orderNoValue === undefined 
+      ? undefined 
+      : typeof orderNoValue === 'string' 
+        ? orderNoValue 
+        : String(orderNoValue);
     
     if (!orderNo) {
       return NextResponse.json({ 
