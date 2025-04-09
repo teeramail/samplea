@@ -102,7 +102,7 @@ export async function POST(request: Request) {
       // For safety, use JSON.stringify for objects or other types
       try {
         return String(value);
-      } catch (e) {
+      } catch (_) {
         console.warn(`Unable to convert ${key} value to string properly`);
         return '';
       }
@@ -199,7 +199,13 @@ export async function POST(request: Request) {
     
     // Alternative format (uses status parameter)
     if (formData.get('status')) {
-      const status = formData.get('status')?.toString().toLowerCase();
+      const statusValue = formData.get('status');
+      const status = statusValue === null || statusValue === undefined 
+        ? '' 
+        : typeof statusValue === 'string' 
+          ? statusValue.toLowerCase() 
+          : String(statusValue).toLowerCase();
+          
       if (status === 'success' || status === 'approved') {
         newStatus = 'COMPLETED';
       } else if (status === 'cancel' || status === 'failed' || status === 'rejected') {
