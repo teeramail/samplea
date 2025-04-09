@@ -125,6 +125,28 @@ export async function POST(request: Request) {
         console.log(`[Callback] Updated booking ${booking.id} status to CANCELLED`);
       }
     }
+    else if (status === 'complete' || (formData.get('respCode') === '0')) {
+      // Handle successful payment
+      const booking = await db.query.bookings.findFirst({
+        where: eq(bookings.paymentOrderNo, orderNo),
+      });
+      
+      if (booking) {
+        const transNo = formData.get('transNo');
+        const transactionId = typeof transNo === 'string' ? transNo : String(transNo);
+        
+        await db.update(bookings)
+          .set({ 
+            paymentStatus: 'COMPLETED',
+            paymentTransactionId: transactionId || null,
+            paymentMethod: 'credit-card',
+            updatedAt: new Date()
+          })
+          .where(eq(bookings.id, booking.id));
+        
+        console.log(`[Callback] Updated booking ${booking.id} status to COMPLETED with transaction ID: ${transactionId}`);
+      }
+    }
     
     // Return 200 to acknowledge receipt
     return NextResponse.json({ status: "success" }, { status: 200 });
