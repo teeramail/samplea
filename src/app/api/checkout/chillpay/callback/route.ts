@@ -6,6 +6,27 @@ import { bookings } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
+// Type-safe function to convert FormData values to strings
+const safeToString = (value: FormDataEntryValue | null): string | undefined => {
+  if (value === null || value === undefined) {
+    return undefined;
+  }
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (value instanceof File) {
+    return value.name;
+  }
+  // For other types, safely convert to string
+  try {
+    return typeof value === 'object' 
+      ? JSON.stringify(value)
+      : String(value);
+  } catch (_) {
+    return undefined;
+  }
+};
+
 // ChillPay Customer Redirect Endpoint
 // This endpoint handles when customers are redirected from ChillPay back to our site
 export async function GET(request: Request) {
@@ -83,45 +104,8 @@ export async function POST(request: Request) {
     console.log("Received POST to callback endpoint:", Object.fromEntries(formData.entries()));
     
     // Extract status and orderNo with safe type handling
-    const statusValue = formData.get('status');
-    let status: string | undefined;
-    if (statusValue === null || statusValue === undefined) {
-      status = undefined;
-    } else if (typeof statusValue === 'string') {
-      status = statusValue;
-    } else if (statusValue instanceof File) {
-      status = statusValue.name;
-    } else {
-      try {
-        // Use a try-catch to safely convert to string or use JSON for objects
-        status = typeof statusValue === 'object' 
-          ? JSON.stringify(statusValue) 
-          : `${statusValue}`;
-      } catch (err) {
-        console.warn('[Callback] Could not convert status value to string:', statusValue);
-        status = undefined;
-      }
-    }
-    
-    const orderNoValue = formData.get('orderNo');
-    let orderNo: string | undefined;
-    if (orderNoValue === null || orderNoValue === undefined) {
-      orderNo = undefined;
-    } else if (typeof orderNoValue === 'string') {
-      orderNo = orderNoValue;
-    } else if (orderNoValue instanceof File) {
-      orderNo = orderNoValue.name;
-    } else {
-      try {
-        // Use a try-catch to safely convert to string or use JSON for objects
-        orderNo = typeof orderNoValue === 'object' 
-          ? JSON.stringify(orderNoValue) 
-          : `${orderNoValue}`;
-      } catch (err) {
-        console.warn('[Callback] Could not convert orderNo value to string:', orderNoValue);
-        orderNo = undefined;
-      }
-    }
+    const status = safeToString(formData.get('status'));
+    const orderNo = safeToString(formData.get('orderNo'));
     
     if (!orderNo) {
       return NextResponse.json({ 
@@ -154,19 +138,18 @@ export async function POST(request: Request) {
       });
       
       if (booking) {
-        const transNo = formData.get('transNo');
-        const transactionId = typeof transNo === 'string' ? transNo : String(transNo);
+        const transactionId = safeToString(formData.get('transNo')) || null;
         
         await db.update(bookings)
           .set({ 
             paymentStatus: 'COMPLETED',
-            paymentTransactionId: transactionId || null,
+            paymentTransactionId: transactionId,
             paymentMethod: 'credit-card',
             updatedAt: new Date()
           })
           .where(eq(bookings.id, booking.id));
         
-        console.log(`[Callback] Updated booking ${booking.id} status to COMPLETED with transaction ID: ${transactionId}`);
+        console.log(`[Callback] Updated booking ${booking.id} status to COMPLETED${transactionId ? ` with transaction ID: ${transactionId}` : ''}`);
       }
     }
     
