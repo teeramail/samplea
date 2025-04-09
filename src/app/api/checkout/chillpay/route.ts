@@ -155,8 +155,8 @@ export async function POST(request: NextRequest) {
     const origin = request.headers.get("origin") ?? "http://localhost:3000";
     
     // Prepare return and callback URLs
-    const returnUrl = `${origin}/events/${booking.eventId}?payment=success`;
-    const callbackUrl = `${origin}/api/checkout/chillpay/callback`;
+    const returnUrl = `${origin}/api/checkout/chillpay/callback`;
+    const webhookUrl = `${origin}/api/checkout/chillpay/webhook`;
 
     // Format amount properly (cents/satang)
     const formattedAmount = Math.round(amount * 100);
@@ -187,8 +187,8 @@ export async function POST(request: NextRequest) {
       PhoneNumber: companyPhoneNumber,
       CustEmail: email,
       ApiKey: process.env.CHILLPAY_API_KEY,
-      ReturnUrl: returnUrl,
-      NotifyUrl: callbackUrl,
+      ReturnUrl: returnUrl,      // URL for user redirect
+      NotifyUrl: webhookUrl,     // URL for background notifications
       LangCode: "EN",
       ChannelCode: "creditcard",
       RouteNo: "1",
