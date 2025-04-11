@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { nanoid } from "nanoid";
 import { TRPCError } from "@trpc/server";
 
 import {
@@ -7,7 +6,7 @@ import {
   publicProcedure,
   // adminProcedure, // TODO
 } from "~/server/api/trpc";
-import { venues, regions } from "~/server/db/schema";
+import { venues } from "~/server/db/schema";
 import { eq, desc, and, like } from "drizzle-orm";
 
 // TODO: Add input schemas for create/update if not already present

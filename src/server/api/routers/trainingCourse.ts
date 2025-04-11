@@ -13,7 +13,7 @@ import { trainingCourses } from "~/server/db/schema";
 import { eq, desc, and, ne } from "drizzle-orm";
 
 // Helper function to generate unique slugs
-async function generateUniqueSlug(db: typeof import("~/server/db").db, title: string, idToExclude?: string): Promise<string> {
+async function generateUniqueSlug(db: any, title: string, idToExclude?: string): Promise<string> {
   const slug = slugify(title, { lower: true, strict: true });
   let counter = 1;
   let uniqueSlug = slug;
@@ -163,7 +163,6 @@ export const trainingCourseRouter = createTRPCRouter({
     }).optional())
     .query(async ({ ctx, input }) => {
         const limit = input?.limit ?? 20;
-        const { cursor } = input ?? {};
         
         const whereConditions = [
             eq(trainingCourses.isActive, true)
@@ -187,7 +186,7 @@ export const trainingCourseRouter = createTRPCRouter({
                 },
             });
 
-            let nextCursor: typeof cursor | undefined = undefined;
+            let nextCursor: string | undefined = undefined;
             if (items.length > limit) {
                 items.pop(); // Remove the extra item used for cursor check
                 nextCursor = items[items.length - 1]?.id;

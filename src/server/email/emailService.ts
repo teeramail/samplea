@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer';
-import { bookings } from '~/server/db/schema';
+import type { bookings } from '~/server/db/schema';
 import { env } from '~/env';
-import { type InferSelectModel } from 'drizzle-orm';
+import type { InferSelectModel } from 'drizzle-orm';
 
 // Define Booking type from the schema
 type Booking = InferSelectModel<typeof bookings>;
@@ -27,7 +27,7 @@ export const sendPaymentConfirmationEmail = async (booking: Booking) => {
     
     await transporter.sendMail({
       from: env.EMAIL_USER,
-      to: booking.customerEmailSnapshot!,
+      to: booking.customerEmailSnapshot ?? '',
       subject: 'Payment Confirmation - Teeramuaythaione',
       html: `
         <h1>Payment Confirmation</h1>
@@ -60,7 +60,7 @@ export const sendPaymentFailureEmail = async (booking: Booking) => {
     
     await transporter.sendMail({
       from: env.EMAIL_USER,
-      to: booking.customerEmailSnapshot!,
+      to: booking.customerEmailSnapshot ?? '',
       subject: 'Payment Failed - Teeramuaythaione',
       html: `
         <h1>Payment Failed</h1>

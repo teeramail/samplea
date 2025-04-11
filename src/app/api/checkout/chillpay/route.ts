@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { bookings, customers } from "~/server/db/schema";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 // import CryptoJS from 'crypto-js';
 import { z } from "zod";
 import crypto from 'crypto';
-import { env } from "~/env";
 
 // Define a schema for the request body
 const RequestSchema = z.object({
@@ -18,7 +18,7 @@ const RequestSchema = z.object({
 });
 
 // Define the expected structure of the ChillPay API response
-interface ChillPayResponse {
+interface ChillPayResponseType {
   Status: number; // Transaction result code (Order No. 1)
   Code: number;   // Explanation for transaction result (Order No. 2)
   Message: string; // Explanation for transaction result
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
         .set({ 
           name: customerName,
           email: email,
-          phone: phone || null,
+          phone: phone ?? null,
           updatedAt: new Date()
         })
         .where(eq(customers.id, booking.customerId));
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
       .set({ 
         customerNameSnapshot: customerName,
         customerEmailSnapshot: email,
-        customerPhoneSnapshot: phone || null
+        customerPhoneSnapshot: phone ?? null
       })
       .where(eq(bookings.id, bookingId));
     
@@ -197,13 +197,7 @@ export async function POST(request: NextRequest) {
     };
 
     // Calculate checksum
-    // Include empty strings for optional fields we're not using
-    const tokenFlag = "N"; // N means pay without token (default)
-    const creditToken = "";
-    const creditMonth = "";
-    const shopID = "";
-    const productImageUrl = "";
-    const cardType = "";
+    // Note: We're not using token-based payment (tokenFlag would be "N" for no token)
     
     // Update the checksum string order to match the correct parameter order
     const checksumString = `${payload.MerchantCode}${payload.OrderNo}${payload.CustomerId}${payload.Amount}${payload.PhoneNumber}${payload.Description}${payload.ChannelCode}${payload.Currency}${payload.LangCode}${payload.RouteNo}${payload.IPAddress}${payload.ApiKey}${payload.CustEmail}${cleanedMd5Secret}`;
@@ -259,9 +253,9 @@ export async function POST(request: NextRequest) {
     console.log("ChillPay API raw response:", responseText);
 
     // Parse the response
-    let responseData;
+    let responseData: ChillPayResponseType;
     try {
-      responseData = JSON.parse(responseText);
+      responseData = JSON.parse(responseText) as ChillPayResponseType;
     } catch (error) {
       console.error("Error parsing ChillPay response:", error);
       
@@ -284,7 +278,7 @@ export async function POST(request: NextRequest) {
     if (responseData.Status === 0 && responseData.Code === 200) {
       // Payment initiated successfully
       return NextResponse.json({
-        paymentUrl: responseData.PaymentUrl,
+        paymentUrl: responseData.PaymentUrl as string,
       });
     } else {
       // Payment initiation failed
@@ -298,9 +292,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { 
           error: "Failed to initiate payment",
-          details: responseData.Message || "Unknown error from payment gateway",
-          code: responseData.Code,
-          status: responseData.Status
+          details: responseData.Message ?? "Unknown error from payment gateway",
+          code: responseData.Code as number,
+          status: responseData.Status as number
         },
         { status: 400 }
       );

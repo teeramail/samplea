@@ -76,7 +76,7 @@ export default function CreateCoursePage() {
     register,
     handleSubmit,
     formState: { errors },
-    reset,
+    // reset is available but not used in this component
   } = useForm<CourseFormData>({
     resolver: zodResolver(courseSchema),
     defaultValues: {
@@ -119,8 +119,8 @@ export default function CreateCoursePage() {
       });
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(typeof errorData.error === 'string' ? errorData.error : 'Failed to create course');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' })) as { error?: string };
+        throw new Error(errorData.error ?? 'Failed to create course');
       }
       
       // Redirect on success

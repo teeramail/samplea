@@ -7,12 +7,11 @@ import {
   primaryKey,
   text,
   timestamp,
-  varchar,
   boolean,
   doublePrecision,
   jsonb,
   time,
-  pgEnum, // Add pgEnum if you plan to use it for status fields
+  // Add other imports as needed
 } from "drizzle-orm/pg-core";
 import { type AdapterAccount } from "next-auth/adapters";
 import { createId } from "@paralleldrive/cuid2"; // Using CUID2 for IDs, adjust if needed
