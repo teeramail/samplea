@@ -236,7 +236,7 @@ export async function POST(request: NextRequest) {
     // STEP 4: Send request to ChillPay API
     const params = new URLSearchParams();
     Object.entries(payload).forEach(([key, value]) => {
-      params.append(key, value);
+      params.append(key, String(value));
     });
     
     const chillPayResponse = await fetch(process.env.CHILLPAY_API_ENDPOINT, {
@@ -278,7 +278,7 @@ export async function POST(request: NextRequest) {
     if (responseData.Status === 0 && responseData.Code === 200) {
       // Payment initiated successfully
       return NextResponse.json({
-        paymentUrl: responseData.PaymentUrl as string,
+        paymentUrl: responseData.PaymentUrl!,
       });
     } else {
       // Payment initiation failed
@@ -293,8 +293,8 @@ export async function POST(request: NextRequest) {
         { 
           error: "Failed to initiate payment",
           details: responseData.Message ?? "Unknown error from payment gateway",
-          code: responseData.Code as number,
-          status: responseData.Status as number
+          code: responseData.Code,
+          status: responseData.Status
         },
         { status: 400 }
       );

@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
       }
       
       // Verify venue if provided
-      if (data.venueId) {
+      if (data.venueId && data.venueId !== "") {
         const venue = await db.query.venues.findFirst({
           where: eq(venues.id, data.venueId),
         });
@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
       }
       
       // Verify instructor if provided
-      if (data.instructorId) {
+      if (data.instructorId && data.instructorId !== "") {
         const instructor = await db.query.instructors.findFirst({
           where: eq(instructors.id, data.instructorId),
         });
@@ -151,9 +151,9 @@ export async function POST(req: NextRequest) {
         scheduleDetails: data.scheduleDetails,
         price: data.price,
         capacity: data.capacity,
-        venueId: data.venueId,
+        venueId: data.venueId === "" ? null : data.venueId,
         regionId: data.regionId,
-        instructorId: data.instructorId,
+        instructorId: data.instructorId === "" ? null : data.instructorId,
         isActive: data.isActive,
         imageUrls: data.imageUrls,
         primaryImageIndex: data.primaryImageIndex,

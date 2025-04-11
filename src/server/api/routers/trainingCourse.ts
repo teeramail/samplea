@@ -11,9 +11,10 @@ import {
 } from "~/server/api/trpc";
 import { trainingCourses } from "~/server/db/schema";
 import { eq, desc, and, ne } from "drizzle-orm";
+import type { db } from "~/server/db";
 
 // Helper function to generate unique slugs
-async function generateUniqueSlug(db: any, title: string, idToExclude?: string): Promise<string> {
+async function generateUniqueSlug(dbInstance: typeof db, title: string, idToExclude?: string): Promise<string> {
   const slug = slugify(title, { lower: true, strict: true });
   let counter = 1;
   let uniqueSlug = slug;
@@ -28,7 +29,7 @@ async function generateUniqueSlug(db: any, title: string, idToExclude?: string):
         conditions.push(ne(trainingCourses.id, idToExclude));
     }
 
-    const existing = await db.query.trainingCourses.findFirst({
+    const existing = await dbInstance.query.trainingCourses.findFirst({
       where: and(...conditions),
       columns: { id: true },
     });
@@ -93,8 +94,8 @@ export const trainingCourseRouter = createTRPCRouter({
             id: newId,
             slug: slug,
             ...input,
-            venueId: input.venueId ?? null,
-            instructorId: input.instructorId ?? null,
+            venueId: input.venueId === "" ? null : input.venueId,
+            instructorId: input.instructorId === "" ? null : input.instructorId,
             capacity: input.capacity ?? null,
             primaryImageIndex: input.primaryImageIndex ?? 0,
             imageUrls: input.imageUrls ?? [],

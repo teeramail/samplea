@@ -109,8 +109,8 @@ export default function CreateCoursePage() {
         body: JSON.stringify({
           ...data,
           // Clean up optional fields
-          venueId: data.venueId ?? null,
-          instructorId: data.instructorId ?? null,
+          venueId: data.venueId === "" ? null : data.venueId,
+          instructorId: data.instructorId === "" ? null : data.instructorId,
           description: data.description ?? null,
           skillLevel: data.skillLevel ?? null,
           duration: data.duration ?? null,

@@ -48,7 +48,7 @@ export default function AdminCoursesPage() {
   // Mutation for toggling the featured status
   const toggleFeaturedMutation = api.trainingCourse.toggleFeatured.useMutation({
     onSuccess: () => {
-      refetch();
+      void refetch();
       // toast.success("Course featured status updated");
     },
     onError: (error) => {
