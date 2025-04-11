@@ -65,11 +65,11 @@ export async function GET(request: Request) {
       console.log(`[Redirect] Updated booking ${bookingId} status to ${isSuccess ? 'COMPLETED' : 'FAILED'}`);
     }
     
-    // Redirect to the confirmation page with success or failure status
-    const redirectBase = `${url.origin}/checkout/confirmation`;
-    const redirectUrl = isSuccess 
-      ? `${redirectBase}?paymentMethod=credit-card&bookingId=${bookingId}&status=success` 
-      : `${redirectBase}?paymentMethod=credit-card&bookingId=${bookingId}&status=failed&message=${encodeURIComponent(message ?? 'Payment failed')}`;
+    // Redirect to our dedicated ChillPay callback page with all parameters
+    const redirectBase = `${url.origin}/checkout/chillpay-callback`;
+    // Pass all the original parameters to our dedicated page
+    const redirectUrl = `${redirectBase}?Status=${status}&Code=${code}&Message=${encodeURIComponent(message ?? '')}&TransactionId=${transactionId ?? ''}&Amount=${amount ?? ''}&OrderNo=${orderNo ?? ''}&bookingId=${bookingId ?? ''}`;
+
 
     // Return a redirect response
     return new Response(null, {
@@ -82,12 +82,12 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error("[Redirect] Error processing ChillPay redirect:", error);
     
-    // Even if we have an error processing the result, redirect to confirmation
+    // Even if we have an error processing the result, redirect to our dedicated page
     // with error status so the user sees something
     return new Response(null, {
       status: 302,
       headers: {
-        Location: `${url.origin}/checkout/confirmation?paymentMethod=credit-card&bookingId=${bookingId}&status=error&message=Internal+server+error`
+        Location: `${url.origin}/checkout/chillpay-callback?Status=error&Message=Internal+server+error&bookingId=${bookingId}`
       }
     });
   }
