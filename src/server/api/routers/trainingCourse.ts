@@ -9,11 +9,11 @@ import {
   // protectedProcedure, // TODO: Use protected/admin procedure later
   // adminProcedure, // TODO: Define and import adminProcedure in trpc.ts
 } from "~/server/api/trpc";
-import { trainingCourses, instructors, regions, venues } from "~/server/db/schema";
-import { eq, desc, asc, and, isNull, ne } from "drizzle-orm";
+import { trainingCourses } from "~/server/db/schema";
+import { eq, desc, and, ne } from "drizzle-orm";
 
 // Helper function to generate unique slugs
-async function generateUniqueSlug(db: any, title: string, idToExclude?: string): Promise<string> {
+async function generateUniqueSlug(db: typeof import("~/server/db").db, title: string, idToExclude?: string): Promise<string> {
   const slug = slugify(title, { lower: true, strict: true });
   let counter = 1;
   let uniqueSlug = slug;
@@ -163,7 +163,7 @@ export const trainingCourseRouter = createTRPCRouter({
     }).optional())
     .query(async ({ ctx, input }) => {
         const limit = input?.limit ?? 20;
-        const cursor = input?.cursor;
+        const { cursor } = input ?? {};
         
         const whereConditions = [
             eq(trainingCourses.isActive, true)

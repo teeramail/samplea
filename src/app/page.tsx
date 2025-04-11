@@ -1,8 +1,5 @@
 import Link from "next/link";
-import { auth } from "~/server/auth";
-import { db } from "~/server/db";
-import { events } from "~/server/db/schema";
-import { eq, desc } from "drizzle-orm";
+
 import Image from "next/image";
 import { format } from 'date-fns';
 import { MapPinIcon, BuildingLibraryIcon } from '@heroicons/react/24/outline';
