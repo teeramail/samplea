@@ -59,9 +59,14 @@ export default function CheckoutPage() {
           let ticketType = "";
           let price = 0;
           
+          // Check for ticket type based on ID or seatType
           if (id.includes('85e-4e5c') || id.toLowerCase().includes('vips')) {
             ticketType = "VIPS";
             price = 3000;
+          } else if (id.toLowerCase().includes('normali') || id.toLowerCase().includes('normal') || 
+                    id === 'f684e1b1-8961-479c-82ee-25280defde7d') { // Add specific ID for normal tickets
+            ticketType = "Normal";
+            price = 800;
           } else {
             ticketType = "Vip";
             price = 2000;
