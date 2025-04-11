@@ -84,17 +84,17 @@ export async function uploadImages(
     // Process and upload each file
     const uploadPromises = imageFiles.map(async (file, index) => {
       try {
-        // Check file size before processing
+        // Check file size before processing - each file must be under 120KB individually
         if (file.size > MAX_FILE_SIZE) {
-          throw new Error(`File ${file.name} exceeds maximum size of 120KB`);
+          throw new Error(`File ${file.name} (${Math.round(file.size / 1024)}KB) exceeds maximum size of 120KB`);
         }
         
         // Process the image
         const processedBuffer = await processImage(file);
         
-        // Check processed size
+        // Check processed size - each processed image must still be under 120KB
         if (processedBuffer.length > MAX_FILE_SIZE) {
-          throw new Error(`Processed file ${file.name} still exceeds maximum size of 120KB`);
+          throw new Error(`Processed file ${file.name} (${Math.round(processedBuffer.length / 1024)}KB) still exceeds maximum size of 120KB. Please use a smaller or more compressed image.`);
         }
         
         // Generate unique filename

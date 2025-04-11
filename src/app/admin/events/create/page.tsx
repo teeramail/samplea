@@ -188,34 +188,48 @@ export default function CreateEventPage() {
 
   const handleImagesChange = (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files ? Array.from(e.target.files) : [];
-    // Check sizes (optional, backend also checks)
+    
+    // Check each file individually against the 120KB limit
     const oversizedFiles = files.filter(f => f.size > 120 * 1024);
+    
     if (oversizedFiles.length > 0) {
-      alert(`The following images exceed the 120KB limit: ${oversizedFiles.map(f => f.name).join(', ')}`);
-      // Filter out oversized files or clear input - this example filters
+      // Clear the input to allow reselection
+      e.target.value = "";
+      
+      // Show clear error message about individual file size limits
+      alert(`Each image must be less than 120KB. The following images are too large: ${oversizedFiles.map(f => `${f.name} (${Math.round(f.size / 1024)}KB)`).join(', ')}`);
+      
+      // Keep only valid files
       const validFiles = files.filter(f => f.size <= 120 * 1024);
       setImageFiles(validFiles);
-      e.target.value = ""; // May need more complex handling to retain valid files
     } else {
-      setImageFiles(files); 
+      // All files are valid
+      setImageFiles(files);
     }
     
-    setImagePreviews([]); // Clear old previews
-    const validFilesForPreview = files.filter(f => f.size <= 120 * 1024); // Use only valid files for preview
+    // Clear old previews
+    setImagePreviews([]);
+    
+    // Generate previews only for valid files
+    const validFilesForPreview = files.filter(f => f.size <= 120 * 1024);
+    
+    if (validFilesForPreview.length === 0) {
+      setImagePreviews([]);
+      return;
+    }
+    
+    // Create previews for valid files
     const newPreviews: string[] = [];
     validFilesForPreview.forEach(file => {
       const reader = new FileReader();
       reader.onloadend = () => {
         newPreviews.push(reader.result as string);
         if (newPreviews.length === validFilesForPreview.length) {
-          setImagePreviews(newPreviews); 
+          setImagePreviews(newPreviews);
         }
       };
       reader.readAsDataURL(file);
     });
-    if (validFilesForPreview.length === 0) {
-      setImagePreviews([]);
-    }
   };
 
   const onSubmit = async (data: EventFormData) => {
