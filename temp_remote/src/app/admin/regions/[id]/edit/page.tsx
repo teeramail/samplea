@@ -1,7 +1,7 @@
 "use client";
 
 import { z } from "zod";
-import { useState, useEffect, type ChangeEvent } from "react";
+import { useState, useEffect, ChangeEvent } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter, useParams } from "next/navigation";
@@ -76,6 +76,7 @@ export default function EditRegionPage() {
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<RegionFormData>({
     resolver: zodResolver(regionUpdateSchema),
@@ -187,8 +188,8 @@ export default function EditRegionPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: `Failed to update region (status: ${response.status})` }));
-        throw new Error(typeof errorData.error === 'string' ? errorData.error : `Failed to update region (status: ${response.status})`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error ?? `Failed to update region (status: ${response.status})`);
       }
 
       router.push(`/admin/regions/${regionId}`);
