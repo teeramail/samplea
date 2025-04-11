@@ -47,19 +47,19 @@ export default function CreateCoursePage() {
         // Fetch regions
         const regionsResponse = await fetch('/api/regions');
         if (!regionsResponse.ok) throw new Error('Failed to fetch regions');
-        const regionsData = await regionsResponse.json();
+        const regionsData = await regionsResponse.json() as Region[];
         setRegions(regionsData);
         
         // Fetch venues
         const venuesResponse = await fetch('/api/venues');
         if (!venuesResponse.ok) throw new Error('Failed to fetch venues');
-        const venuesData = await venuesResponse.json();
+        const venuesData = await venuesResponse.json() as Venue[];
         setVenues(venuesData);
         
         // Fetch instructors
         const instructorsResponse = await fetch('/api/instructors');
         if (!instructorsResponse.ok) throw new Error('Failed to fetch instructors');
-        const instructorsData = await instructorsResponse.json();
+        const instructorsData = await instructorsResponse.json() as Instructor[];
         setInstructors(instructorsData);
       } catch (error) {
         console.error('Error fetching resources:', error);
@@ -76,7 +76,7 @@ export default function CreateCoursePage() {
     register,
     handleSubmit,
     formState: { errors },
-    reset: _reset,
+    reset,
   } = useForm<CourseFormData>({
     resolver: zodResolver(courseSchema),
     defaultValues: {
@@ -119,8 +119,8 @@ export default function CreateCoursePage() {
       });
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error ?? 'Failed to create course');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(typeof errorData.error === 'string' ? errorData.error : 'Failed to create course');
       }
       
       // Redirect on success
