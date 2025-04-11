@@ -104,37 +104,72 @@ export default function ChillPayCallbackPage() {
                     </div>
                   )}
                   
-                  {ticketInfo?.tickets && (
+                  {ticketInfo?.event?.venue && (
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Tickets:</span>
-                      <span className="font-semibold">{ticketInfo.tickets.length}</span>
+                      <span className="text-gray-600">Venue:</span>
+                      <span className="font-semibold">{ticketInfo.event.venue.name}</span>
                     </div>
                   )}
                   
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Amount Paid:</span>
-                    <span className="font-semibold">
-                      {amount ? `฿${parseFloat(amount).toFixed(2)}` : 'N/A'}
-                    </span>
-                  </div>
+                  {/* Display ticket details */}
+                  {ticketInfo?.tickets && ticketInfo.tickets.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <h3 className="font-medium text-gray-800 mb-2">Your Tickets:</h3>
+                      <div className="space-y-3">
+                        {ticketInfo.tickets.map((ticket: any, index: number) => (
+                          <div key={index} className="bg-white p-3 rounded-md border border-gray-200">
+                            <div className="flex justify-between mb-1">
+                              <span className="text-gray-600">Type:</span>
+                              <span className="font-semibold">{ticket.seatType || 'Standard'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Ticket ID:</span>
+                              <span className="font-mono text-xs">{ticket.id.substring(0, 8)}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Payment Method:</span>
-                    <span className="font-semibold">Credit Card</span>
-                  </div>
-                  
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Transaction ID:</span>
-                    <span className="font-semibold text-xs">{transactionId || 'N/A'}</span>
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Amount Paid:</span>
+                      <span className="font-semibold">
+                        {amount ? `฿${parseFloat(amount).toFixed(2)}` : 'N/A'}
+                      </span>
+                    </div>
+                    
+                    <div className="flex justify-between mt-2">
+                      <span className="text-gray-600">Payment Method:</span>
+                      <span className="font-semibold">Credit Card</span>
+                    </div>
+                    
+                    <div className="flex justify-between mt-2">
+                      <span className="text-gray-600">Transaction ID:</span>
+                      <span className="font-mono text-xs">{transactionId || 'N/A'}</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Additional Information */}
               <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200 mb-6">
-                <p className="text-sm text-gray-700">
+                <p className="text-sm text-gray-700 mb-2">
                   <span className="font-semibold">Important:</span> A confirmation email has been sent to your registered email address with your e-ticket(s). Please check your inbox and spam folder.
                 </p>
+                <p className="text-sm text-gray-700">
+                  Please bring your e-ticket or confirmation number to the event. You may be asked to show ID matching the name on the booking.
+                </p>
+              </div>
+              
+              {/* QR Code Placeholder - In a real implementation, generate a QR code with the booking ID */}
+              <div className="bg-white p-4 rounded-lg border border-gray-200 mb-6 text-center">
+                <h3 className="font-medium text-gray-800 mb-2">Quick Entry</h3>
+                <div className="bg-gray-100 h-40 w-40 mx-auto flex items-center justify-center">
+                  <p className="text-gray-500 text-sm">QR Code will be in your email</p>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">Show this at the venue for quick entry</p>
               </div>
             </>
           ) : (

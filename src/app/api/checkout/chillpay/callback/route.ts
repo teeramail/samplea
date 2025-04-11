@@ -153,11 +153,50 @@ export async function POST(request: Request) {
       }
     }
     
-    // Return 200 to acknowledge receipt
-    return NextResponse.json({ status: "success" }, { status: 200 });
+    // Redirect to the customer-facing page instead of returning JSON
+    const url = new URL(request.url);
+    const redirectBase = `${url.origin}/checkout/chillpay-callback`;
+    
+    // Create redirect URL with appropriate parameters
+    let redirectUrl = '';
+    let bookingId = '';
+    
+    // Find the booking to get the bookingId
+    const booking = await db.query.bookings.findFirst({
+      where: eq(bookings.paymentOrderNo, orderNo),
+    });
+    
+    if (booking) {
+      bookingId = booking.id;
+    }
+    
+    if (status === 'complete' || (formData.get('respCode') === '0')) {
+      // Successful payment
+      redirectUrl = `${redirectBase}?Status=0&Code=200&OrderNo=${orderNo}&bookingId=${bookingId}&TransactionId=${safeToString(formData.get('transNo')) || ''}`;
+    } else if (status === 'cancel') {
+      // Cancelled payment
+      redirectUrl = `${redirectBase}?Status=cancel&Message=Payment+cancelled&OrderNo=${orderNo}&bookingId=${bookingId}`;
+    } else {
+      // Failed payment
+      redirectUrl = `${redirectBase}?Status=error&Message=Payment+failed&OrderNo=${orderNo}&bookingId=${bookingId}`;
+    }
+    
+    return new Response(null, {
+      status: 302,
+      headers: {
+        Location: redirectUrl
+      }
+    });
     
   } catch (error) {
     console.error("[Callback] Error handling fallback notification:", error);
-    return NextResponse.json({ status: "error", message: "Internal server error" }, { status: 500 });
+    // Even on error, redirect to the customer-facing page with error status
+    const url = new URL(request.url);
+    return new Response(null, {
+      status: 302,
+      headers: {
+        Location: `${url.origin}/checkout/chillpay-callback?Status=error&Message=Internal+server+error`
+      }
+    });
   }
 } 
