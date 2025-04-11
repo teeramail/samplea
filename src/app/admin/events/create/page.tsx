@@ -97,6 +97,8 @@ export default function CreateEventPage() {
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [thumbnailSize, setThumbnailSize] = useState<string>("");
+  const [imageSizes, setImageSizes] = useState<string[]>([]);
 
   const {
     register,
@@ -172,17 +174,19 @@ export default function CreateEventPage() {
     if (file) {
       // Basic size check (optional, backend also checks)
       if (file.size > 30 * 1024) {
-        alert("Thumbnail image size should not exceed 30KB.");
+        alert(`Thumbnail image size should not exceed 30KB. Current size: ${(file.size / 1024).toFixed(1)}KB`);
         e.target.value = ""; // Clear input
         return;
       }
-      setThumbnailFile(file); 
+      setThumbnailFile(file);
+      setThumbnailSize(`${(file.size / 1024).toFixed(1)}KB`); 
       const reader = new FileReader();
       reader.onloadend = () => { setThumbnailPreview(reader.result as string); };
       reader.readAsDataURL(file);
     } else {
       setThumbnailFile(null); 
-      setThumbnailPreview(null); 
+      setThumbnailPreview(null);
+      setThumbnailSize("");
     }
   };
 
@@ -197,7 +201,7 @@ export default function CreateEventPage() {
       e.target.value = "";
       
       // Show clear error message about individual file size limits
-      alert(`Each image must be less than 120KB. The following images are too large: ${oversizedFiles.map(f => `${f.name} (${Math.round(f.size / 1024)}KB)`).join(', ')}`);
+      alert(`Each image must be less than 120KB. The following images are too large: ${oversizedFiles.map(f => `${f.name} (${(f.size / 1024).toFixed(1)}KB)`).join(', ')}`);
       
       // Keep only valid files
       const validFiles = files.filter(f => f.size <= 120 * 1024);
@@ -207,19 +211,24 @@ export default function CreateEventPage() {
       setImageFiles(files);
     }
     
-    // Clear old previews
+    // Clear old previews and sizes
     setImagePreviews([]);
+    setImageSizes([]);
     
     // Generate previews only for valid files
     const validFilesForPreview = files.filter(f => f.size <= 120 * 1024);
     
     if (validFilesForPreview.length === 0) {
       setImagePreviews([]);
+      setImageSizes([]);
       return;
     }
     
-    // Create previews for valid files
+    // Create previews and track sizes for valid files
     const newPreviews: string[] = [];
+    const newSizes: string[] = validFilesForPreview.map(file => `${(file.size / 1024).toFixed(1)}KB`);
+    setImageSizes(newSizes);
+    
     validFilesForPreview.forEach(file => {
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -499,6 +508,20 @@ export default function CreateEventPage() {
             />
             {thumbnailPreview && (
               <div className="mt-2">
+                <div className="flex items-center mb-1">
+                  <span className="text-xs text-gray-500 mr-2">Current size: {thumbnailSize}</span>
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      setThumbnailFile(null);
+                      setThumbnailPreview(null);
+                      setThumbnailSize("");
+                    }}
+                    className="text-xs text-red-500 hover:text-red-700"
+                  >
+                    Remove
+                  </button>
+                </div>
                 <Image src={thumbnailPreview} alt="Thumbnail preview" width={100} height={75} className="rounded-md object-cover"/>
               </div>
             )}
@@ -517,9 +540,33 @@ export default function CreateEventPage() {
               className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
             />
             {imagePreviews.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-2">
+              <div className="mt-2 flex flex-wrap gap-4">
                 {imagePreviews.map((preview, index) => (
-                  <Image key={index} src={preview} alt={`Event image preview ${index + 1}`} width={100} height={75} className="rounded-md object-cover"/>
+                  <div key={index} className="relative">
+                    <div className="flex items-center mb-1">
+                      <span className="text-xs text-gray-500 mr-2">Size: {imageSizes[index]}</span>
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          const newFiles = [...imageFiles];
+                          newFiles.splice(index, 1);
+                          setImageFiles(newFiles);
+                          
+                          const newPreviews = [...imagePreviews];
+                          newPreviews.splice(index, 1);
+                          setImagePreviews(newPreviews);
+                          
+                          const newSizes = [...imageSizes];
+                          newSizes.splice(index, 1);
+                          setImageSizes(newSizes);
+                        }}
+                        className="text-xs text-red-500 hover:text-red-700"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <Image src={preview} alt={`Event image preview ${index + 1}`} width={100} height={75} className="rounded-md object-cover"/>
+                  </div>
                 ))}
               </div>
             )}

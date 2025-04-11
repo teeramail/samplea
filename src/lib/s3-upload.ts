@@ -29,12 +29,37 @@ export interface UploadResponse {
 async function processImage(file: File): Promise<Buffer> {
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
+  const maxSize = MAX_FILE_SIZE;
   
-  // Process with sharp to optimize and resize if needed
-  return await sharp(buffer)
+  // Start with higher quality and reduce if needed
+  let quality = 80;
+  let processedBuffer = await sharp(buffer)
     .resize(800) // Resize to max width of 800px
-    .jpeg({ quality: 80 }) // Convert to JPEG with 80% quality
+    .jpeg({ quality }) // Convert to JPEG with initial quality
     .toBuffer();
+  
+  // If still too large, progressively reduce quality until it fits
+  while (processedBuffer.length > maxSize && quality > 40) {
+    quality -= 10;
+    processedBuffer = await sharp(buffer)
+      .resize(800)
+      .jpeg({ quality })
+      .toBuffer();
+  }
+  
+  // If still too large, reduce dimensions
+  if (processedBuffer.length > maxSize) {
+    let width = 700;
+    while (processedBuffer.length > maxSize && width >= 400) {
+      processedBuffer = await sharp(buffer)
+        .resize(width)
+        .jpeg({ quality: 70 })
+        .toBuffer();
+      width -= 100;
+    }
+  }
+  
+  return processedBuffer;
 }
 
 /**
@@ -85,8 +110,8 @@ export async function uploadImages(
     const uploadPromises = imageFiles.map(async (file, index) => {
       try {
         // Check file size before processing - each file must be under 120KB individually
-        if (file.size > MAX_FILE_SIZE) {
-          throw new Error(`File ${file.name} (${Math.round(file.size / 1024)}KB) exceeds maximum size of 120KB`);
+        if (file.size > MAX_FILE_SIZE * 1.5) { // Allow slightly larger files since we'll compress them
+          throw new Error(`File ${file.name} (${Math.round(file.size / 1024)}KB) is too large. Maximum allowed size before compression is 180KB`);
         }
         
         // Process the image
@@ -94,7 +119,9 @@ export async function uploadImages(
         
         // Check processed size - each processed image must still be under 120KB
         if (processedBuffer.length > MAX_FILE_SIZE) {
-          throw new Error(`Processed file ${file.name} (${Math.round(processedBuffer.length / 1024)}KB) still exceeds maximum size of 120KB. Please use a smaller or more compressed image.`);
+          // This shouldn't happen with our improved processing, but just in case
+          console.error(`Failed to compress ${file.name} to under 120KB. Final size: ${Math.round(processedBuffer.length / 1024)}KB`);
+          throw new Error(`Unable to compress ${file.name} to under 120KB. Please use a smaller image or compress it manually.`);
         }
         
         // Generate unique filename
