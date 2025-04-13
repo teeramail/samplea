@@ -65,11 +65,33 @@ export async function GET(request: Request) {
       console.log(`[Redirect] Updated booking ${bookingId} status to ${isSuccess ? 'COMPLETED' : 'FAILED'}`);
     }
     
-    // Redirect to our dedicated ChillPay callback page with all parameters
-    const redirectBase = `${url.origin}/checkout/chillpay-callback`;
-    // Pass all the original parameters to our dedicated page
-    const redirectUrl = `${redirectBase}?Status=${status}&Code=${code}&Message=${encodeURIComponent(message ?? '')}&TransactionId=${transactionId ?? ''}&Amount=${amount ?? ''}&OrderNo=${orderNo ?? ''}&bookingId=${bookingId ?? ''}`;
-
+    // Check if this is a callback from an external system integration
+    const externalReturnUrl = params.get('externalReturnUrl');
+    
+    let redirectUrl;
+    
+    if (externalReturnUrl) {
+      // If we have an external return URL, redirect back to the external system
+      // with the payment result parameters
+      const externalUrl = new URL(externalReturnUrl);
+      
+      // Add payment result parameters to the external URL
+      externalUrl.searchParams.set('status', isSuccess ? 'success' : 'failed');
+      externalUrl.searchParams.set('bookingId', bookingId || '');
+      externalUrl.searchParams.set('transactionId', transactionId || '');
+      externalUrl.searchParams.set('amount', amount || '');
+      if (!isSuccess && message) {
+        externalUrl.searchParams.set('message', message);
+      }
+      
+      redirectUrl = externalUrl.toString();
+      console.log(`[Redirect] Redirecting to external system: ${redirectUrl}`);
+    } else {
+      // Normal flow - redirect to our dedicated ChillPay callback page
+      const redirectBase = `${url.origin}/checkout/chillpay-callback`;
+      // Pass all the original parameters to our dedicated page
+      redirectUrl = `${redirectBase}?Status=${status}&Code=${code}&Message=${encodeURIComponent(message ?? '')}&TransactionId=${transactionId ?? ''}&Amount=${amount ?? ''}&OrderNo=${orderNo ?? ''}&bookingId=${bookingId ?? ''}`;
+    }
 
     // Return a redirect response
     return new Response(null, {
@@ -82,14 +104,33 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error("[Redirect] Error processing ChillPay redirect:", error);
     
-    // Even if we have an error processing the result, redirect to our dedicated page
-    // with error status so the user sees something
-    return new Response(null, {
-      status: 302,
-      headers: {
-        Location: `${url.origin}/checkout/chillpay-callback?Status=error&Message=Internal+server+error&bookingId=${bookingId}`
+    // Check if this is a callback from an external system integration
+    const externalReturnUrl = params.get('externalReturnUrl');
+    
+    if (externalReturnUrl) {
+      // If we have an external return URL, redirect back to the external system with error status
+      const externalUrl = new URL(externalReturnUrl);
+      externalUrl.searchParams.set('status', 'error');
+      externalUrl.searchParams.set('message', 'Internal server error');
+      if (bookingId) {
+        externalUrl.searchParams.set('bookingId', bookingId);
       }
-    });
+      
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: externalUrl.toString()
+        }
+      });
+    } else {
+      // Normal flow - redirect to our dedicated page with error status
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: `${url.origin}/checkout/chillpay-callback?Status=error&Message=Internal+server+error&bookingId=${bookingId}`
+        }
+      });
+    }
   }
 }
 
