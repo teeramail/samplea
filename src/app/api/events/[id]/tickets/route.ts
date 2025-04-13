@@ -3,14 +3,21 @@ import { db } from "~/server/db";
 import { eventTickets } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
 
+export interface EventTicketsParams {
+  params: {
+    id: string;
+  };
+}
+
 // GET /api/events/[id]/tickets
 // Fetch all tickets for a specific event
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  context: EventTicketsParams
 ) {
   try {
-    const eventId = params.id;
+    // Properly access the id from context.params
+    const { id: eventId } = context.params;
 
     if (!eventId) {
       return NextResponse.json(
