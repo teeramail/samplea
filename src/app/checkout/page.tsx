@@ -69,7 +69,7 @@ export default function CheckoutPage() {
             price = 800;
           } else {
             ticketType = "Vip";
-            price = 2000;
+            price = 1000;
           }
           
           details.push({
