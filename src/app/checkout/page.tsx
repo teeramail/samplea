@@ -42,6 +42,44 @@ export default function CheckoutPage() {
     }));
   };
 
+  // State for storing event ticket information from API
+  const [eventTickets, setEventTickets] = useState<Record<string, {seatType: string, price: number}>>({});
+  const [isLoadingTickets, setIsLoadingTickets] = useState(false);
+  const [ticketError, setTicketError] = useState<string | null>(null);
+
+  // Fetch ticket information from the API when the component mounts
+  useEffect(() => {
+    if (eventId) {
+      setIsLoadingTickets(true);
+      setTicketError(null);
+      
+      fetch(`/api/events/${eventId}/tickets`)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Failed to fetch ticket information');
+          }
+          return response.json();
+        })
+        .then(data => {
+          // Create a map of ticket ID to ticket details
+          const ticketMap: Record<string, {seatType: string, price: number}> = {};
+          data.forEach((ticket: any) => {
+            ticketMap[ticket.id] = {
+              seatType: ticket.seatType,
+              price: ticket.price
+            };
+          });
+          setEventTickets(ticketMap);
+          setIsLoadingTickets(false);
+        })
+        .catch(error => {
+          console.error('Error fetching ticket information:', error);
+          setTicketError('Failed to load ticket information. Please try again.');
+          setIsLoadingTickets(false);
+        });
+    }
+  }, [eventId]);
+
   // Parse ticket information from the URL 
   const ticketInfo = useMemo(() => {
     if (!ticketsParam) return { totalQuantity: 0, ticketDetails: [] };
@@ -56,26 +94,13 @@ export default function CheckoutPage() {
         const quantity = parseInt(qtyStr, 10);
         
         if (id && !isNaN(quantity) && quantity > 0) {
-          let ticketType = "";
-          let price = 0;
-          
-          // Check for ticket type based on ID or seatType
-          if (id.includes('85e-4e5c') || id.toLowerCase().includes('vips')) {
-            ticketType = "VIPS";
-            price = 3000;
-          } else if (id.toLowerCase().includes('normali') || id.toLowerCase().includes('normal') || 
-                    id === 'f684e1b1-8961-479c-82ee-25280defde7d') { // Add specific ID for normal tickets
-            ticketType = "Normal";
-            price = 800;
-          } else {
-            ticketType = "Vip";
-            price = 1000;
-          }
+          // Get ticket details from the API response
+          const ticketDetails = eventTickets[id] || { seatType: 'Unknown', price: 0 };
           
           details.push({
             id,
-            type: ticketType,
-            price,
+            type: ticketDetails.seatType,
+            price: ticketDetails.price,
             quantity
           });
           
@@ -88,7 +113,7 @@ export default function CheckoutPage() {
       console.error("Error parsing tickets parameter:", error);
       return { totalQuantity: 0, ticketDetails: [] };
     }
-  }, [ticketsParam]);
+  }, [ticketsParam, eventTickets]);
 
   // --- Validation ---
   useEffect(() => {
