@@ -50,7 +50,7 @@ export default function ChillPayCallbackPage() {
           <div className="relative h-12 w-48">
             <Image 
               src="/logo.png" 
-              alt="Teera Muay Thai One Logo"
+              alt="ThaiBoxingHub Logo"
               fill
               style={{ objectFit: "contain" }}
               priority

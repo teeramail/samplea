@@ -6,7 +6,7 @@ export default function AboutPage() {
         
         <div className="prose max-w-none">
           <p className="text-lg mb-4">
-            Welcome to Teera Muay Thai One, the premier destination for authentic Muay Thai experiences in Thailand.
+            Welcome to ThaiBoxingHub, the premier destination for authentic Muay Thai experiences in Thailand.
           </p>
           
           <p className="mb-4">
@@ -33,7 +33,7 @@ export default function AboutPage() {
           
           <p className="mt-8">
             Thank you for being part of our journey. Whether you&apos;re a seasoned fighter or a curious
-            beginner, we welcome you to the world of Teera Muay Thai One.
+            beginner, we welcome you to the world of ThaiBoxingHub.
           </p>
         </div>
       </div>

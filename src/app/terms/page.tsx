@@ -6,7 +6,7 @@ export default function TermsPage() {
         
         <div className="prose max-w-none">
           <p className="mb-4">
-            Welcome to Teera Muay Thai One. By accessing and using our website and services, 
+            Welcome to ThaiBoxingHub. By accessing and using our website and services, 
             you agree to be bound by these Terms and Conditions.
           </p>
           
@@ -25,10 +25,22 @@ export default function TermsPage() {
           </p>
           
           <h2 className="text-2xl font-semibold mt-8 mb-4">3. Cancellation Policy</h2>
+          <p className="mb-2">
+            <strong>Standard Events:</strong> Cancellations must meet both of these conditions for a full refund:
+          </p>
+          <ul className="list-disc pl-6 mb-2">
+            <li>Made at least 72 hours before the event start time</li>
+            <li>Submitted before 8:00 PM on the same date of booking</li>
+          </ul>
           <p className="mb-4">
-            Cancellations made 48 hours or more before the event start time may receive a full refund.
-            Cancellations made less than 48 hours before the event may not be eligible for a refund.
-            In case of event cancellation by the organizer, a full refund will be provided.
+            Cancellations made after 9:00 PM on the booking date will incur a 10% processing fee (to cover credit card transaction charges).
+            Cancellations made less than 72 hours before the event are not eligible for a refund under any circumstances.
+          </p>
+          <p className="mb-4">
+            <strong>Muay Thai Learning Courses:</strong> All Muay Thai learning course bookings are final and non-refundable under any circumstances. No refunds will be issued regardless of cancellation timing.
+          </p>
+          <p className="mb-4">
+            In case of event cancellation by the organizer, a full refund will be provided for standard events only.
           </p>
           
           <h2 className="text-2xl font-semibold mt-8 mb-4">4. User Conduct</h2>
@@ -40,7 +52,7 @@ export default function TermsPage() {
           
           <h2 className="text-2xl font-semibold mt-8 mb-4">5. Limitation of Liability</h2>
           <p className="mb-4">
-            Teera Muay Thai One shall not be liable for any direct, indirect, incidental, special, 
+            ThaiBoxingHub shall not be liable for any direct, indirect, incidental, special, 
             or consequential damages resulting from the use or inability to use our services or 
             participation in events.
           </p>

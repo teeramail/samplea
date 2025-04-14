@@ -6,7 +6,7 @@ export default function PrivacyPage() {
         
         <div className="prose max-w-none">
           <p className="mb-4">
-            At Teera Muay Thai One, we are committed to protecting your privacy and ensuring the security of your personal information.
+            At ThaiBoxingHub, we are committed to protecting your privacy and ensuring the security of your personal information.
             This Privacy Policy explains how we collect, use, and safeguard your information when you use our website and services.
           </p>
           
@@ -91,8 +91,8 @@ export default function PrivacyPage() {
           <p className="mb-4">
             If you have any questions about this Privacy Policy or our data practices, please contact us at:
             <br />
-            <a href="mailto:privacy@teeramuaythaione.com" className="text-red-600 hover:underline">
-              privacy@teeramuaythaione.com
+            <a href="mailto:privacy@thaiboxinghub.com" className="text-red-600 hover:underline">
+              privacy@thaiboxinghub.com
             </a>
           </p>
           
