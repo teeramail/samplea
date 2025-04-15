@@ -17,6 +17,17 @@ const venueUpdateSchema = z.object({
   regionId: z.string().min(1, "Please select a region"),
   latitude: z.coerce.number().optional(),
   longitude: z.coerce.number().optional(),
+  googleMapsUrl: z.string().url("Must be a valid URL").optional().or(z.literal('')),
+  remarks: z.string().optional(),
+  socialMediaLinks: z.object({
+    facebook: z.string().url("Must be a valid URL").optional().or(z.literal('')),
+    instagram: z.string().url("Must be a valid URL").optional().or(z.literal('')),
+    tiktok: z.string().url("Must be a valid URL").optional().or(z.literal('')),
+    twitter: z.string().url("Must be a valid URL").optional().or(z.literal('')),
+    youtube: z.string().url("Must be a valid URL").optional().or(z.literal('')),
+  }).optional(),
+  venueTypeIds: z.array(z.string()).min(1, "Select at least one venue type"),
+  primaryVenueTypeId: z.string().optional(),
   // Image URLs are handled separately in submission logic
 });
 
@@ -28,6 +39,17 @@ type FetchedVenueData = VenueFormData & {
   thumbnailUrl?: string | null;
   imageUrls?: string[] | null;
   region?: { id: string; name: string }; // Assuming region is included
+  venueTypes?: { id: string; name: string; description: string }[];
+  primaryVenueType?: { id: string; name: string };
+  googleMapsUrl?: string;
+  remarks?: string;
+  socialMediaLinks?: {
+    facebook?: string;
+    instagram?: string;
+    tiktok?: string;
+    twitter?: string;
+    youtube?: string;
+  };
 };
 
 type Region = {
@@ -79,6 +101,10 @@ export default function EditVenuePage() {
   const [error, setError] = useState("");
   const [regions, setRegions] = useState<Region[]>([]);
   const [isLoadingRegions, setIsLoadingRegions] = useState(true);
+  const [venueTypes, setVenueTypes] = useState<{ id: string; name: string; description: string }[]>([]);
+  const [isLoadingVenueTypes, setIsLoadingVenueTypes] = useState(true);
+  const [selectedVenueTypes, setSelectedVenueTypes] = useState<string[]>([]);
+  const [primaryVenueType, setPrimaryVenueType] = useState<string>("");
 
   // State for images
   const [currentThumbnailUrl, setCurrentThumbnailUrl] = useState<string | null | undefined>(null);
@@ -93,6 +119,8 @@ export default function EditVenuePage() {
     handleSubmit,
     reset, // Use reset to populate form after fetch
     formState: { errors },
+    setValue,
+    watch,
   } = useForm<VenueFormData>({
     resolver: zodResolver(venueUpdateSchema),
     defaultValues: {
@@ -102,6 +130,17 @@ export default function EditVenuePage() {
       regionId: "",
       latitude: undefined,
       longitude: undefined,
+      googleMapsUrl: "",
+      remarks: "",
+      socialMediaLinks: {
+        facebook: "",
+        instagram: "",
+        tiktok: "",
+        twitter: "",
+        youtube: "",
+      },
+      venueTypeIds: [],
+      primaryVenueTypeId: "",
     },
   });
 
@@ -122,6 +161,26 @@ export default function EditVenuePage() {
       }
     };
     void fetchRegions();
+  }, []);
+
+  // Fetch venue types
+  useEffect(() => {
+    const fetchVenueTypes = async () => {
+      setIsLoadingVenueTypes(true);
+      try {
+        const response = await fetch("/api/venue-types");
+        if (!response.ok) throw new Error("Failed to fetch venue types");
+        const data = await response.json() as { id: string; name: string; description: string }[];
+        setVenueTypes(data);
+      } catch (err) {
+        console.error("Error fetching venue types:", err);
+        setError("Failed to load venue types. Please try again.");
+      } finally {
+        setIsLoadingVenueTypes(false);
+      }
+    };
+
+    void fetchVenueTypes();
   }, []);
 
   // Fetch venue data
@@ -146,7 +205,27 @@ export default function EditVenuePage() {
           regionId: data.regionId,
           latitude: data.latitude ?? undefined,
           longitude: data.longitude ?? undefined,
+          googleMapsUrl: data.googleMapsUrl || "",
+          remarks: data.remarks || "",
+          socialMediaLinks: {
+            facebook: data.socialMediaLinks?.facebook || "",
+            instagram: data.socialMediaLinks?.instagram || "",
+            tiktok: data.socialMediaLinks?.tiktok || "",
+            twitter: data.socialMediaLinks?.twitter || "",
+            youtube: data.socialMediaLinks?.youtube || "",
+          },
+          venueTypeIds: data.venueTypes?.map(vt => vt.id) || [],
+          primaryVenueTypeId: data.primaryVenueType?.id || "",
         });
+        
+        // Set venue types
+        if (data.venueTypes) {
+          const venueTypeIds = data.venueTypes.map(vt => vt.id);
+          setSelectedVenueTypes(venueTypeIds);
+          const primaryTypeId = data.primaryVenueType?.id || venueTypeIds[0] || "";
+          setPrimaryVenueType(primaryTypeId);
+        }
+        
         setCurrentThumbnailUrl(data.thumbnailUrl);
         setCurrentImageUrls(data.imageUrls ?? []);
       } catch (err) {
@@ -158,6 +237,32 @@ export default function EditVenuePage() {
     };
     void fetchVenue();
   }, [venueId, reset]);
+
+  // Handle venue type selection
+  const handleVenueTypeChange = (typeId: string) => {
+    setSelectedVenueTypes(prev => {
+      // If already selected, remove it
+      if (prev.includes(typeId)) {
+        // If this is also the primary type, reset primary type
+        if (primaryVenueType === typeId) {
+          const newTypes = prev.filter(id => id !== typeId);
+          // Ensure we always have a string, not undefined
+          const newPrimaryType = newTypes.length > 0 ? newTypes[0] : "";
+          setPrimaryVenueType(newPrimaryType);
+        }
+        return prev.filter(id => id !== typeId);
+      } 
+      // Otherwise, add it
+      else {
+        const newTypes = [...prev, typeId];
+        // If this is the first type, make it primary
+        if (newTypes.length === 1) {
+          setPrimaryVenueType(typeId);
+        }
+        return newTypes;
+      }
+    });
+  };
 
   // --- File Handlers ---
   const handleThumbnailChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -200,6 +305,10 @@ export default function EditVenuePage() {
     setIsLoading(true);
     setError("");
 
+    // Update venue types from state
+    setValue('venueTypeIds', selectedVenueTypes);
+    setValue('primaryVenueTypeId', primaryVenueType);
+
     let finalThumbnailUrl = currentThumbnailUrl;
     let finalImageUrls = currentImageUrls;
 
@@ -229,6 +338,8 @@ export default function EditVenuePage() {
       // 3. Prepare final data for venue update API
       const venueUpdateData = {
         ...data,
+        venueTypeIds: selectedVenueTypes,
+        primaryVenueTypeId: primaryVenueType,
         latitude: data.latitude === undefined || isNaN(data.latitude) ? null : data.latitude,
         longitude: data.longitude === undefined || isNaN(data.longitude) ? null : data.longitude,
         thumbnailUrl: finalThumbnailUrl,
@@ -413,6 +524,186 @@ export default function EditVenuePage() {
                 height={96}
                 className="rounded-md object-cover mt-1"
               />
+            </div>
+          )}
+        </div>
+
+        {/* Google Maps URL */}
+        <div>
+          <label htmlFor="googleMapsUrl" className="block text-sm font-medium text-gray-700">
+            Google Maps URL
+          </label>
+          <input
+            id="googleMapsUrl"
+            type="url"
+            {...register("googleMapsUrl")}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            placeholder="https://maps.google.com/..."
+          />
+          {errors.googleMapsUrl && (
+            <p className="mt-1 text-sm text-red-600">{errors.googleMapsUrl.message}</p>
+          )}
+        </div>
+
+        {/* Remarks */}
+        <div>
+          <label htmlFor="remarks" className="block text-sm font-medium text-gray-700">
+            Remarks
+          </label>
+          <textarea
+            id="remarks"
+            {...register("remarks")}
+            rows={3}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            placeholder="Additional information about the venue..."
+          />
+        </div>
+
+        {/* Social Media Links */}
+        <div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Social Media Links</h3>
+          
+          <div className="space-y-3">
+            <div>
+              <label htmlFor="facebook" className="block text-sm font-medium text-gray-700">
+                Facebook
+              </label>
+              <input
+                id="facebook"
+                type="url"
+                {...register("socialMediaLinks.facebook")}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                placeholder="https://facebook.com/..."
+              />
+              {errors.socialMediaLinks?.facebook && (
+                <p className="mt-1 text-sm text-red-600">{errors.socialMediaLinks.facebook.message}</p>
+              )}
+            </div>
+            
+            <div>
+              <label htmlFor="instagram" className="block text-sm font-medium text-gray-700">
+                Instagram
+              </label>
+              <input
+                id="instagram"
+                type="url"
+                {...register("socialMediaLinks.instagram")}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                placeholder="https://instagram.com/..."
+              />
+              {errors.socialMediaLinks?.instagram && (
+                <p className="mt-1 text-sm text-red-600">{errors.socialMediaLinks.instagram.message}</p>
+              )}
+            </div>
+            
+            <div>
+              <label htmlFor="tiktok" className="block text-sm font-medium text-gray-700">
+                TikTok
+              </label>
+              <input
+                id="tiktok"
+                type="url"
+                {...register("socialMediaLinks.tiktok")}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                placeholder="https://tiktok.com/..."
+              />
+              {errors.socialMediaLinks?.tiktok && (
+                <p className="mt-1 text-sm text-red-600">{errors.socialMediaLinks.tiktok.message}</p>
+              )}
+            </div>
+            
+            <div>
+              <label htmlFor="twitter" className="block text-sm font-medium text-gray-700">
+                Twitter
+              </label>
+              <input
+                id="twitter"
+                type="url"
+                {...register("socialMediaLinks.twitter")}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                placeholder="https://twitter.com/..."
+              />
+              {errors.socialMediaLinks?.twitter && (
+                <p className="mt-1 text-sm text-red-600">{errors.socialMediaLinks.twitter.message}</p>
+              )}
+            </div>
+            
+            <div>
+              <label htmlFor="youtube" className="block text-sm font-medium text-gray-700">
+                YouTube
+              </label>
+              <input
+                id="youtube"
+                type="url"
+                {...register("socialMediaLinks.youtube")}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                placeholder="https://youtube.com/..."
+              />
+              {errors.socialMediaLinks?.youtube && (
+                <p className="mt-1 text-sm text-red-600">{errors.socialMediaLinks.youtube.message}</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Venue Types */}
+        <div className="space-y-4">
+          <label className="block text-sm font-medium text-gray-700">
+            Venue Types
+          </label>
+          
+          {isLoadingVenueTypes ? (
+            <div className="py-4 text-center">Loading venue types...</div>
+          ) : venueTypes.length === 0 ? (
+            <div className="py-4 text-center text-red-500">No venue types available. Please try refreshing the page.</div>
+          ) : (
+            <div>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+                {venueTypes.map((type) => (
+                  <div key={type.id} className="flex items-start">
+                    <div className="flex items-center h-5">
+                      <input
+                        id={`type-${type.id}`}
+                        type="checkbox"
+                        checked={selectedVenueTypes.includes(type.id)}
+                        onChange={() => handleVenueTypeChange(type.id)}
+                        className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded"
+                      />
+                    </div>
+                    <div className="ml-3 text-sm">
+                      <label htmlFor={`type-${type.id}`} className="font-medium text-gray-700">
+                        {type.name}
+                      </label>
+                      {type.description && (
+                        <p className="text-gray-500">{type.description}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {selectedVenueTypes.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Primary Venue Type
+                  </label>
+                  <select
+                    value={primaryVenueType}
+                    onChange={(e) => setPrimaryVenueType(e.target.value)}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  >
+                    {selectedVenueTypes.map((typeId) => (
+                      <option key={typeId} value={typeId}>
+                        {venueTypes.find(t => t.id === typeId)?.name ?? typeId}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              
+              {errors.venueTypeIds && (
+                <p className="mt-1 text-sm text-red-600">{errors.venueTypeIds.message}</p>
+              )}
             </div>
           )}
         </div>
