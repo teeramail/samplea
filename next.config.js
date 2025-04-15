@@ -7,7 +7,7 @@ import "./src/env.js";
 /** @type {import("next").NextConfig} */
 const config = {
   images: {
-    domains: ['upload.wikimedia.org', 'www.paypalobjects.com']
+    domains: ['upload.wikimedia.org', 'www.paypalobjects.com', 'sgp1.digitaloceanspaces.com']
   }
 };
 
