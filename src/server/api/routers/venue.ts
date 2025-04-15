@@ -183,7 +183,7 @@ export const venueRouter = createTRPCRouter({
             return {
               ...venue,
               venueTypes: venueTypeLinks.map(link => link.venueType),
-              primaryType: venueTypeLinks.find(link => link.isPrimary)?.venueType || venueTypeLinks[0]?.venueType,
+              primaryType: venueTypeLinks.find(link => link.isPrimary)?.venueType ?? venueTypeLinks[0]?.venueType,
             };
           })
         );
@@ -224,7 +224,7 @@ export const venueRouter = createTRPCRouter({
         // Third pass: add venues with no types to an "Other" category
         const venuesWithNoTypes = venuesWithTypes.filter(venue => !venue.venueTypes.length);
         if (venuesWithNoTypes.length > 0) {
-          groupedVenues['Other'] = venuesWithNoTypes;
+          groupedVenues.Other = venuesWithNoTypes;
         }
         
         return {

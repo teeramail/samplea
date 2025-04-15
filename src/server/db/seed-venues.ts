@@ -184,7 +184,7 @@ main()
     console.error("Error during seeding:", e);
     process.exit(1);
   })
-  .finally(async () => {
+  .finally(() => {
     console.log("Seed script execution completed.");
     process.exit(0);
   });

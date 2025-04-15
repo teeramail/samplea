@@ -247,8 +247,8 @@ export default function EditVenuePage() {
         if (primaryVenueType === typeId) {
           const newTypes = prev.filter(id => id !== typeId);
           // Ensure we always have a string, not undefined
-          const newPrimaryType = newTypes.length > 0 ? newTypes[0] : "";
-          setPrimaryVenueType(newPrimaryType);
+          // Always set to a string value
+          setPrimaryVenueType(newTypes.length > 0 ? String(newTypes[0]) : "");
         }
         return prev.filter(id => id !== typeId);
       } 

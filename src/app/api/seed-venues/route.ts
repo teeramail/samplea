@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { regions, venueTypes, venues, venueToVenueTypes } from "~/server/db/schema";
 
-export async function GET() {
+// Common seeding logic used by both GET and POST handlers
+async function seedVenues() {
   try {
     console.log("Starting venue and venue type seeding...");
 
@@ -177,12 +178,39 @@ export async function GET() {
       console.log(`Created ${venueData.length} venues with type associations.`);
     }
 
-    return NextResponse.json({
+    return {
       success: true,
       message: "Venue seeding completed successfully!",
-    });
+    };
   } catch (error) {
     console.error("Error during seeding:", error);
+    throw error;
+  }
+}
+
+// GET handler for browser requests
+export async function GET() {
+  try {
+    const result = await seedVenues();
+    return NextResponse.json(result);
+  } catch (error) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to seed venues",
+        error: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// POST handler for API requests
+export async function POST() {
+  try {
+    const result = await seedVenues();
+    return NextResponse.json(result);
+  } catch (error) {
     return NextResponse.json(
       {
         success: false,

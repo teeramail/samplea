@@ -4,17 +4,13 @@ import Image from "next/image";
 import { format } from 'date-fns';
 import { MapPinIcon, BuildingLibraryIcon } from '@heroicons/react/24/outline';
 
-// Import the server-side tRPC caller
+// Import the server-side tRPC caller and direct DB access
 import { api } from "~/trpc/server";
+import { db } from "~/server/db";
+import { desc, eq } from "drizzle-orm";
+import { venues } from "~/server/db/schema";
 // Import the type helper from the correct location
 import type { RouterOutputs } from "~/trpc/react";
-
-// Assume these card components exist for displaying items
-// import { EventCard } from "~/app/_components/EventCard";
-// import { FighterCard } from "~/app/_components/FighterCard";
-// import { CourseCard } from "~/app/_components/CourseCard";
-// import { VenueCard } from "~/app/_components/VenueCard";
-// import { BlogPostCard } from "~/app/_components/BlogPostCard";
 
 // Helper function (consider moving to a utils file)
 const formatDate = (date: Date | string | null | undefined) => {
@@ -54,18 +50,36 @@ interface VenuesByTypeResponse {
 
 export default async function Home() {
   // Fetch all data in parallel
-  const [upcomingEvents, featuredFighters, featuredCourses, featuredVenues, featuredPosts, venuesByType] = await Promise.all([
+  const [upcomingEvents, featuredFighters, featuredCourses, featuredPosts] = await Promise.all([
     api.event.getUpcoming({ limit: 3 }), // Assuming this router/procedure exists now
     api.fighter.getFeatured({ limit: 3 }),
     api.trainingCourse.getFeatured({ limit: 2 }),
-    api.venue.getFeatured({ limit: 4 }),
     api.post.getFeatured({ limit: 2 }),
-    api.venue.getByVenueType({ limit: 50, featured: true }) // Get venues by type, prioritize featured ones
   ]);
-
-  // --- REMOVE HARDCODED DATA ---
-  // const featuredFighters = [ ... ];
-  // const featuredPosts = [ ... ];
+  
+  // Fetch venues directly from the database - similar to the venues page
+  // This ensures consistency between the homepage and venues page
+  const recommendedVenues = await db.query.venues.findMany({
+    limit: 12, // Limit to 12 venues for the homepage
+    orderBy: [desc(venues.isFeatured), desc(venues.createdAt)], // Featured first, then newest
+    with: {
+      region: true,
+      venueTypes: {
+        with: {
+          venueType: true,
+        },
+      },
+    },
+  });
+  
+  // Process venues to include their types
+  const venuesWithTypes = recommendedVenues.map(venue => ({
+    ...venue,
+    venueTypeNames: venue.venueTypes.map(vt => vt.venueType.name),
+  }));
+  
+  // Check if we have venues to display
+  const hasVenues = venuesWithTypes.length > 0;
 
   return (
     <main className="flex min-h-screen flex-col items-center bg-gradient-to-b from-[#2e026d] to-[#15162c] text-white">
@@ -125,7 +139,7 @@ export default async function Home() {
                  // --- REPLACE WITH <FighterCard /> IF AVAILABLE ---
                  <div key={fighter.id} className="bg-white/10 rounded-lg overflow-hidden hover:bg-white/20 transition-colors">
                    {fighter.imageUrl && (
-                     <div className="relative h-48 overflow-hidden bg-white/5">
+                     <div className="relative h-48 bg-white/5">
                        <Image src={fighter.imageUrl} alt={fighter.name} fill className="object-cover" />
                      </div>
                    )}
@@ -182,93 +196,53 @@ export default async function Home() {
           )}
         </section>
 
-        {/* Recommended Gyms Section - Grouped by Venue Type */}
+        {/* Recommended Gyms Section - Simple List */}
         <section className="w-full max-w-5xl mt-16">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-3xl font-bold">Recommended Gyms</h2>
             <Link href="/venues" className="text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]">View All &rarr;</Link>
           </div>
-          {venuesByType && Object.entries(venuesByType.groupedVenues).length > 0 ? (
-            <div className="space-y-12">
-              {/* Sort venue types to prioritize Muay Thai, then Gym, then others */}
-              {Object.entries(venuesByType.groupedVenues)
-                .sort(([typeA], [typeB]) => {
-                  // Prioritize specific venue types
-                  const typeOrder = {
-                    'Muay Thai': 1,
-                    'Gym': 2,
-                    'Kickboxing': 3,
-                    'Boxing': 4,
-                    'Stadium': 5,
-                    'Other': 99 // Always last
-                  };
-                  const orderA = typeOrder[typeA as keyof typeof typeOrder] || 10;
-                  const orderB = typeOrder[typeB as keyof typeof typeOrder] || 10;
-                  return orderA - orderB;
-                })
-                .map(([venueType, venues]) => (
-                <div key={venueType} className="space-y-4">
-                  <h3 className="text-xl font-semibold text-[hsl(280,100%,70%)] capitalize">{venueType} {venueType !== 'Other' ? 'Gyms' : ''}</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-                    {/* Sort venues by featured status first, then by name */}
-                    {(venues as VenueWithTypes[])
-                      .sort((a, b) => {
-                        // Featured venues first
-                        if (a.isFeatured && !b.isFeatured) return -1;
-                        if (!a.isFeatured && b.isFeatured) return 1;
-                        // Then sort by name
-                        return a.name.localeCompare(b.name);
-                      })
-                      .slice(0, 4)
-                      .map((venue: VenueWithTypes) => (
-                      <Link key={venue.id} href={`/venues/${venue.id}`} 
-                            className={`block ${venue.isFeatured ? 'bg-white/20 ring-2 ring-[hsl(280,100%,70%)]' : 'bg-white/10'} rounded-lg overflow-hidden hover:bg-white/20 transition-colors`}>
-                        {venue.thumbnailUrl ? (
-                          <div className="relative h-36 overflow-hidden bg-white/5">
-                            <Image src={venue.thumbnailUrl} alt={venue.name} fill className="object-cover" />
-                            {venue.isFeatured && (
-                              <div className="absolute top-0 right-0 bg-[hsl(280,100%,70%)] text-white text-xs px-2 py-1 m-2 rounded-md">
-                                Featured
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="relative h-36 overflow-hidden bg-white/5 flex items-center justify-center">
-                            <BuildingLibraryIcon className="h-16 w-16 text-white/30" />
-                            {venue.isFeatured && (
-                              <div className="absolute top-0 right-0 bg-[hsl(280,100%,70%)] text-white text-xs px-2 py-1 m-2 rounded-md">
-                                Featured
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        <div className="p-4">
-                          <h4 className="text-lg font-bold mb-1 truncate">{venue.name}</h4>
-                          {venue.region && (
-                            <div className="flex items-center text-sm text-gray-400 truncate">
-                              <MapPinIcon className="h-4 w-4 mr-1" />
-                              <span>{venue.region.name}</span>
-                            </div>
-                          )}
-                          <div className="mt-2 flex flex-wrap gap-1">
-                            {venue.venueTypes && venue.venueTypes.map((type: { id: string; name: string }, idx: number) => (
-                              <span key={idx} className={`inline-block px-2 py-1 text-xs rounded-full ${venue.primaryType && type.id === venue.primaryType.id ? 'bg-[hsl(280,100%,70%)]' : 'bg-[hsl(280,70%,30%)]'} text-white`}>
-                                {type.name}
-                              </span>
-                            )).slice(0, 2)}
-                          </div>
+          {hasVenues ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
+              {venuesWithTypes.map((venue) => (
+                <Link key={venue.id} href={`/venues/${venue.id}`} 
+                      className={`block ${venue.isFeatured ? 'bg-white/20 ring-2 ring-[hsl(280,100%,70%)]' : 'bg-white/10'} rounded-lg overflow-hidden hover:bg-white/20 transition-colors`}>
+                  {venue.thumbnailUrl ? (
+                    <div className="relative h-36 overflow-hidden bg-white/5">
+                      <Image src={venue.thumbnailUrl} alt={venue.name} fill className="object-cover" />
+                      {venue.isFeatured && (
+                        <div className="absolute top-0 right-0 bg-[hsl(280,100%,70%)] text-white text-xs px-2 py-1 m-2 rounded-md">
+                          Featured
                         </div>
-                      </Link>
-                    ))}
-                  </div>
-                  {(venues as VenueWithTypes[]).length > 4 && (
-                    <div className="text-right">
-                      <Link href={`/venues?type=${encodeURIComponent(venueType)}`} className="text-sm text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]">
-                        View more {venueType.toLowerCase()} {venueType !== 'Other' ? 'gyms' : 'venues'} &rarr;
-                      </Link>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="relative h-36 overflow-hidden bg-white/5 flex items-center justify-center">
+                      <BuildingLibraryIcon className="h-16 w-16 text-white/30" />
+                      {venue.isFeatured && (
+                        <div className="absolute top-0 right-0 bg-[hsl(280,100%,70%)] text-white text-xs px-2 py-1 m-2 rounded-md">
+                          Featured
+                        </div>
+                      )}
                     </div>
                   )}
-                </div>
+                  <div className="p-4">
+                    <h4 className="text-lg font-bold mb-1 truncate">{venue.name}</h4>
+                    {venue.region && (
+                      <div className="flex items-center text-sm text-gray-400 truncate">
+                        <MapPinIcon className="h-4 w-4 mr-1" />
+                        <span>{venue.region.name}</span>
+                      </div>
+                    )}
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {venue.venueTypeNames.slice(0, 2).map((typeName, idx) => (
+                        <span key={idx} className="inline-block px-2 py-1 text-xs rounded-full bg-[hsl(280,70%,30%)] text-white">
+                          {typeName}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </Link>
               ))}
             </div>
           ) : (
