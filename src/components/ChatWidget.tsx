@@ -19,10 +19,10 @@ export default function ChatWidget() {
     window.Tawk_API = window.Tawk_API || {};
     window.Tawk_LoadStart = new Date();
 
-    // Create and append the Tawk.to script
+    // Create and append the Tawk.to script using the exact code provided
     const script = document.createElement('script');
     script.async = true;
-    script.src = 'https://embed.tawk.to/YOUR_TAWK_TO_PROPERTY_ID/default'; // Replace with your actual Tawk.to Property ID
+    script.src = 'https://embed.tawk.to/67fde3c103705119092a84c9/1iors3b0j'; // Actual Tawk.to Property ID
     script.charset = 'UTF-8';
     script.setAttribute('crossorigin', '*');
     

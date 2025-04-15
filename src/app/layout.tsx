@@ -9,12 +9,7 @@ import { ThemeProvider } from "./_components/ThemeProvider";
 import { ClientLayout } from "./_components/ClientLayout";
 import { RegionsNav } from "./_components/RegionsNav";
 import { TRPCReactProvider } from "~/trpc/react";
-import dynamic from "next/dynamic";
-
-// Import ChatWidget with dynamic loading to prevent SSR issues
-const ChatWidget = dynamic(() => import("~/components/ChatWidget"), {
-  ssr: false,
-});
+import ChatWidgetWrapper from "~/components/ChatWidgetWrapper";
 
 export const metadata: Metadata = {
   title: "ThaiBoxingHub",
@@ -37,7 +32,7 @@ export default function RootLayout({
                 {children}
               </div>
               <Footer />
-              <ChatWidget />
+              <ChatWidgetWrapper />
             </ClientLayout>
           </ThemeProvider>
         </TRPCReactProvider>
