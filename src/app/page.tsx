@@ -38,6 +38,13 @@ interface VenueWithTypes extends VenueType {
     createdAt: Date;
     updatedAt: Date;
   }>;
+  primaryType?: {
+    id: string;
+    name: string;
+    description: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  };
 }
 
 interface VenuesByTypeResponse {
@@ -53,7 +60,7 @@ export default async function Home() {
     api.trainingCourse.getFeatured({ limit: 2 }),
     api.venue.getFeatured({ limit: 4 }),
     api.post.getFeatured({ limit: 2 }),
-    api.venue.getByVenueType({ limit: 50 }) // Get venues by type
+    api.venue.getByVenueType({ limit: 50, featured: true }) // Get venues by type, prioritize featured ones
   ]);
 
   // --- REMOVE HARDCODED DATA ---
@@ -181,26 +188,71 @@ export default async function Home() {
             <h2 className="text-3xl font-bold">Recommended Gyms</h2>
             <Link href="/venues" className="text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]">View All &rarr;</Link>
           </div>
-          
-          {venuesByType && 'groupedVenues' in venuesByType && Object.keys(venuesByType.groupedVenues).length > 0 ? (
-            <div className="space-y-8">
-              {Object.entries(venuesByType.groupedVenues).map(([venueType, venues]) => (
+          {venuesByType && Object.entries(venuesByType.groupedVenues).length > 0 ? (
+            <div className="space-y-12">
+              {/* Sort venue types to prioritize Muay Thai, then Gym, then others */}
+              {Object.entries(venuesByType.groupedVenues)
+                .sort(([typeA], [typeB]) => {
+                  // Prioritize specific venue types
+                  const typeOrder = {
+                    'Muay Thai': 1,
+                    'Gym': 2,
+                    'Kickboxing': 3,
+                    'Boxing': 4,
+                    'Stadium': 5,
+                    'Other': 99 // Always last
+                  };
+                  const orderA = typeOrder[typeA as keyof typeof typeOrder] || 10;
+                  const orderB = typeOrder[typeB as keyof typeof typeOrder] || 10;
+                  return orderA - orderB;
+                })
+                .map(([venueType, venues]) => (
                 <div key={venueType} className="space-y-4">
-                  <h3 className="text-xl font-semibold text-[hsl(280,100%,70%)] capitalize">{venueType} Gyms</h3>
+                  <h3 className="text-xl font-semibold text-[hsl(280,100%,70%)] capitalize">{venueType} {venueType !== 'Other' ? 'Gyms' : ''}</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-                    {(venues as VenueWithTypes[]).slice(0, 4).map((venue: VenueWithTypes) => (
-                      <Link key={venue.id} href={`/venues/${venue.id}`} className="block bg-white/10 rounded-lg overflow-hidden hover:bg-white/20 transition-colors">
-                        {venue.thumbnailUrl && (
+                    {/* Sort venues by featured status first, then by name */}
+                    {(venues as VenueWithTypes[])
+                      .sort((a, b) => {
+                        // Featured venues first
+                        if (a.isFeatured && !b.isFeatured) return -1;
+                        if (!a.isFeatured && b.isFeatured) return 1;
+                        // Then sort by name
+                        return a.name.localeCompare(b.name);
+                      })
+                      .slice(0, 4)
+                      .map((venue: VenueWithTypes) => (
+                      <Link key={venue.id} href={`/venues/${venue.id}`} 
+                            className={`block ${venue.isFeatured ? 'bg-white/20 ring-2 ring-[hsl(280,100%,70%)]' : 'bg-white/10'} rounded-lg overflow-hidden hover:bg-white/20 transition-colors`}>
+                        {venue.thumbnailUrl ? (
                           <div className="relative h-36 overflow-hidden bg-white/5">
                             <Image src={venue.thumbnailUrl} alt={venue.name} fill className="object-cover" />
+                            {venue.isFeatured && (
+                              <div className="absolute top-0 right-0 bg-[hsl(280,100%,70%)] text-white text-xs px-2 py-1 m-2 rounded-md">
+                                Featured
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="relative h-36 overflow-hidden bg-white/5 flex items-center justify-center">
+                            <BuildingLibraryIcon className="h-16 w-16 text-white/30" />
+                            {venue.isFeatured && (
+                              <div className="absolute top-0 right-0 bg-[hsl(280,100%,70%)] text-white text-xs px-2 py-1 m-2 rounded-md">
+                                Featured
+                              </div>
+                            )}
                           </div>
                         )}
                         <div className="p-4">
                           <h4 className="text-lg font-bold mb-1 truncate">{venue.name}</h4>
-                          {venue.region && <p className="text-sm text-gray-400 truncate">{venue.region.name}</p>}
+                          {venue.region && (
+                            <div className="flex items-center text-sm text-gray-400 truncate">
+                              <MapPinIcon className="h-4 w-4 mr-1" />
+                              <span>{venue.region.name}</span>
+                            </div>
+                          )}
                           <div className="mt-2 flex flex-wrap gap-1">
                             {venue.venueTypes && venue.venueTypes.map((type: { id: string; name: string }, idx: number) => (
-                              <span key={idx} className="inline-block px-2 py-1 text-xs rounded-full bg-[hsl(280,70%,30%)] text-white">
+                              <span key={idx} className={`inline-block px-2 py-1 text-xs rounded-full ${venue.primaryType && type.id === venue.primaryType.id ? 'bg-[hsl(280,100%,70%)]' : 'bg-[hsl(280,70%,30%)]'} text-white`}>
                                 {type.name}
                               </span>
                             )).slice(0, 2)}
@@ -212,7 +264,7 @@ export default async function Home() {
                   {(venues as VenueWithTypes[]).length > 4 && (
                     <div className="text-right">
                       <Link href={`/venues?type=${encodeURIComponent(venueType)}`} className="text-sm text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]">
-                        View more {venueType} gyms &rarr;
+                        View more {venueType.toLowerCase()} {venueType !== 'Other' ? 'gyms' : 'venues'} &rarr;
                       </Link>
                     </div>
                   )}

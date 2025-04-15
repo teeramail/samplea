@@ -108,6 +108,7 @@ export const venueRouter = createTRPCRouter({
       cursor: z.string().nullish(),
       venueTypeIds: z.array(z.string()).optional(),
       regionId: z.string().optional(),
+      featured: z.boolean().optional(),
     }))
     .query(async ({ ctx, input }) => {
       const limit = input.limit;
@@ -122,7 +123,9 @@ export const venueRouter = createTRPCRouter({
             where: or(
               like(venueTypes.name, '%muay thai%'),
               like(venueTypes.name, '%kickboxing%'),
-              like(venueTypes.name, '%boxing%')
+              like(venueTypes.name, '%boxing%'),
+              like(venueTypes.name, '%gym%'),
+              like(venueTypes.name, '%stadium%')
             ),
           });
           typeIds = allVenueTypes.map(type => type.id);
@@ -137,7 +140,10 @@ export const venueRouter = createTRPCRouter({
         
         // If no venues found with these types, return empty array
         if (venueIds.length === 0) {
-          return [];
+          return {
+            venues: [],
+            groupedVenues: {},
+          };
         }
         
         // Add venue ID filter
@@ -148,11 +154,16 @@ export const venueRouter = createTRPCRouter({
           whereConditions.push(eq(venues.regionId, input.regionId));
         }
         
+        // Add featured filter if provided
+        if (input.featured !== undefined) {
+          whereConditions.push(eq(venues.isFeatured, input.featured));
+        }
+        
         // Get the venues
         const venuesList = await ctx.db.query.venues.findMany({
           where: and(...whereConditions),
           limit: limit,
-          orderBy: [asc(venues.name)],
+          orderBy: [desc(venues.isFeatured), asc(venues.name)], // Sort featured venues first
           with: {
             region: true,
           },
@@ -166,19 +177,39 @@ export const venueRouter = createTRPCRouter({
               with: {
                 venueType: true,
               },
+              orderBy: [desc(venueToVenueTypes.isPrimary)], // Get primary types first
             });
             
             return {
               ...venue,
               venueTypes: venueTypeLinks.map(link => link.venueType),
+              primaryType: venueTypeLinks.find(link => link.isPrimary)?.venueType || venueTypeLinks[0]?.venueType,
             };
           })
         );
         
-        // Group venues by venue type
+        // Group venues by venue type - prioritize primary types
         const groupedVenues: Record<string, typeof venuesWithTypes> = {};
+        
+        // First pass: add venues to their primary type groups
+        venuesWithTypes.forEach(venue => {
+          if (venue.primaryType) {
+            const typeName = venue.primaryType.name || 'Unknown';
+            if (!groupedVenues[typeName]) {
+              groupedVenues[typeName] = [];
+            }
+            groupedVenues[typeName].push(venue);
+          }
+        });
+        
+        // Second pass: add venues to their secondary type groups if they have multiple types
         venuesWithTypes.forEach(venue => {
           venue.venueTypes.forEach(type => {
+            // Skip if this is the primary type (already added)
+            if (venue.primaryType && type.id === venue.primaryType.id) {
+              return;
+            }
+            
             const typeName = type.name || 'Unknown';
             if (!groupedVenues[typeName]) {
               groupedVenues[typeName] = [];
@@ -189,6 +220,12 @@ export const venueRouter = createTRPCRouter({
             }
           });
         });
+        
+        // Third pass: add venues with no types to an "Other" category
+        const venuesWithNoTypes = venuesWithTypes.filter(venue => !venue.venueTypes.length);
+        if (venuesWithNoTypes.length > 0) {
+          groupedVenues['Other'] = venuesWithNoTypes;
+        }
         
         return {
           venues: venuesWithTypes,
