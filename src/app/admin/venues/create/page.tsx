@@ -15,6 +15,17 @@ const venueSchema = z.object({
   regionId: z.string().min(1, "Please select a region"),
   latitude: z.coerce.number().optional(),
   longitude: z.coerce.number().optional(),
+  googleMapsUrl: z.string().url("Must be a valid URL").optional().or(z.literal('')),
+  remarks: z.string().optional(),
+  socialMediaLinks: z.object({
+    facebook: z.string().url("Must be a valid URL").optional().or(z.literal('')),
+    instagram: z.string().url("Must be a valid URL").optional().or(z.literal('')),
+    tiktok: z.string().url("Must be a valid URL").optional().or(z.literal('')),
+    twitter: z.string().url("Must be a valid URL").optional().or(z.literal('')),
+    youtube: z.string().url("Must be a valid URL").optional().or(z.literal('')),
+  }).optional(),
+  venueTypeIds: z.array(z.string()).min(1, "Select at least one venue type"),
+  primaryVenueTypeId: z.string().optional(),
 });
 
 type VenueFormData = Omit<z.infer<typeof venueSchema>, 'thumbnailUrl' | 'imageUrls'>;
@@ -59,16 +70,22 @@ export default function CreateVenuePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [regions, setRegions] = useState<{ id: string; name: string }[]>([]);
+  const [venueTypes, setVenueTypes] = useState<{ id: string; name: string; description: string }[]>([]);
   const [isLoadingRegions, setIsLoadingRegions] = useState(true);
+  const [isLoadingVenueTypes, setIsLoadingVenueTypes] = useState(true);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [selectedVenueTypes, setSelectedVenueTypes] = useState<string[]>([]);
+  const [primaryVenueType, setPrimaryVenueType] = useState<string>("");
   
   const {
     register,
     handleSubmit,
     formState: { errors },
+    setValue,
+    watch,
   } = useForm<VenueFormData>({
     resolver: zodResolver(venueSchema),
     defaultValues: {
@@ -78,6 +95,17 @@ export default function CreateVenuePage() {
       regionId: "",
       latitude: undefined,
       longitude: undefined,
+      googleMapsUrl: "",
+      remarks: "",
+      socialMediaLinks: {
+        facebook: "",
+        instagram: "",
+        tiktok: "",
+        twitter: "",
+        youtube: "",
+      },
+      venueTypeIds: [],
+      primaryVenueTypeId: "",
     },
   });
 
@@ -99,8 +127,51 @@ export default function CreateVenuePage() {
       }
     };
     
+    const fetchVenueTypes = async () => {
+      setIsLoadingVenueTypes(true);
+      try {
+        const response = await fetch("/api/venue-types");
+        if (!response.ok) {
+          throw new Error("Failed to fetch venue types");
+        }
+        const data = (await response.json()) as { id: string; name: string; description: string }[];
+        setVenueTypes(data);
+      } catch (error) {
+        console.error("Error fetching venue types:", error);
+        setError("Failed to load venue types. Please try again later.");
+      } finally {
+        setIsLoadingVenueTypes(false);
+      }
+    };
+    
     void fetchRegions();
+    void fetchVenueTypes();
   }, []);
+  
+  // Handle venue type selection
+  const handleVenueTypeChange = (typeId: string) => {
+    setSelectedVenueTypes(prev => {
+      if (prev.includes(typeId)) {
+        // If removing the primary type, also clear the primary type
+        if (primaryVenueType === typeId) {
+          setPrimaryVenueType("");
+        }
+        return prev.filter(id => id !== typeId);
+      } else {
+        // If this is the first type selected, make it primary
+        if (prev.length === 0) {
+          setPrimaryVenueType(typeId);
+        }
+        return [...prev, typeId];
+      }
+    });
+  };
+  
+  // Update form values when venue types change
+  useEffect(() => {
+    setValue("venueTypeIds", selectedVenueTypes);
+    setValue("primaryVenueTypeId", primaryVenueType);
+  }, [selectedVenueTypes, primaryVenueType, setValue]);
 
   const handleThumbnailChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

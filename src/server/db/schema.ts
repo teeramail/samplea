@@ -11,6 +11,7 @@ import {
   doublePrecision,
   jsonb,
   time,
+  uniqueIndex,
   // Add other imports as needed
 } from "drizzle-orm/pg-core";
 import { type AdapterAccount } from "next-auth/adapters";
@@ -66,6 +67,10 @@ export const venues = createTable(
     thumbnailUrl: text("thumbnailUrl"),
     imageUrls: text("imageUrls").array(),
     isFeatured: boolean("isFeatured").notNull().default(false), // Added featured flag
+    // New fields
+    googleMapsUrl: text("googleMapsUrl"),
+    remarks: text("remarks"),
+    socialMediaLinks: jsonb("socialMediaLinks"), // JSON object for social media links
     // SEO Fields
     metaTitle: text("metaTitle"),
     metaDescription: text("metaDescription"),
@@ -79,6 +84,44 @@ export const venues = createTable(
       .notNull()
       .$onUpdate(() => new Date()),
   }
+);
+
+// Venue Type table for categorization
+export const venueTypes = createTable(
+  "VenueType",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    description: text("description"),
+    createdAt: timestamp("createdAt", { withTimezone: false })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updatedAt", { withTimezone: false })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull()
+      .$onUpdate(() => new Date()),
+  }
+);
+
+// Junction table for many-to-many relationship between Venue and VenueType
+export const venueToVenueTypes = createTable(
+  "VenueToVenueType",
+  {
+    id: text("id").primaryKey().$defaultFn(() => createId()),
+    venueId: text("venueId").references(() => venues.id, { onDelete: 'cascade' }).notNull(),
+    venueTypeId: text("venueTypeId").references(() => venueTypes.id, { onDelete: 'cascade' }).notNull(),
+    isPrimary: boolean("isPrimary").notNull().default(false),
+    createdAt: timestamp("createdAt", { withTimezone: false })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updatedAt", { withTimezone: false })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => ({
+    venueTypeUniqueIdx: uniqueIndex("venue_to_venue_type_unique_idx").on(table.venueId, table.venueTypeId),
+  })
 );
 
 export const events = createTable(
@@ -487,6 +530,16 @@ export const venuesRelations = relations(venues, ({ one, many }) => ({
   region: one(regions, { fields: [venues.regionId], references: [regions.id] }),
   eventTemplates: many(eventTemplates),
   trainingCourses: many(trainingCourses),
+  venueTypes: many(venueToVenueTypes),
+}));
+
+export const venueTypesRelations = relations(venueTypes, ({ many }) => ({
+  venues: many(venueToVenueTypes),
+}));
+
+export const venueToVenueTypesRelations = relations(venueToVenueTypes, ({ one }) => ({
+  venue: one(venues, { fields: [venueToVenueTypes.venueId], references: [venues.id] }),
+  venueType: one(venueTypes, { fields: [venueToVenueTypes.venueTypeId], references: [venueTypes.id] }),
 }));
 
 export const eventsRelations = relations(events, ({ one, many }) => ({
