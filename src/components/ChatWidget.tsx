@@ -18,6 +18,12 @@ export default function ChatWidget() {
     // Initialize Tawk.to
     window.Tawk_API = window.Tawk_API || {};
     window.Tawk_LoadStart = new Date();
+    
+    // Configure Tawk.to to not automatically show the chat box
+    window.Tawk_API.onLoad = function() {
+      // Hide the chat window but keep the widget/bubble visible
+      window.Tawk_API.hideWidget();
+    };
 
     // Create and append the Tawk.to script using the exact code provided
     const script = document.createElement('script');
