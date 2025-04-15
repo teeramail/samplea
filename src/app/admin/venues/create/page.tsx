@@ -239,12 +239,25 @@ export default function CreateVenuePage() {
         uploadedImageUrls.push(...results.filter((url): url is string => url !== null));
       }
 
+      // Filter out empty social media links
+      const socialMediaLinks = data.socialMediaLinks ? 
+        Object.fromEntries(
+          Object.entries(data.socialMediaLinks)
+            .filter(([_, value]) => value && value.trim() !== '')
+        ) : {};
+
       const venueData = {
         ...data,
         latitude: data.latitude === undefined || isNaN(data.latitude) ? null : data.latitude,
         longitude: data.longitude === undefined || isNaN(data.longitude) ? null : data.longitude,
         thumbnailUrl: uploadedThumbnailUrl,
         imageUrls: uploadedImageUrls,
+        socialMediaLinks,
+        // Include venue type information
+        venueTypes: data.venueTypeIds.map(typeId => ({
+          venueTypeId: typeId,
+          isPrimary: typeId === data.primaryVenueTypeId
+        }))
       };
       
       console.log("Submitting final venue data:", venueData);
@@ -403,6 +416,126 @@ export default function CreateVenuePage() {
         </div>
 
         <div>
+          <label htmlFor="googleMapsUrl" className="block text-sm font-medium text-gray-700">
+            Google Maps URL
+          </label>
+          <input
+            id="googleMapsUrl"
+            type="url"
+            placeholder="https://goo.gl/maps/example"
+            {...register("googleMapsUrl")}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          />
+          {errors.googleMapsUrl && (
+            <p className="mt-1 text-sm text-red-600">{errors.googleMapsUrl.message}</p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="remarks" className="block text-sm font-medium text-gray-700">
+            Remarks
+          </label>
+          <textarea
+            id="remarks"
+            rows={3}
+            placeholder="Additional information about the venue"
+            {...register("remarks")}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          />
+          {errors.remarks && (
+            <p className="mt-1 text-sm text-red-600">{errors.remarks.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-4">
+          <label className="block text-sm font-medium text-gray-700">
+            Social Media Links
+          </label>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="facebook" className="block text-sm font-medium text-gray-500">
+                Facebook
+              </label>
+              <input
+                id="facebook"
+                type="url"
+                placeholder="https://facebook.com/venuepage"
+                {...register("socialMediaLinks.facebook")}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              />
+              {errors.socialMediaLinks?.facebook && (
+                <p className="mt-1 text-sm text-red-600">{errors.socialMediaLinks.facebook.message}</p>
+              )}
+            </div>
+            
+            <div>
+              <label htmlFor="instagram" className="block text-sm font-medium text-gray-500">
+                Instagram
+              </label>
+              <input
+                id="instagram"
+                type="url"
+                placeholder="https://instagram.com/venuepage"
+                {...register("socialMediaLinks.instagram")}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              />
+              {errors.socialMediaLinks?.instagram && (
+                <p className="mt-1 text-sm text-red-600">{errors.socialMediaLinks.instagram.message}</p>
+              )}
+            </div>
+            
+            <div>
+              <label htmlFor="tiktok" className="block text-sm font-medium text-gray-500">
+                TikTok
+              </label>
+              <input
+                id="tiktok"
+                type="url"
+                placeholder="https://tiktok.com/@venuepage"
+                {...register("socialMediaLinks.tiktok")}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              />
+              {errors.socialMediaLinks?.tiktok && (
+                <p className="mt-1 text-sm text-red-600">{errors.socialMediaLinks.tiktok.message}</p>
+              )}
+            </div>
+            
+            <div>
+              <label htmlFor="twitter" className="block text-sm font-medium text-gray-500">
+                Twitter
+              </label>
+              <input
+                id="twitter"
+                type="url"
+                placeholder="https://twitter.com/venuepage"
+                {...register("socialMediaLinks.twitter")}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              />
+              {errors.socialMediaLinks?.twitter && (
+                <p className="mt-1 text-sm text-red-600">{errors.socialMediaLinks.twitter.message}</p>
+              )}
+            </div>
+            
+            <div>
+              <label htmlFor="youtube" className="block text-sm font-medium text-gray-500">
+                YouTube
+              </label>
+              <input
+                id="youtube"
+                type="url"
+                placeholder="https://youtube.com/channel/venuepage"
+                {...register("socialMediaLinks.youtube")}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              />
+              {errors.socialMediaLinks?.youtube && (
+                <p className="mt-1 text-sm text-red-600">{errors.socialMediaLinks.youtube.message}</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div>
           <label htmlFor="thumbnail" className="block text-sm font-medium text-gray-700">
             Thumbnail Image (for listings)
           </label>
@@ -456,6 +589,67 @@ export default function CreateVenuePage() {
           )}
         </div>
         
+        <div className="space-y-4">
+          <label className="block text-sm font-medium text-gray-700">
+            Venue Types
+          </label>
+          
+          {isLoadingVenueTypes ? (
+            <div className="py-4 text-center">Loading venue types...</div>
+          ) : venueTypes.length === 0 ? (
+            <div className="py-4 text-center text-red-500">No venue types available. Please try refreshing the page.</div>
+          ) : (
+            <div>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+                {venueTypes.map((type) => (
+                  <div key={type.id} className="flex items-start">
+                    <div className="flex items-center h-5">
+                      <input
+                        id={`type-${type.id}`}
+                        type="checkbox"
+                        checked={selectedVenueTypes.includes(type.id)}
+                        onChange={() => handleVenueTypeChange(type.id)}
+                        className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded"
+                      />
+                    </div>
+                    <div className="ml-3 text-sm">
+                      <label htmlFor={`type-${type.id}`} className="font-medium text-gray-700">
+                        {type.name}
+                      </label>
+                      {type.description && (
+                        <p className="text-gray-500">{type.description}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {selectedVenueTypes.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Primary Venue Type
+                  </label>
+                  <select
+                    value={primaryVenueType}
+                    onChange={(e) => setPrimaryVenueType(e.target.value)}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  >
+                    {selectedVenueTypes.map((typeId) => (
+                      <option key={typeId} value={typeId}>
+                        {venueTypes.find(t => t.id === typeId)?.name || typeId}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              
+              {errors.venueTypeIds && (
+                <p className="mt-1 text-sm text-red-600">{errors.venueTypeIds.message}</p>
+              )}
+            </div>
+          )}
+        </div>
+
         <div className="flex justify-end">
           <button
             type="button"

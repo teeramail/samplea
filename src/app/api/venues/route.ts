@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { db } from "~/server/db";
-import { venues } from "~/server/db/schema";
+import { db } from "../../../server/db";
+import { venues, venueToVenueTypes } from "../../../server/db/schema";
 import { z } from "zod";
-import { v4 as uuidv4 } from "uuid";
+import { createId } from "@paralleldrive/cuid2";
 
 // Schema for venue creation
 const venueSchema = z.object({
@@ -14,6 +14,15 @@ const venueSchema = z.object({
   longitude: z.number().nullable().optional(),
   thumbnailUrl: z.string().url().nullable().optional(),
   imageUrls: z.array(z.string().url()).nullable().optional(),
+  // New fields
+  googleMapsUrl: z.string().url().nullable().optional(),
+  remarks: z.string().nullable().optional(),
+  socialMediaLinks: z.record(z.string()).nullable().optional(),
+  // Venue types
+  venueTypes: z.array(z.object({
+    venueTypeId: z.string(),
+    isPrimary: z.boolean().default(false)
+  })).min(1, "At least one venue type is required"),
 });
 
 export async function GET() {
@@ -51,7 +60,7 @@ export async function POST(request: NextRequest) {
     }
     
     const data = validation.data;
-    const venueId = uuidv4();
+    const venueId = createId();
     
     // Insert venue including new fields
     await db.insert(venues).values({
@@ -64,9 +73,27 @@ export async function POST(request: NextRequest) {
       longitude: data.longitude,
       thumbnailUrl: data.thumbnailUrl,
       imageUrls: data.imageUrls,
+      // Add new fields
+      googleMapsUrl: data.googleMapsUrl,
+      remarks: data.remarks,
+      socialMediaLinks: data.socialMediaLinks,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
+    
+    // Insert venue types
+    if (data.venueTypes && data.venueTypes.length > 0) {
+      const venueTypeEntries = data.venueTypes.map(type => ({
+        id: createId(),
+        venueId: venueId,
+        venueTypeId: type.venueTypeId,
+        isPrimary: type.isPrimary,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }));
+      
+      await db.insert(venueToVenueTypes).values(venueTypeEntries);
+    }
     
     // Get the created venue with region data
     const newVenue = await db.query.venues.findFirst({
