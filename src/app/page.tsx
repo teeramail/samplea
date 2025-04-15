@@ -29,14 +29,31 @@ type CourseType = RouterOutputs["trainingCourse"]["getFeatured"][number];
 type VenueType = RouterOutputs["venue"]["getFeatured"][number];
 type PostType = RouterOutputs["post"]["getFeatured"][number];
 
+// Define types for venue with types
+interface VenueWithTypes extends VenueType {
+  venueTypes: Array<{
+    id: string;
+    name: string;
+    description: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
+}
+
+interface VenuesByTypeResponse {
+  venues: VenueWithTypes[];
+  groupedVenues: Record<string, VenueWithTypes[]>;
+}
+
 export default async function Home() {
   // Fetch all data in parallel
-  const [upcomingEvents, featuredFighters, featuredCourses, featuredVenues, featuredPosts] = await Promise.all([
+  const [upcomingEvents, featuredFighters, featuredCourses, featuredVenues, featuredPosts, venuesByType] = await Promise.all([
     api.event.getUpcoming({ limit: 3 }), // Assuming this router/procedure exists now
     api.fighter.getFeatured({ limit: 3 }),
     api.trainingCourse.getFeatured({ limit: 2 }),
     api.venue.getFeatured({ limit: 4 }),
-    api.post.getFeatured({ limit: 2 })
+    api.post.getFeatured({ limit: 2 }),
+    api.venue.getByVenueType({ limit: 50 }) // Get venues by type
   ]);
 
   // --- REMOVE HARDCODED DATA ---
@@ -158,32 +175,53 @@ export default async function Home() {
           )}
         </section>
 
-        {/* Featured Gyms Section - NEW & DYNAMIC */}
+        {/* Recommended Gyms Section - Grouped by Venue Type */}
         <section className="w-full max-w-5xl mt-16">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-3xl font-bold">Recommended Gyms</h2>
             <Link href="/venues" className="text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]">View All &rarr;</Link>
           </div>
-          {featuredVenues && featuredVenues.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-              {featuredVenues.map((venue: VenueType) => (
-                // --- REPLACE WITH <VenueCard /> IF AVAILABLE ---
-                <Link key={venue.id} href={`/venues/${venue.id}`} className="block bg-white/10 rounded-lg overflow-hidden hover:bg-white/20 transition-colors">
-                   {venue.thumbnailUrl && (
-                     <div className="relative h-36 overflow-hidden bg-white/5">
-                       <Image src={venue.thumbnailUrl} alt={venue.name} fill className="object-cover" />
-                     </div>
-                   )}
-                   <div className="p-4">
-                     <h3 className="text-lg font-bold mb-1 truncate">{venue.name}</h3>
-                     {venue.region && <p className="text-sm text-gray-400 truncate">{venue.region.name}</p>}
-                   </div>
-                 </Link>
+          
+          {venuesByType && 'groupedVenues' in venuesByType && Object.keys(venuesByType.groupedVenues).length > 0 ? (
+            <div className="space-y-8">
+              {Object.entries(venuesByType.groupedVenues).map(([venueType, venues]) => (
+                <div key={venueType} className="space-y-4">
+                  <h3 className="text-xl font-semibold text-[hsl(280,100%,70%)] capitalize">{venueType} Gyms</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+                    {(venues as VenueWithTypes[]).slice(0, 4).map((venue: VenueWithTypes) => (
+                      <Link key={venue.id} href={`/venues/${venue.id}`} className="block bg-white/10 rounded-lg overflow-hidden hover:bg-white/20 transition-colors">
+                        {venue.thumbnailUrl && (
+                          <div className="relative h-36 overflow-hidden bg-white/5">
+                            <Image src={venue.thumbnailUrl} alt={venue.name} fill className="object-cover" />
+                          </div>
+                        )}
+                        <div className="p-4">
+                          <h4 className="text-lg font-bold mb-1 truncate">{venue.name}</h4>
+                          {venue.region && <p className="text-sm text-gray-400 truncate">{venue.region.name}</p>}
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {venue.venueTypes && venue.venueTypes.map((type: { id: string; name: string }, idx: number) => (
+                              <span key={idx} className="inline-block px-2 py-1 text-xs rounded-full bg-[hsl(280,70%,30%)] text-white">
+                                {type.name}
+                              </span>
+                            )).slice(0, 2)}
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                  {(venues as VenueWithTypes[]).length > 4 && (
+                    <div className="text-right">
+                      <Link href={`/venues?type=${encodeURIComponent(venueType)}`} className="text-sm text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]">
+                        View more {venueType} gyms &rarr;
+                      </Link>
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           ) : (
             <div className="bg-white/10 rounded-lg p-8 text-center">
-              <p className="text-gray-300">No featured gyms available right now.</p>
+              <p className="text-gray-300">No recommended gyms available right now.</p>
             </div>
           )}
         </section>

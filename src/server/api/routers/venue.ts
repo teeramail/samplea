@@ -6,8 +6,8 @@ import {
   publicProcedure,
   // adminProcedure, // TODO
 } from "~/server/api/trpc";
-import { venues } from "~/server/db/schema";
-import { eq, desc, and, like } from "drizzle-orm";
+import { venues, venueToVenueTypes, venueTypes } from "~/server/db/schema";
+import { eq, desc, and, like, asc, inArray, or } from "drizzle-orm";
 
 // TODO: Add input schemas for create/update if not already present
 
@@ -100,4 +100,103 @@ export const venueRouter = createTRPCRouter({
 
   // TODO: Add create, update, delete procedures (marked for admin)
   // TODO: Add toggleFeatured procedure (marked for admin)
+
+  // Add a procedure to get venues by venue type
+  getByVenueType: publicProcedure
+    .input(z.object({
+      limit: z.number().min(1).max(100).default(50),
+      cursor: z.string().nullish(),
+      venueTypeIds: z.array(z.string()).optional(),
+      regionId: z.string().optional(),
+    }))
+    .query(async ({ ctx, input }) => {
+      const limit = input.limit;
+      const whereConditions = [];
+      
+      try {
+        // First, get venue types if not provided
+        let typeIds = input.venueTypeIds;
+        if (!typeIds || typeIds.length === 0) {
+          // Get all venue types related to Muay Thai and Kickboxing
+          const allVenueTypes = await ctx.db.query.venueTypes.findMany({
+            where: or(
+              like(venueTypes.name, '%muay thai%'),
+              like(venueTypes.name, '%kickboxing%'),
+              like(venueTypes.name, '%boxing%')
+            ),
+          });
+          typeIds = allVenueTypes.map(type => type.id);
+        }
+        
+        // Get venue IDs that match the venue types
+        const venueTypeLinks = await ctx.db.query.venueToVenueTypes.findMany({
+          where: inArray(venueToVenueTypes.venueTypeId, typeIds),
+        });
+        
+        const venueIds = venueTypeLinks.map(link => link.venueId);
+        
+        // If no venues found with these types, return empty array
+        if (venueIds.length === 0) {
+          return [];
+        }
+        
+        // Add venue ID filter
+        whereConditions.push(inArray(venues.id, venueIds));
+        
+        // Add region filter if provided
+        if (input.regionId) {
+          whereConditions.push(eq(venues.regionId, input.regionId));
+        }
+        
+        // Get the venues
+        const venuesList = await ctx.db.query.venues.findMany({
+          where: and(...whereConditions),
+          limit: limit,
+          orderBy: [asc(venues.name)],
+          with: {
+            region: true,
+          },
+        });
+        
+        // For each venue, get its venue types
+        const venuesWithTypes = await Promise.all(
+          venuesList.map(async (venue) => {
+            const venueTypeLinks = await ctx.db.query.venueToVenueTypes.findMany({
+              where: eq(venueToVenueTypes.venueId, venue.id),
+              with: {
+                venueType: true,
+              },
+            });
+            
+            return {
+              ...venue,
+              venueTypes: venueTypeLinks.map(link => link.venueType),
+            };
+          })
+        );
+        
+        // Group venues by venue type
+        const groupedVenues: Record<string, typeof venuesWithTypes> = {};
+        venuesWithTypes.forEach(venue => {
+          venue.venueTypes.forEach(type => {
+            const typeName = type.name || 'Unknown';
+            if (!groupedVenues[typeName]) {
+              groupedVenues[typeName] = [];
+            }
+            // Only add the venue if it's not already in this group
+            if (!groupedVenues[typeName].some((v) => v.id === venue.id)) {
+              groupedVenues[typeName].push(venue);
+            }
+          });
+        });
+        
+        return {
+          venues: venuesWithTypes,
+          groupedVenues: groupedVenues,
+        };
+      } catch (error) {
+        console.error("Failed to fetch venues by type:", error);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch venues by type' });
+      }
+    }),
 }); 
