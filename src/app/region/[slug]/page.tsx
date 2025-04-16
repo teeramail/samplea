@@ -6,7 +6,7 @@ import Image from "next/image";
 import { MapPinIcon, BuildingLibraryIcon } from '@heroicons/react/24/outline';
 import { notFound } from "next/navigation";
 import { format, startOfDay } from 'date-fns';
-import { utcToZonedTime } from 'date-fns-tz';
+import { toZonedTime } from 'date-fns-tz';
 
 // Define types for the event data
 type UpcomingEvent = {
@@ -30,7 +30,7 @@ async function getRegionEvents(regionId: string) {
     // Get current date in Thai time zone (UTC+7)
     const thaiTimeZone = 'Asia/Bangkok';
     const now = new Date();
-    const thaiNow = utcToZonedTime(now, thaiTimeZone);
+    const thaiNow = toZonedTime(now, thaiTimeZone);
     const thaiToday = startOfDay(thaiNow);
     
     console.log(`Filtering events from ${thaiToday.toISOString()} in Thai time`);
@@ -82,7 +82,7 @@ export default async function RegionPage({ params }: RegionPageProps) {
   // Format date function with Thai time zone
   const formatDate = (date: Date) => {
     const thaiTimeZone = 'Asia/Bangkok';
-    const thaiDate = utcToZonedTime(new Date(date), thaiTimeZone);
+    const thaiDate = toZonedTime(new Date(date), thaiTimeZone);
     
     return format(thaiDate, 'MMMM d, yyyy');
   };
