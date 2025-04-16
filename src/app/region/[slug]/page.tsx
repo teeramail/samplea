@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { db } from "~/server/db";
 import { events, regions } from "~/server/db/schema";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, gte, and } from "drizzle-orm";
 import Image from "next/image";
 import { MapPinIcon, BuildingLibraryIcon } from '@heroicons/react/24/outline';
 import { notFound } from "next/navigation";
+import { format, startOfDay } from 'date-fns';
+import { utcToZonedTime } from 'date-fns-tz';
 
 // Define types for the event data
 type UpcomingEvent = {
@@ -22,9 +24,17 @@ type RegionPageProps = {
   }>;
 };
 
-// Function to get events for a specific region
+// Function to get events for a specific region - only today and upcoming events in Thai time
 async function getRegionEvents(regionId: string) {
   try {
+    // Get current date in Thai time zone (UTC+7)
+    const thaiTimeZone = 'Asia/Bangkok';
+    const now = new Date();
+    const thaiNow = utcToZonedTime(now, thaiTimeZone);
+    const thaiToday = startOfDay(thaiNow);
+    
+    console.log(`Filtering events from ${thaiToday.toISOString()} in Thai time`);
+    
     const regionEvents = await db.query.events.findMany({
       columns: { 
         id: true,
@@ -37,9 +47,14 @@ async function getRegionEvents(regionId: string) {
         region: { columns: { name: true } },
       },
       orderBy: [desc(events.date)],
-      where: eq(events.regionId, regionId),
+      where: and(
+        eq(events.regionId, regionId),
+        gte(events.date, thaiToday) // Only events from today onwards in Thai time
+      ),
       limit: 10, // Showing more events on the region page
     });
+    
+    console.log(`Found ${regionEvents.length} upcoming events in region`);
     return regionEvents;
   } catch (error) {
     console.error("Error fetching region events:", error);
@@ -64,13 +79,12 @@ export default async function RegionPage({ params }: RegionPageProps) {
   // Get events for this region
   const regionEvents: UpcomingEvent[] = await getRegionEvents(region.id);
   
-  // Format date function
+  // Format date function with Thai time zone
   const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric"
-    });
+    const thaiTimeZone = 'Asia/Bangkok';
+    const thaiDate = utcToZonedTime(new Date(date), thaiTimeZone);
+    
+    return format(thaiDate, 'MMMM d, yyyy');
   };
 
   return (
