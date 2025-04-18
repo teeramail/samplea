@@ -7,7 +7,7 @@ import {
   // adminProcedure, // TODO
 } from "~/server/api/trpc";
 import { venues, venueToVenueTypes, venueTypes } from "~/server/db/schema";
-import { eq, desc, and, like, asc, inArray, or } from "drizzle-orm";
+import { eq, desc, and, like, asc, inArray, or, count } from "drizzle-orm";
 
 // TODO: Add input schemas for create/update if not already present
 
@@ -15,13 +15,19 @@ export const venueRouter = createTRPCRouter({
   // Add list procedure to fetch all venues
   list: publicProcedure
     .input(z.object({
-      limit: z.number().min(1).max(100).default(50),
-      cursor: z.string().nullish(),
+      limit: z.number().min(1).max(100).default(10),
+      page: z.number().min(1).default(1),
       query: z.string().optional(),
+      sortField: z.enum(['name', 'region', 'address', 'featured', 'updatedAt']).default('updatedAt'),
+      sortDirection: z.enum(['asc', 'desc']).default('desc'),
     }).optional())
     .query(async ({ ctx, input }) => {
-      const limit = input?.limit ?? 50;
+      const limit = input?.limit ?? 10;
+      const page = input?.page ?? 1;
+      const offset = (page - 1) * limit;
       const query = input?.query;
+      const sortField = input?.sortField ?? 'updatedAt';
+      const sortDirection = input?.sortDirection ?? 'desc';
       
       try {
         let whereClause = undefined;
@@ -30,16 +36,45 @@ export const venueRouter = createTRPCRouter({
           whereClause = like(venues.name, `%${query}%`);
         }
         
+        // Count total venues for pagination
+        const totalCount = await ctx.db
+          .select({ count: count() })
+          .from(venues)
+          .where(whereClause ?? undefined)
+          .then(result => result[0]?.count ?? 0);
+        
+        // Determine sort order
+        let orderBy;
+        switch (sortField) {
+          case 'name':
+            orderBy = sortDirection === 'asc' ? asc(venues.name) : desc(venues.name);
+            break;
+          case 'featured':
+            orderBy = sortDirection === 'asc' ? asc(venues.isFeatured) : desc(venues.isFeatured);
+            break;
+          case 'updatedAt':
+            orderBy = sortDirection === 'asc' ? asc(venues.updatedAt) : desc(venues.updatedAt);
+            break;
+          default:
+            orderBy = desc(venues.updatedAt);
+        }
+        
         const venuesList = await ctx.db.query.venues.findMany({
           where: whereClause,
-          orderBy: [desc(venues.name)],
+          orderBy: [orderBy],
           limit: limit,
+          offset: offset,
           with: {
             region: true,
           },
         });
         
-        return venuesList;
+        return {
+          items: venuesList,
+          totalCount,
+          pageCount: Math.ceil(totalCount / limit),
+          currentPage: page,
+        };
       } catch (error) {
         console.error("Failed to fetch venues:", error);
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch venues' });
