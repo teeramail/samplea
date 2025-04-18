@@ -15,7 +15,12 @@ const venueSchema = z.object({
   regionId: z.string().min(1, "Please select a region"),
   latitude: z.coerce.number().optional(),
   longitude: z.coerce.number().optional(),
-  googleMapsUrl: z.string().url("Must be a valid URL").optional().or(z.literal('')),
+  googleMapsUrl: z.union([
+    z.string().url("Must be a valid URL"),
+    z.string().max(0),
+    z.null(),
+    z.undefined()
+  ]),
   remarks: z.string().optional(),
   socialMediaLinks: z.object({
     facebook: z.string().url("Must be a valid URL").optional().or(z.literal('')),
