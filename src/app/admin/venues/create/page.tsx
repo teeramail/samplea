@@ -34,21 +34,20 @@ type UploadResponse = {
   urls: string[];
 };
 
-async function uploadFile(file: File, entityType: string): Promise<string | null> {
+async function uploadFile(file: File, isThumbnail: boolean): Promise<string | null> {
   const formData = new FormData();
   formData.append("image", file);
-  formData.append("entityType", entityType);
 
   try {
-    const response = await fetch("/api/upload", {
+    const endpoint = isThumbnail ? "/api/upload-thumbnail" : "/api/upload-venue-images";
+    const response = await fetch(endpoint, {
       method: "POST",
       body: formData,
     });
 
     if (!response.ok) {
-      console.error("Upload failed with status:", response.status);
       const errorText = await response.text();
-      console.error("Upload error details:", errorText);
+      console.error("Upload failed with status:", response.status, errorText);
       return null;
     }
 
@@ -212,33 +211,7 @@ export default function CreateVenuePage() {
     setIsLoading(true);
     setError("");
     
-    let uploadedThumbnailUrl: string | null = null;
-    const uploadedImageUrls: string[] = [];
-
-    try {
-      if (thumbnailFile) {
-        uploadedThumbnailUrl = await uploadFile(thumbnailFile, "venue");
-        if (!uploadedThumbnailUrl) {
-          throw new Error("Failed to upload thumbnail image. Please try again.");
-        }
       }
-
-      if (imageFiles.length > 0) {
-        const results: (string | null)[] = [];
-        for (const file of imageFiles) {
-          const url = await uploadFile(file, "venue");
-          results.push(url);
-        }
-        
-        if (results.some(url => url === null)) {
-          const failedIndices = results
-            .map((url, index) => url === null ? index + 1 : -1)
-            .filter(i => i !== -1);
-          throw new Error(`Failed to upload venue image(s): #${failedIndices.join(', ')}. Please try again.`);
-        }
-        uploadedImageUrls.push(...results.filter((url): url is string => url !== null));
-      }
-
       // Filter out empty social media links
       const socialMediaLinks = data.socialMediaLinks ? 
         Object.fromEntries(
