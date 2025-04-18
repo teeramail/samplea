@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { api } from "~/trpc/react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 // import toast from "react-hot-toast"; // Optional
 
 // Define the interface for a venue
@@ -47,9 +48,12 @@ function ToggleSwitch({ enabled, onChange }: { enabled: boolean; onChange: (enab
 }
 
 export default function AdminVenuesPage() {
+  const router = useRouter();
   // State for filtering
   const [showFeaturedOnly, setShowFeaturedOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortField, setSortField] = useState<'name' | 'region' | 'address' | 'featured'>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // Fetch the list of venues
   const { data: venuesData, isLoading, error, refetch } = api.venue.list.useQuery();
@@ -71,9 +75,10 @@ export default function AdminVenuesPage() {
     toggleFeaturedMutation.mutate({ id: venue.id, isFeatured: !venue.isFeatured });
   };
 
-  // Filter venues based on search and featured filter
-  const filterVenues = (venues: Venue[]): Venue[] => {
-    return venues.filter((venue) => {
+  // Filter and sort venues based on search, featured filter, and sort options
+  const filterAndSortVenues = (venues: Venue[]): Venue[] => {
+    // First filter the venues
+    const filteredVenues = venues.filter((venue) => {
       const matchesSearch = searchQuery === '' || 
         (venue.name?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
         (venue.region?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
@@ -82,11 +87,75 @@ export default function AdminVenuesPage() {
       
       return matchesSearch && matchesFeatured;
     });
+    
+    // Then sort the filtered venues
+    return filteredVenues.sort((a, b) => {
+      let valueA: any;
+      let valueB: any;
+      
+      switch (sortField) {
+        case 'name':
+          valueA = a.name?.toLowerCase() ?? '';
+          valueB = b.name?.toLowerCase() ?? '';
+          break;
+        case 'region':
+          valueA = a.region?.name?.toLowerCase() ?? '';
+          valueB = b.region?.name?.toLowerCase() ?? '';
+          break;
+        case 'address':
+          valueA = a.address?.toLowerCase() ?? '';
+          valueB = b.address?.toLowerCase() ?? '';
+          break;
+        case 'featured':
+          valueA = a.isFeatured ? 1 : 0;
+          valueB = b.isFeatured ? 1 : 0;
+          break;
+        default:
+          valueA = a.name?.toLowerCase() ?? '';
+          valueB = b.name?.toLowerCase() ?? '';
+      }
+      
+      if (sortDirection === 'asc') {
+        return valueA < valueB ? -1 : valueA > valueB ? 1 : 0;
+      } else {
+        return valueA > valueB ? -1 : valueA < valueB ? 1 : 0;
+      }
+    });
   };
 
   if (isLoading) return <div className="p-4">Loading venues...</div>;
   if (error) return <div className="p-4 text-red-600">Error loading venues: {error.message}</div>;
   
+  // Delete venue mutation
+  const deleteVenueMutation = api.venue.delete.useMutation({
+    onSuccess: () => {
+      void refetch();
+      // toast.success("Venue deleted successfully");
+    },
+    onError: (error) => {
+      console.error("Failed to delete venue:", error);
+      // toast.error("Failed to delete venue");
+    },
+  });
+
+  const handleDeleteVenue = (venueId: string) => {
+    if (confirm("Are you sure you want to delete this venue? This action cannot be undone.")) {
+      deleteVenueMutation.mutate({ id: venueId });
+    }
+  };
+
+  // Handle column sort
+  const handleSort = (field: 'name' | 'region' | 'address' | 'featured') => {
+    if (sortField === field) {
+      // Toggle direction if clicking the same field
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Set new field and default to ascending
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
   // Process the venues data safely
   let allVenues: Venue[] = [];
   if (hasItems(venuesData)) {
@@ -95,14 +164,14 @@ export default function AdminVenuesPage() {
     allVenues = venuesData;
   }
   
-  const venues = filterVenues(allVenues);
+  const venues = filterAndSortVenues(allVenues);
   const featuredCount = allVenues.filter(venue => venue.isFeatured).length;
 
   return (
     <div>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <h1 className="text-2xl font-bold text-gray-800">Manage Venues / Gyms</h1>
-        <Link href="/admin/venues/new" className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md flex items-center">
+        <Link href="/admin/venues/create" className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md flex items-center">
           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
           </svg>
@@ -172,9 +241,17 @@ export default function AdminVenuesPage() {
                     onChange={() => handleToggleFeatured(venue)}
                   />
                 </div>
-                <Link href={`/admin/venues/${venue.id}/edit`} className="text-indigo-600 hover:text-indigo-900 text-sm font-medium">
-                  Edit
-                </Link>
+                <div className="flex space-x-3">
+                  <Link href={`/admin/venues/${venue.id}/edit`} className="text-indigo-600 hover:text-indigo-900 text-sm font-medium">
+                    Edit
+                  </Link>
+                  <button 
+                    onClick={() => handleDeleteVenue(venue.id)}
+                    className="text-red-600 hover:text-red-900 text-sm font-medium"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -186,10 +263,46 @@ export default function AdminVenuesPage() {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Region</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
-              <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Featured</th>
+              <th 
+                scope="col" 
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                onClick={() => handleSort('name')}
+              >
+                Name
+                {sortField === 'name' && (
+                  <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                )}
+              </th>
+              <th 
+                scope="col" 
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                onClick={() => handleSort('region')}
+              >
+                Region
+                {sortField === 'region' && (
+                  <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                )}
+              </th>
+              <th 
+                scope="col" 
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                onClick={() => handleSort('address')}
+              >
+                Address
+                {sortField === 'address' && (
+                  <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                )}
+              </th>
+              <th 
+                scope="col" 
+                className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                onClick={() => handleSort('featured')}
+              >
+                Featured
+                {sortField === 'featured' && (
+                  <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                )}
+              </th>
               <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
@@ -207,29 +320,34 @@ export default function AdminVenuesPage() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <Link href={`/admin/venues/${venue.id}/edit`} className="text-indigo-600 hover:text-indigo-900 mr-3">Edit</Link>
-                  {/* Add delete button/logic here */}
+                  <button 
+                    onClick={() => handleDeleteVenue(venue.id)} 
+                    className="text-red-600 hover:text-red-900"
+                  >
+                    Delete
+                  </button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-       {venues.length === 0 && (
-          <div className="text-center py-8 bg-white rounded-lg shadow-sm">
-            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-            </svg>
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No venues found</h3>
-            {searchQuery && (
-              <p className="mt-1 text-sm text-gray-500">Try adjusting your search or filter.</p>
-            )}
-            {!searchQuery && showFeaturedOnly && (
-              <p className="mt-1 text-sm text-gray-500">No featured venues yet. Toggle the switch to feature a venue.</p>
-            )}
-            {!searchQuery && !showFeaturedOnly && (
-              <p className="mt-1 text-sm text-gray-500">Get started by adding a new venue.</p>
-            )}
-          </div>
+      {venues.length === 0 && (
+        <div className="text-center py-8 bg-white rounded-lg shadow-sm">
+          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+          </svg>
+          <h3 className="mt-2 text-sm font-medium text-gray-900">No venues found</h3>
+          {searchQuery && (
+            <p className="mt-1 text-sm text-gray-500">Try adjusting your search or filter.</p>
+          )}
+          {!searchQuery && showFeaturedOnly && (
+            <p className="mt-1 text-sm text-gray-500">No featured venues yet. Toggle the switch to feature a venue.</p>
+          )}
+          {!searchQuery && !showFeaturedOnly && (
+            <p className="mt-1 text-sm text-gray-500">Get started by adding a new venue.</p>
+          )}
+        </div>
       )}
     </div>
   );

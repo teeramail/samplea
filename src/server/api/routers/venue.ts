@@ -98,8 +98,48 @@ export const venueRouter = createTRPCRouter({
       }
     }),
 
-  // TODO: Add create, update, delete procedures (marked for admin)
-  // TODO: Add toggleFeatured procedure (marked for admin)
+  // TODO: Add create, update procedures (marked for admin)
+  // Delete procedure for venues
+  delete: publicProcedure // TODO: Change to adminProcedure
+    .input(z.object({
+      id: z.string(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // First check if venue exists
+        const venue = await ctx.db.query.venues.findFirst({
+          where: eq(venues.id, input.id),
+        });
+        
+        if (!venue) {
+          throw new TRPCError({ 
+            code: 'NOT_FOUND', 
+            message: 'Venue not found' 
+          });
+        }
+        
+        // Delete venue type relationships first
+        await ctx.db
+          .delete(venueToVenueTypes)
+          .where(eq(venueToVenueTypes.venueId, input.id));
+          
+        // Then delete the venue
+        await ctx.db
+          .delete(venues)
+          .where(eq(venues.id, input.id));
+          
+        return { success: true };
+      } catch (error) {
+        console.error("Failed to delete venue:", error);
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        throw new TRPCError({ 
+          code: 'INTERNAL_SERVER_ERROR', 
+          message: 'Failed to delete venue' 
+        });
+      }
+    }),
 
   // Add a procedure to get venues by venue type
   getByVenueType: publicProcedure
