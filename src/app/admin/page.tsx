@@ -1,3 +1,4 @@
+
 import Link from "next/link";
 import { db } from "~/server/db";
 import { events, venues, fighters, posts, trainingCourses } from "~/server/db/schema";
