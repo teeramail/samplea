@@ -211,6 +211,37 @@ export default function CreateVenuePage() {
     setIsLoading(true);
     setError("");
     
+    let uploadedThumbnailUrl: string | null = null;
+    const uploadedImageUrls: string[] = [];
+
+    try {
+      if (thumbnailFile) {
+        uploadedThumbnailUrl = await uploadFile(thumbnailFile, true);
+        if (!uploadedThumbnailUrl) {
+          throw new Error("Failed to upload thumbnail image. Please try again.");
+        }
+      }
+
+      if (imageFiles.length > 0) {
+        const uploadVenueImages = async (files: File[]): Promise<string[]> => {
+          const formData = new FormData();
+          files.forEach((file) => formData.append("image", file));
+          const response = await fetch("/api/upload-venue-images", {
+            method: "POST",
+            body: formData,
+          });
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error("Venue image upload failed: " + errorText);
+          }
+          const result = (await response.json()) as UploadResponse;
+          return result.urls ?? [];
+        };
+        const urls = await uploadVenueImages(imageFiles);
+        if (urls.length !== imageFiles.length) {
+          throw new Error("Failed to upload one or more venue images. Please try again.");
+        }
+        uploadedImageUrls.push(...urls);
       }
       // Filter out empty social media links
       const socialMediaLinks = data.socialMediaLinks ? 
