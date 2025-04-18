@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "~/trpc/react";
 import { useState, useEffect } from "react";
+import { use } from "react";
 import Image from "next/image";
 
 // Define the expected type for venue data
@@ -23,9 +24,9 @@ interface VenueDetail {
   region?: { id: string; name: string } | null;
 }
 
-export default function VenueViewPage({ params }: { params: { id: string } }) {
+export default function VenueViewPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
-  const { id } = params;
+  const { id } = use(params);
   
   // State for navigation between venues
   const [allVenueIds, setAllVenueIds] = useState<string[]>([]);
