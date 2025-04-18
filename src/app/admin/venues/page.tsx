@@ -69,6 +69,18 @@ export default function AdminVenuesPage() {
       // toast.error("Failed to update featured status");
     },
   });
+  
+  // Delete venue mutation
+  const deleteVenueMutation = api.venue.delete.useMutation({
+    onSuccess: () => {
+      void refetch();
+      // toast.success("Venue deleted successfully");
+    },
+    onError: (error) => {
+      console.error("Failed to delete venue:", error);
+      // toast.error("Failed to delete venue");
+    },
+  });
 
   const handleToggleFeatured = (venue: Venue) => {
     if (!venue) return;
@@ -123,26 +135,14 @@ export default function AdminVenuesPage() {
     });
   };
 
-  if (isLoading) return <div className="p-4">Loading venues...</div>;
-  if (error) return <div className="p-4 text-red-600">Error loading venues: {error.message}</div>;
-  
-  // Delete venue mutation
-  const deleteVenueMutation = api.venue.delete.useMutation({
-    onSuccess: () => {
-      void refetch();
-      // toast.success("Venue deleted successfully");
-    },
-    onError: (error) => {
-      console.error("Failed to delete venue:", error);
-      // toast.error("Failed to delete venue");
-    },
-  });
-
   const handleDeleteVenue = (venueId: string) => {
     if (confirm("Are you sure you want to delete this venue? This action cannot be undone.")) {
       deleteVenueMutation.mutate({ id: venueId });
     }
   };
+  
+  if (isLoading) return <div className="p-4">Loading venues...</div>;
+  if (error) return <div className="p-4 text-red-600">Error loading venues: {error.message}</div>;
 
   // Handle column sort
   const handleSort = (field: 'name' | 'region' | 'address' | 'featured') => {
