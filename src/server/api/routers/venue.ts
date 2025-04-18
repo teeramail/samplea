@@ -311,4 +311,44 @@ export const venueRouter = createTRPCRouter({
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch venues by type' });
       }
     }),
+  // Get venue by ID procedure
+  getById: publicProcedure
+    .input(z.object({
+      id: z.string()
+    }))
+    .query(async ({ ctx, input }) => {
+      try {
+        const venue = await ctx.db.query.venues.findFirst({
+          where: eq(venues.id, input.id),
+          with: {
+            region: true
+          }
+        });
+        
+        if (!venue) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Venue not found' });
+        }
+        
+        return venue;
+      } catch (error) {
+        console.error("Failed to fetch venue:", error);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch venue' });
+      }
+    }),
+    
+  // Get all venue IDs for navigation
+  getAllIds: publicProcedure
+    .query(async ({ ctx }) => {
+      try {
+        const allVenues = await ctx.db
+          .select({ id: venues.id })
+          .from(venues)
+          .orderBy(desc(venues.updatedAt));
+        
+        return allVenues.map(venue => venue.id);
+      } catch (error) {
+        console.error("Failed to fetch venue IDs:", error);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch venue IDs' });
+      }
+    })
 }); 

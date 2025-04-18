@@ -324,11 +324,15 @@ export default function AdminVenuesPage() {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {venues.map((venue) => (
-              <tr key={venue.id} className={`${venue.isFeatured ? 'bg-indigo-50' : ''} hover:bg-gray-50`}>
+              <tr 
+                key={venue.id} 
+                className={`${venue.isFeatured ? 'bg-indigo-50' : ''} hover:bg-gray-50 cursor-pointer`}
+                onClick={() => router.push(`/admin/venues/${venue.id}/view`)}
+              >
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{venue.name}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{venue.region?.name ?? 'N/A'}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-xs">{venue.address}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center" onClick={(e) => e.stopPropagation()}>
                   <ToggleSwitch
                     enabled={!!venue.isFeatured}
                     onChange={() => handleToggleFeatured(venue)}
@@ -337,10 +341,13 @@ export default function AdminVenuesPage() {
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                   {venue.updatedAt ? new Date(venue.updatedAt).toLocaleDateString() : 'N/A'}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <Link href={`/admin/venues/${venue.id}/edit`} className="text-indigo-600 hover:text-indigo-900 mr-3">Edit</Link>
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium" onClick={(e) => e.stopPropagation()}>
+                  <Link href={`/admin/venues/${venue.id}/edit`} className="text-indigo-600 hover:text-indigo-900 mr-3" onClick={(e) => e.stopPropagation()}>Edit</Link>
                   <button 
-                    onClick={() => handleDeleteVenue(venue.id)} 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteVenue(venue.id);
+                    }} 
                     className="text-red-600 hover:text-red-900"
                   >
                     Delete
