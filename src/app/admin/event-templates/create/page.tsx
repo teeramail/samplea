@@ -7,6 +7,7 @@ import { z } from "zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "~/trpc/react";
+import Image from "next/image";
 
 // Define Zod schema for validation
 const eventTemplateTicketSchema = z.object({
@@ -39,6 +40,7 @@ const eventTemplateSchema = z.object({
       .optional(),
   ),
   isActive: z.boolean().default(true),
+  thumbnailUrl: z.string().optional(),
   templateTickets: z
     .array(eventTemplateTicketSchema)
     .min(1, "Add at least one ticket type"),
@@ -48,6 +50,11 @@ const eventTemplateSchema = z.object({
 type EventTemplateFormData = z.infer<typeof eventTemplateSchema>;
 type Venue = { id: string; name: string; regionId: string };
 type Region = { id: string; name: string };
+
+// Type for the upload API response
+type UploadResponse = {
+  urls: string[];
+};
 
 const daysOfWeek = [
   { id: 0, name: "Sunday" },
@@ -59,12 +66,50 @@ const daysOfWeek = [
   { id: 6, name: "Saturday" },
 ];
 
+// Upload Helper
+async function uploadFile(
+  file: File,
+  entityType: string,
+): Promise<string | null> {
+  const formData = new FormData();
+  formData.append("image", file);
+  formData.append("entityType", entityType);
+  try {
+    const response = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+    if (!response.ok) {
+      console.error("Upload failed:", response.status, await response.text());
+      return null;
+    }
+    // Use type assertion here
+    const result = (await response.json()) as UploadResponse;
+    // Check result.urls directly now
+    if (result.urls && Array.isArray(result.urls) && result.urls.length > 0) {
+      // Use nullish coalescing operator to ensure null is returned if urls[0] is undefined
+      return result.urls[0] ?? null;
+    } else {
+      console.error("Upload API response error or no URLs returned:", result);
+      return null;
+    }
+  } catch (error) {
+    console.error("Upload fetch error:", error);
+    return null;
+  }
+}
+
 export default function CreateEventTemplatePage() {
   const router = useRouter();
   const [allVenues, setAllVenues] = useState<Venue[]>([]);
   const [regions, setRegions] = useState<Region[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  
+  // Image State
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+  const [thumbnailSize, setThumbnailSize] = useState<string>("");
 
   const {
     register,
@@ -152,7 +197,47 @@ export default function CreateEventTemplatePage() {
     },
   });
 
-  const onSubmit: SubmitHandler<EventTemplateFormData> = (data) => {
+  // File Handlers
+  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Clear any previous errors
+      setSubmitError(null);
+      
+      // Check file type
+      const validImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!validImageTypes.includes(file.type)) {
+        setSubmitError("Please upload a valid image file (JPEG, PNG, GIF, or WEBP)");
+        e.target.value = ""; // Clear input
+        return;
+      }
+      
+      // Size check - must be less than 30KB
+      if (file.size > 30 * 1024) {
+        setSubmitError(`Thumbnail image size must be less than 30KB. Current size: ${(file.size / 1024).toFixed(1)}KB`);
+        e.target.value = ""; // Clear input
+        return;
+      }
+      
+      // Success - set file and preview
+      setThumbnailFile(file);
+      setThumbnailSize(`${(file.size / 1024).toFixed(1)}KB`);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setThumbnailPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      // Clear thumbnail data if no file selected
+      setThumbnailFile(null);
+      setThumbnailPreview(null);
+      setThumbnailSize("");
+    }
+  };
+
+  const onSubmit: SubmitHandler<EventTemplateFormData> = async (data) => {
     // Clear any previous errors
     setSubmitError(null);
     
@@ -193,9 +278,19 @@ export default function CreateEventTemplatePage() {
         return;
       }
       
+      // Handle thumbnail upload if there's a file
+      let thumbnailUrl = undefined;
+      if (thumbnailFile) {
+        const uploadedUrl = await uploadFile(thumbnailFile, "eventTemplate");
+        if (uploadedUrl) {
+          thumbnailUrl = uploadedUrl;
+        }
+      }
+      
       // Format the data for API submission
       const payload = {
         ...data,
+        thumbnailUrl,
         // Ensure defaultEndTime is properly handled
         defaultEndTime: data.defaultEndTime || undefined,
       };
@@ -317,24 +412,45 @@ export default function CreateEventTemplatePage() {
             )}
           </div>
           <div className="md:col-span-2">
-            <label
-              htmlFor="defaultDescription"
-              className="mb-1 block text-sm font-medium text-gray-700"
-            >
-              Default Description
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Thumbnail Image (Optional, max 30KB)
             </label>
-            <textarea
-              id="defaultDescription"
-              {...register("defaultDescription")}
-              rows={3}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-            ></textarea>
+            <div className="mt-1 flex items-center space-x-4">
+              {thumbnailPreview && (
+                <div className="relative h-24 w-24 overflow-hidden rounded-md border border-gray-300">
+                  <Image
+                    src={thumbnailPreview}
+                    alt="Thumbnail preview"
+                    fill
+                    style={{ objectFit: "cover" }}
+                  />
+                </div>
+              )}
+              <div className="flex-1">
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  onChange={handleThumbnailChange}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-indigo-700 hover:file:bg-indigo-100"
+                />
+                <div className="mt-2 flex items-center">
+                  {thumbnailSize && (
+                    <span className="mr-2 inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                      Size: {thumbnailSize}
+                    </span>
+                  )}
+                  <span className="text-xs text-gray-500">
+                    Accepted formats: JPEG, PNG, GIF, WEBP (max 30KB)
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-6 border-t pt-6 md:grid-cols-2">
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
+            <label
+              htmlFor="recurringDaysOfWeek"
+              className="mb-2 block text-sm font-medium text-gray-700"
+            >
               Recurring Days of Week
             </label>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
