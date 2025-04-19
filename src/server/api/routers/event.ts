@@ -1,14 +1,14 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createId } from "@paralleldrive/cuid2";
-import { format, addDays, parseISO, setHours, setMinutes } from "date-fns";
+import { format } from "date-fns";
 
 import {
   createTRPCRouter,
   publicProcedure,
   protectedProcedure,
 } from "~/server/api/trpc";
-import { events, venues, regions, eventTemplates, eventTemplateTickets, eventTickets } from "~/server/db/schema";
+import { events, eventTemplates, eventTemplateTickets, eventTickets } from "~/server/db/schema";
 import { eq, desc, and, gte, like, asc, count, inArray } from "drizzle-orm";
 
 // Helper function to generate dates from a recurring pattern
@@ -30,8 +30,8 @@ function generateDatesFromRecurringPattern(
     if (recurringDaysOfWeek.includes(dayOfWeek)) {
       // Parse time strings
       const startTimeParts = defaultStartTime.split(':').map(Number);
-      const startHours = startTimeParts[0] || 0;
-      const startMinutes = startTimeParts[1] || 0;
+      const startHours = startTimeParts[0] ?? 0;
+      const startMinutes = startTimeParts[1] ?? 0;
       
       // Create start time
       const startTime = new Date(currentDate);
@@ -41,8 +41,8 @@ function generateDatesFromRecurringPattern(
       let endTime;
       if (defaultEndTime) {
         const endTimeParts = defaultEndTime.split(':').map(Number);
-        const endHours = endTimeParts[0] || 0;
-        const endMinutes = endTimeParts[1] || 0;
+        const endHours = endTimeParts[0] ?? 0;
+        const endMinutes = endTimeParts[1] ?? 0;
         endTime = new Date(currentDate);
         endTime.setHours(endHours, endMinutes, 0, 0);
       }

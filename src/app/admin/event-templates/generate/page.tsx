@@ -12,12 +12,6 @@ export default function GenerateEventsPage() {
   const [selectedTemplates, setSelectedTemplates] = useState<string[]>([]);
   const [previewMode, setPreviewMode] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
-  interface TemplateTicket {
-    seatType: string;
-    defaultPrice: number;
-    defaultCapacity: number;
-    defaultDescription?: string;
-  }
 
   interface EventTemplate {
     id: string;

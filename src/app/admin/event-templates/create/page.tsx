@@ -128,7 +128,7 @@ export default function CreateEventTemplatePage() {
         ...data,
         // Convert time strings to proper format if needed
         defaultStartTime: data.defaultStartTime,
-        defaultEndTime: data.defaultEndTime || undefined,
+        defaultEndTime: data.defaultEndTime ?? undefined,
       };
 
       // Submit using tRPC mutation

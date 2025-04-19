@@ -69,7 +69,7 @@ export default function EventTemplatesListPage() {
   // Toggle template active status
   const toggleActiveMutation = api.eventTemplate.toggleActive.useMutation({
     onSuccess: () => {
-      refetch();
+      void refetch();
     },
   });
 
@@ -79,7 +79,7 @@ export default function EventTemplatesListPage() {
   };
 
   // Calculate pagination values
-  const pageCount = templatesData?.meta.totalPages || 1;
+  const pageCount = templatesData?.meta.totalPages ?? 1;
 
   return (
     <div className="space-y-6">
@@ -181,7 +181,7 @@ export default function EventTemplatesListPage() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {templatesData?.items.length ? (
-                  templatesData.items.map((template: any) => (
+                  templatesData.items.map((template) => (
                     <tr 
                       key={template.id} 
                       className="hover:bg-gray-50 cursor-pointer"
@@ -190,9 +190,9 @@ export default function EventTemplatesListPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">{template.templateName}</div>
                         <div className="text-xs text-gray-500">
-                          {template.recurringDaysOfWeek.map((day: number) => [
+                          {Array.isArray(template.recurringDaysOfWeek) ? template.recurringDaysOfWeek.map((day: number) => [
                             'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'
-                          ][day]).join(', ')} at {template.defaultStartTime.slice(0, 5)}
+                          ][day]).join(', ') : ''} at {typeof template.defaultStartTime === 'string' ? template.defaultStartTime.slice(0, 5) : ''}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { desc, eq, like, sql, asc } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
@@ -46,9 +46,9 @@ export const regionRouter = createTRPCRouter({
           }
           
           // Default comparison for non-string fields
-          return sortDirection === 'asc'
-            ? (fieldA as any) - (fieldB as any)
-            : (fieldB as any) - (fieldA as any);
+          const numA = typeof fieldA === 'number' ? fieldA : 0;
+          const numB = typeof fieldB === 'number' ? fieldB : 0;
+          return sortDirection === 'asc' ? numA - numB : numB - numA;
         });
         
         // Apply pagination
@@ -100,17 +100,17 @@ export const regionRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       try {
         // Generate a slug if not provided
-        const slug = input.slug || input.name.toLowerCase().replace(/\s+/g, '-');
+        const slug = input.slug ?? input.name.toLowerCase().replace(/\s+/g, '-');
         
         const newRegion = {
           id: createId(),
           name: input.name,
           slug,
           description: input.description,
-          imageUrls: input.imageUrls || [],
+          imageUrls: input.imageUrls ?? [],
           metaTitle: input.metaTitle,
           metaDescription: input.metaDescription,
-          keywords: input.keywords || [],
+          keywords: input.keywords ?? [],
         };
         
         const result = await ctx.db.insert(regions).values(newRegion).returning();

@@ -205,24 +205,24 @@ export default function EditVenuePage() {
           regionId: data.regionId,
           latitude: data.latitude ?? undefined,
           longitude: data.longitude ?? undefined,
-          googleMapsUrl: data.googleMapsUrl || "",
-          remarks: data.remarks || "",
+          googleMapsUrl: data.googleMapsUrl ?? "",
+          remarks: data.remarks ?? "",
           socialMediaLinks: {
-            facebook: data.socialMediaLinks?.facebook || "",
-            instagram: data.socialMediaLinks?.instagram || "",
-            tiktok: data.socialMediaLinks?.tiktok || "",
-            twitter: data.socialMediaLinks?.twitter || "",
-            youtube: data.socialMediaLinks?.youtube || "",
+            facebook: data.socialMediaLinks?.facebook ?? "",
+            instagram: data.socialMediaLinks?.instagram ?? "",
+            tiktok: data.socialMediaLinks?.tiktok ?? "",
+            twitter: data.socialMediaLinks?.twitter ?? "",
+            youtube: data.socialMediaLinks?.youtube ?? "",
           },
-          venueTypeIds: data.venueTypes?.map(vt => vt.id) || [],
-          primaryVenueTypeId: data.primaryVenueType?.id || "",
+          venueTypeIds: data.venueTypes?.map(vt => vt.id) ?? [],
+          primaryVenueTypeId: data.primaryVenueType?.id ?? "",
         });
         
         // Set venue types
         if (data.venueTypes) {
           const venueTypeIds = data.venueTypes.map(vt => vt.id);
           setSelectedVenueTypes(venueTypeIds);
-          const primaryTypeId = data.primaryVenueType?.id || venueTypeIds[0] || "";
+          const primaryTypeId = data.primaryVenueType?.id ?? venueTypeIds[0] ?? "";
           setPrimaryVenueType(primaryTypeId);
         }
         
