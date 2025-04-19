@@ -287,20 +287,46 @@ export default function EditEventTemplatePage({ params }: PageProps) {
       
       // Set template tickets if available
       if (templateData.templateTickets && Array.isArray(templateData.templateTickets) && templateData.templateTickets.length > 0) {
-        // Reset the field array to avoid duplicates
-        while (fields.length > 0) {
-          remove(0);
+        try {
+          // Safely clear existing fields
+          if (fields && fields.length > 0) {
+            // Use a safer approach to reset fields
+            for (let i = fields.length - 1; i >= 0; i--) {
+              remove(i);
+            }
+          }
+          
+          // Add each ticket from the API response
+          for (const ticket of templateData.templateTickets) {
+            if (ticket && typeof ticket === 'object') {
+              append({
+                id: ticket.id || '',
+                seatType: ticket.seatType || '',
+                defaultPrice: typeof ticket.defaultPrice === 'number' ? ticket.defaultPrice : 0,
+                defaultCapacity: typeof ticket.defaultCapacity === 'number' ? ticket.defaultCapacity : 0,
+                defaultDescription: ticket.defaultDescription ?? "",
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Error setting template tickets:', error);
+          // If there's an error, set a default ticket
+          if (fields.length === 0) {
+            append({
+              seatType: "",
+              defaultPrice: 0,
+              defaultCapacity: 0,
+              defaultDescription: "",
+            });
+          }
         }
-        
-        // Add each ticket from the API response
-        templateData.templateTickets.forEach((ticket) => {
-          append({
-            id: ticket.id,
-            seatType: ticket.seatType,
-            defaultPrice: ticket.defaultPrice,
-            defaultCapacity: ticket.defaultCapacity,
-            defaultDescription: ticket.defaultDescription ?? "",
-          });
+      } else if (fields.length === 0) {
+        // Ensure there's at least one empty ticket field if none exist
+        append({
+          seatType: "",
+          defaultPrice: 0,
+          defaultCapacity: 0,
+          defaultDescription: "",
         });
       }
     }
