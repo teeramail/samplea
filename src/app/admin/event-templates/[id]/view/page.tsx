@@ -11,7 +11,6 @@ type PageProps = {
 };
 
 export default function ViewEventTemplatePage({ params }: PageProps) {
-  const router = useRouter();
   const { id } = params;
   const [isLoading, setIsLoading] = useState(true);
 
@@ -32,7 +31,8 @@ export default function ViewEventTemplatePage({ params }: PageProps) {
     if (!time) return "";
     
     // Ensure time is in HH:MM format
-    const timeMatch = time.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+    const timeRegex = /^([01]?\d|2[0-3]):([0-5]\d)$/;
+    const timeMatch = timeRegex.exec(time);
     if (!timeMatch) return time;
     
     const hours = timeMatch[1];
@@ -150,7 +150,7 @@ export default function ViewEventTemplatePage({ params }: PageProps) {
                   <div>
                     <h4 className="text-sm font-medium text-gray-500">Description</h4>
                     <p className="mt-1 text-sm text-gray-900">
-                      {template.defaultDescription || "No description"}
+                      {template.defaultDescription ?? "No description"}
                     </p>
                   </div>
                 </div>
@@ -255,7 +255,7 @@ export default function ViewEventTemplatePage({ params }: PageProps) {
                           {ticket.defaultCapacity}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-500">
-                          {ticket.defaultDescription || "—"}
+                          {ticket.defaultDescription ?? "—"}
                         </td>
                       </tr>
                     ))}

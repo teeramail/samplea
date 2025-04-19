@@ -53,13 +53,14 @@ const eventTemplateSchema = z.object({
 type EventTemplateFormData = z.infer<typeof eventTemplateSchema>;
 type Venue = { id: string; name: string; regionId: string };
 type Region = { id: string; name: string };
-type EventTemplateTicket = {
+// Interface for event template tickets
+interface EventTemplateTicketType {
   id: string;
   seatType: string;
   defaultPrice: number;
   defaultCapacity: number;
   defaultDescription?: string | null;
-};
+}
 
 // We're using this type for reference but not directly in the code
 // Keeping it for documentation purposes
@@ -235,8 +236,9 @@ export default function EditEventTemplatePage({ params }: PageProps) {
       // Format time to ensure consistent format (HH:MM)
       if (templateData.defaultStartTime) {
         // Ensure time is in HH:MM format
-        const startTimeMatch = templateData.defaultStartTime.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
-        if (startTimeMatch && startTimeMatch[1] && startTimeMatch[2]) {
+        const timeRegex = /^([01]?\d|2[0-3]):([0-5]\d)$/;
+        const startTimeMatch = timeRegex.exec(templateData.defaultStartTime);
+        if (startTimeMatch?.[1] && startTimeMatch?.[2]) {
           const hours = startTimeMatch[1].padStart(2, '0');
           const minutes = startTimeMatch[2];
           setValue("defaultStartTime", `${hours}:${minutes}`);
@@ -247,8 +249,9 @@ export default function EditEventTemplatePage({ params }: PageProps) {
       
       if (templateData.defaultEndTime) {
         // Ensure time is in HH:MM format
-        const endTimeMatch = templateData.defaultEndTime.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
-        if (endTimeMatch && endTimeMatch[1] && endTimeMatch[2]) {
+        const endTimeRegex = /^([01]?\d|2[0-3]):([0-5]\d)$/;
+        const endTimeMatch = endTimeRegex.exec(templateData.defaultEndTime);
+        if (endTimeMatch?.[1] && endTimeMatch?.[2]) {
           const hours = endTimeMatch[1].padStart(2, '0');
           const minutes = endTimeMatch[2];
           setValue("defaultEndTime", `${hours}:${minutes}`);
