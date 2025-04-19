@@ -61,7 +61,9 @@ type EventTemplateTicket = {
   defaultDescription?: string | null;
 };
 
-type EventTemplate = {
+// We're using this type for reference but not directly in the code
+// Keeping it for documentation purposes
+/* type EventTemplate = {
   id: string;
   templateName: string;
   regionId: string;
@@ -76,7 +78,7 @@ type EventTemplate = {
   templateTickets: EventTemplateTicket[];
   venue?: Venue;
   region?: Region;
-};
+}; */
 
 // Type for the upload API response
 type UploadResponse = {
@@ -227,18 +229,22 @@ export default function EditEventTemplatePage({ params }: PageProps) {
       setValue("regionId", templateData.regionId);
       setValue("venueId", templateData.venueId);
       setValue("defaultTitleFormat", templateData.defaultTitleFormat);
-      setValue("defaultDescription", templateData.defaultDescription || "");
+      setValue("defaultDescription", templateData.defaultDescription ?? "");
       setValue("recurringDaysOfWeek", templateData.recurringDaysOfWeek);
       setValue("defaultStartTime", templateData.defaultStartTime);
-      setValue("defaultEndTime", templateData.defaultEndTime || "");
+      setValue("defaultEndTime", templateData.defaultEndTime ?? "");
       setValue("isActive", templateData.isActive);
       
       // Handle thumbnailUrl safely with type checking
       if ('thumbnailUrl' in templateData && templateData.thumbnailUrl !== undefined) {
         // Ensure thumbnailValue is a string
-        const thumbnailValue = typeof templateData.thumbnailUrl === 'string' 
-          ? templateData.thumbnailUrl 
-          : templateData.thumbnailUrl === null ? "" : String(templateData.thumbnailUrl);
+        // Handle all possible types safely
+        let thumbnailValue = "";
+        if (typeof templateData.thumbnailUrl === 'string') {
+          thumbnailValue = templateData.thumbnailUrl;
+        } else if (templateData.thumbnailUrl === null || templateData.thumbnailUrl === undefined) {
+          thumbnailValue = "";
+        }
         
         // Set the form value
         setValue("thumbnailUrl", thumbnailValue);
@@ -250,7 +256,7 @@ export default function EditEventTemplatePage({ params }: PageProps) {
         }
       }
     }
-  }, [templateData, reset]);
+  }, [templateData, reset, setValue]);
 
   useEffect(() => {
     if (venuesData?.items) {
@@ -370,7 +376,7 @@ export default function EditEventTemplatePage({ params }: PageProps) {
         id,
         thumbnailUrl,
         // Ensure defaultEndTime is properly handled
-        defaultEndTime: data.defaultEndTime || undefined,
+        defaultEndTime: data.defaultEndTime ?? undefined,
       };
 
       // Submit using tRPC mutation
