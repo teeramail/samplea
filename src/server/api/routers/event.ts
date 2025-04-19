@@ -20,7 +20,7 @@ function generateDatesFromRecurringPattern(
   defaultEndTime?: string | null
 ) {
   const dates = [];
-  let currentDate = new Date(startDate);
+  const currentDate = new Date(startDate);
   
   // Loop through each day in the range
   while (currentDate <= endDate) {
