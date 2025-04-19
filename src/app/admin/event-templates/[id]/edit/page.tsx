@@ -126,15 +126,14 @@ async function uploadFile(
   }
 }
 
-export default function EditEventTemplatePage({
-  params,
-}: {
-  params: { id: string };
-}) {
+type PageProps = {
+  params: Promise<{ id: string }>;
+};
+
+export default function EditEventTemplatePage({ params }: PageProps) {
   // Unwrap params using React.use() to access properties safely
-  // Cast params to any to avoid TypeScript errors with React.use()
-  const unwrappedParams = React.use(params as any);
-  const id = unwrappedParams.id as string;
+  const unwrappedParams = React.use(params);
+  const id = unwrappedParams.id;
   const router = useRouter();
   const [allVenues, setAllVenues] = useState<Venue[]>([]);
   const [regions, setRegions] = useState<Region[]>([]);
