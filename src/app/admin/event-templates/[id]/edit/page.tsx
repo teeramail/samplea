@@ -231,8 +231,34 @@ export default function EditEventTemplatePage({ params }: PageProps) {
       setValue("defaultTitleFormat", templateData.defaultTitleFormat);
       setValue("defaultDescription", templateData.defaultDescription ?? "");
       setValue("recurringDaysOfWeek", templateData.recurringDaysOfWeek);
-      setValue("defaultStartTime", templateData.defaultStartTime);
-      setValue("defaultEndTime", templateData.defaultEndTime ?? "");
+      
+      // Format time to ensure consistent format (HH:MM)
+      if (templateData.defaultStartTime) {
+        // Ensure time is in HH:MM format
+        const startTimeMatch = templateData.defaultStartTime.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+        if (startTimeMatch && startTimeMatch[1] && startTimeMatch[2]) {
+          const hours = startTimeMatch[1].padStart(2, '0');
+          const minutes = startTimeMatch[2];
+          setValue("defaultStartTime", `${hours}:${minutes}`);
+        } else {
+          setValue("defaultStartTime", templateData.defaultStartTime);
+        }
+      }
+      
+      if (templateData.defaultEndTime) {
+        // Ensure time is in HH:MM format
+        const endTimeMatch = templateData.defaultEndTime.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+        if (endTimeMatch && endTimeMatch[1] && endTimeMatch[2]) {
+          const hours = endTimeMatch[1].padStart(2, '0');
+          const minutes = endTimeMatch[2];
+          setValue("defaultEndTime", `${hours}:${minutes}`);
+        } else {
+          setValue("defaultEndTime", templateData.defaultEndTime);
+        }
+      } else {
+        setValue("defaultEndTime", "");
+      }
+      
       setValue("isActive", templateData.isActive);
       
       // Handle thumbnailUrl safely with type checking
@@ -255,8 +281,27 @@ export default function EditEventTemplatePage({ params }: PageProps) {
           setExistingThumbnailUrl(thumbnailValue);
         }
       }
+      
+      // Set template tickets if available
+      if (templateData.templateTickets && Array.isArray(templateData.templateTickets) && templateData.templateTickets.length > 0) {
+        // Reset the field array to avoid duplicates
+        while (fields.length > 0) {
+          remove(0);
+        }
+        
+        // Add each ticket from the API response
+        templateData.templateTickets.forEach((ticket) => {
+          append({
+            id: ticket.id,
+            seatType: ticket.seatType,
+            defaultPrice: ticket.defaultPrice,
+            defaultCapacity: ticket.defaultCapacity,
+            defaultDescription: ticket.defaultDescription ?? "",
+          });
+        });
+      }
     }
-  }, [templateData, reset, setValue]);
+  }, [templateData, reset, setValue, fields, remove, append]);
 
   useEffect(() => {
     if (venuesData?.items) {

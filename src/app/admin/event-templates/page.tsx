@@ -68,7 +68,7 @@ export default function EventTemplatesListPage() {
 
   // Handle row click to navigate to detail view
   const handleRowClick = (id: string) => {
-    router.push(`/admin/event-templates/${id}/edit`);
+    router.push(`/admin/event-templates/${id}/view`);
   };
 
   // Toggle template active status
