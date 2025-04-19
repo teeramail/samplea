@@ -174,9 +174,11 @@ export default function CreateEventPage() {
 
   // Watch for region changes to filter venues
   const selectedRegionId = watch("regionId");
+  
+  // Filter venues based on selected region
   const filteredVenues = selectedRegionId
     ? venues.filter((venue) => venue.regionId === selectedRegionId)
-    : venues;
+    : [];  // Show no venues if no region is selected
 
   // File Handlers
   const handleThumbnailChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -500,8 +502,10 @@ export default function CreateEventPage() {
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                 disabled={isLoadingRegions}
                 onChange={(e) => {
-                  setValue("regionId", e.target.value);
-                  setValue("venueId", ""); // Reset venue when region changes
+                  // Manually set the value and trigger validation
+                  setValue("regionId", e.target.value, { shouldValidate: true });
+                  // Reset venue selection when region changes
+                  setValue("venueId", "", { shouldValidate: true });
                 }}
               >
                 <option value="">Select a region</option>
@@ -532,7 +536,7 @@ export default function CreateEventPage() {
                 id="venueId"
                 {...register("venueId")}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                disabled={isLoadingVenues || !selectedRegionId}
+                disabled={isLoadingVenues || !selectedRegionId || filteredVenues.length === 0}
               >
                 <option value="">
                   {!selectedRegionId

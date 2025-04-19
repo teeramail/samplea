@@ -290,7 +290,7 @@ export const eventTemplateRouter = createTRPCRouter({
       // Find ticket IDs to keep
       const ticketIdsToKeep = templateTickets
         .filter((t) => t.id)
-        .map((t) => t.id as string);
+        .map((t) => t.id!);
 
       // Delete tickets that are no longer needed
       const ticketIdsToDelete = existingTicketIds.filter(

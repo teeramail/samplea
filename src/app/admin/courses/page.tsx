@@ -82,8 +82,7 @@ export default function AdminCoursesPage() {
       const matchesSearch =
         !searchQuery ||
         course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (course.region?.name &&
-          course.region.name.toLowerCase().includes(searchQuery.toLowerCase()));
+        (course.region?.name?.toLowerCase().includes(searchQuery.toLowerCase()));
 
       const matchesFeatured = !showFeaturedOnly || course.isFeatured;
 
