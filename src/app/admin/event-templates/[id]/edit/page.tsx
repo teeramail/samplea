@@ -417,13 +417,17 @@ export default function EditEventTemplatePage({ params }: PageProps) {
         // If already in correct format, return as is
         if (timeRegex.test(timeString)) {
           // Ensure hours are padded to 2 digits
-          const [hours, minutes] = timeString.split(':');
-          return `${hours.padStart(2, '0')}:${minutes}`;
+          const parts = timeString.split(':');
+          if (parts.length >= 2 && parts[0] !== undefined && parts[1] !== undefined) {
+            const hours = parts[0];
+            const minutes = parts[1];
+            return `${hours.padStart(2, '0')}:${minutes}`;
+          }
         }
         
         // Try to parse and reformat the time
         const timeParts = timeString.split(':');
-        if (timeParts.length >= 2) {
+        if (timeParts.length >= 2 && timeParts[0] !== undefined && timeParts[1] !== undefined) {
           const hours = parseInt(timeParts[0], 10);
           const minutes = parseInt(timeParts[1], 10);
           

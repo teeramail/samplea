@@ -189,7 +189,7 @@ export default function ViewEventTemplatePage({ params }: PageProps) {
               </div>
 
               {/* Thumbnail section - only show if available */}
-              {template && typeof template === 'object' && 'thumbnailUrl' in template && template.thumbnailUrl && (
+              {template && typeof template === 'object' && 'thumbnailUrl' in template && template.thumbnailUrl ? (
                 <div>
                   <h3 className="text-lg font-medium leading-6 text-gray-900">
                     Thumbnail
@@ -205,7 +205,7 @@ export default function ViewEventTemplatePage({ params }: PageProps) {
                     </div>
                   </div>
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
 
