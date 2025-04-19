@@ -7,6 +7,7 @@ import { z } from "zod";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Image from "next/image";
+import { api } from "~/trpc/react";
 
 export const dynamic = "force-dynamic";
 
@@ -43,18 +44,19 @@ type EventFormData = Omit<
 >;
 
 // Define types for API responses
+// Simplified type with only the fields we need for the form
 type Venue = {
   id: string;
   name: string;
-  regionId: string;
   address: string;
   capacity: number | null;
+  regionId: string;
 };
 
+// Simplified type with only the fields we need for the form
 type Region = {
   id: string;
   name: string;
-  description?: string;
 };
 
 // Type for the upload API response
@@ -138,39 +140,69 @@ export default function CreateEventPage() {
     name: "ticketTypes",
   });
 
-  // Fetch venues and regions when component mounts
+  // Fetch venues using tRPC
+  const { data: venuesData, isLoading: isVenuesLoading, error: venuesError } = api.venue.list.useQuery({
+    page: 1,
+    limit: 100,
+    sortField: "name",
+    sortDirection: "asc",
+  });
+
+  // Fetch regions using tRPC
+  const { data: regionsData, isLoading: isRegionsLoading, error: regionsError } = api.region.list.useQuery({
+    page: 1,
+    limit: 100,
+    sortField: "name",
+    sortDirection: "asc",
+  });
+
+  // Update state when data is loaded
   useEffect(() => {
-    const fetchVenuesAndRegions = async () => {
-      try {
-        // Fetch venues
-        setIsLoadingVenues(true);
-        const venuesResponse = await fetch("/api/venues");
-        if (!venuesResponse.ok) {
-          throw new Error("Failed to load venues");
-        }
-        const venuesData = (await venuesResponse.json()) as Venue[];
-        setVenues(venuesData);
-        setIsLoadingVenues(false);
+    if (venuesData?.items) {
+      // Extract only the fields we need to avoid type mismatches
+      const simplifiedVenues = venuesData.items.map(venue => ({
+        id: venue.id,
+        name: venue.name,
+        address: venue.address,
+        capacity: venue.capacity,
+        regionId: venue.regionId,
+        // Include other fields as needed but only those that are actually used in the form
+      }));
+      
+      setVenues(simplifiedVenues as Venue[]);
+      setIsLoadingVenues(false);
+    }
+    if (venuesError) {
+      console.error("Error fetching venues:", venuesError);
+      setError("Failed to load venues. Please try again later.");
+      setIsLoadingVenues(false);
+    }
+  }, [venuesData, venuesError]);
 
-        // Fetch regions
-        setIsLoadingRegions(true);
-        const regionsResponse = await fetch("/api/regions");
-        if (!regionsResponse.ok) {
-          throw new Error("Failed to load regions");
-        }
-        const regionsData = (await regionsResponse.json()) as Region[];
-        setRegions(regionsData);
-        setIsLoadingRegions(false);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        setError("Failed to load necessary data. Please try again later.");
-        setIsLoadingVenues(false);
-        setIsLoadingRegions(false);
-      }
-    };
+  useEffect(() => {
+    if (regionsData?.items) {
+      // Extract only the fields we need to avoid type mismatches
+      const simplifiedRegions = regionsData.items.map(region => ({
+        id: region.id,
+        name: region.name,
+        // Include other fields as needed but only those that are actually used in the form
+      }));
+      
+      setRegions(simplifiedRegions as Region[]);
+      setIsLoadingRegions(false);
+    }
+    if (regionsError) {
+      console.error("Error fetching regions:", regionsError);
+      setError("Failed to load regions. Please try again later.");
+      setIsLoadingRegions(false);
+    }
+  }, [regionsData, regionsError]);
 
-    void fetchVenuesAndRegions();
-  }, []);
+  // Set loading states based on tRPC loading states
+  useEffect(() => {
+    setIsLoadingVenues(isVenuesLoading);
+    setIsLoadingRegions(isRegionsLoading);
+  }, [isVenuesLoading, isRegionsLoading]);
 
   // Watch for region changes to filter venues
   const selectedRegionId = watch("regionId");

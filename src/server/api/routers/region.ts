@@ -2,11 +2,11 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, protectedProcedure, publicProcedure } from "~/server/api/trpc";
 import { regions } from "~/server/db/schema";
 
 export const regionRouter = createTRPCRouter({
-  list: protectedProcedure
+  list: publicProcedure
     .input(
       z.object({
         page: z.number().default(1),

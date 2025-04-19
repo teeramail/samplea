@@ -165,7 +165,7 @@ export const eventTemplateRouter = createTRPCRouter({
   }),
 
   // Create a new event template
-  create: protectedProcedure
+  create: publicProcedure
     .input(
       z.object({
         templateName: z.string().min(1),

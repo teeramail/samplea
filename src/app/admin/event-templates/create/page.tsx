@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useForm, type SubmitHandler, useFieldArray } from "react-hook-form";
-import { DevTool } from "@hookform/devtools";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Link from "next/link";
@@ -148,29 +147,65 @@ export default function CreateEventTemplatePage() {
       router.push("/admin/event-templates");
     },
     onError: (error) => {
-      setSubmitError(error.message);
+      console.error("API error creating template:", error);
+      setSubmitError(error.message || "Failed to create event template");
     },
   });
 
-  const onSubmit: SubmitHandler<EventTemplateFormData> = async (data) => {
+  const onSubmit: SubmitHandler<EventTemplateFormData> = (data) => {
+    // Clear any previous errors
+    setSubmitError(null);
+    
     try {
-      setSubmitError(null);
-
+      // Validate required fields explicitly to avoid validation errors
+      if (!data.templateName) {
+        setSubmitError("Template name is required");
+        return;
+      }
+      
+      if (!data.regionId) {
+        setSubmitError("Region is required");
+        return;
+      }
+      
+      if (!data.venueId) {
+        setSubmitError("Venue is required");
+        return;
+      }
+      
+      if (!data.defaultTitleFormat) {
+        setSubmitError("Title format is required");
+        return;
+      }
+      
+      if (!data.recurringDaysOfWeek || data.recurringDaysOfWeek.length === 0) {
+        setSubmitError("Select at least one day of week");
+        return;
+      }
+      
+      if (!data.defaultStartTime) {
+        setSubmitError("Start time is required");
+        return;
+      }
+      
+      if (!data.templateTickets || data.templateTickets.length === 0) {
+        setSubmitError("Add at least one ticket type");
+        return;
+      }
+      
       // Format the data for API submission
       const payload = {
         ...data,
-        // Convert time strings to proper format if needed
-        defaultStartTime: data.defaultStartTime,
-        defaultEndTime: data.defaultEndTime ?? undefined,
+        // Ensure defaultEndTime is properly handled
+        defaultEndTime: data.defaultEndTime || undefined,
       };
 
       // Submit using tRPC mutation
       createTemplate.mutate(payload);
     } catch (error) {
-      console.error("Error creating template:", error);
-      console.error("Detailed submission error:", error);
+      console.error("Error in form submission:", error);
       setSubmitError(
-        error instanceof Error ? error.message : "An unknown error occurred",
+        error instanceof Error ? error.message : "An unknown error occurred"
       );
     }
   };
@@ -523,7 +558,6 @@ export default function CreateEventTemplatePage() {
           </div>
         </div>
       </form>
-      <DevTool control={control} />
     </div>
   );
 }
