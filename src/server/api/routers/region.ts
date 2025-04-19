@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { desc, eq, like, sql, and } from "drizzle-orm";
+import { desc, eq, like, sql, asc } from "drizzle-orm";
+import { createId } from "@paralleldrive/cuid2";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { regions } from "~/server/db/schema";
@@ -19,55 +20,69 @@ export const regionRouter = createTRPCRouter({
       const { page, limit, sortField, sortDirection, query } = input;
       const offset = (page - 1) * limit;
 
-      // Build query filter
-      let whereClause;
-      if (query) {
-        whereClause = like(regions.name, `%${query}%`);
-      }
-
-      // Get total count for pagination
-      const totalCountResult = await ctx.db
-        .select({ count: sql<number>`count(*)` })
-        .from(regions)
-        .where(whereClause || undefined)
-        .then((result) => result[0]);
+      try {
+        // Get all regions first (we'll handle pagination in memory for simplicity)
+        let allRegions = await ctx.db.select().from(regions);
         
-      const totalCount = totalCountResult?.count ?? 0;
-
-      // Get the regions with pagination and sorting
-      const items = await ctx.db
-        .select()
-        .from(regions)
-        .where(whereClause || undefined)
-        .orderBy(
-          sortDirection === "desc"
-            ? desc(regions[sortField as keyof typeof regions])
-            : regions[sortField as keyof typeof regions],
-        )
-        .limit(limit)
-        .offset(offset);
-
-      return {
-        items,
-        meta: {
-          totalCount,
-          page,
-          limit,
-          pageCount: Math.ceil(totalCount / limit),
-        },
-      };
+        // Apply search filter if query exists
+        if (query && query.trim() !== '') {
+          allRegions = allRegions.filter(region => 
+            region.name.toLowerCase().includes(query.toLowerCase())
+          );
+        }
+        
+        // Get total count
+        const totalCount = allRegions.length;
+        
+        // Sort the regions
+        allRegions.sort((a, b) => {
+          const fieldA = a[sortField as keyof typeof a];
+          const fieldB = b[sortField as keyof typeof b];
+          
+          if (typeof fieldA === 'string' && typeof fieldB === 'string') {
+            return sortDirection === 'asc' 
+              ? fieldA.localeCompare(fieldB)
+              : fieldB.localeCompare(fieldA);
+          }
+          
+          // Default comparison for non-string fields
+          return sortDirection === 'asc'
+            ? (fieldA as any) - (fieldB as any)
+            : (fieldB as any) - (fieldA as any);
+        });
+        
+        // Apply pagination
+        const items = allRegions.slice(offset, offset + limit);
+        
+        return {
+          items,
+          meta: {
+            totalCount,
+            page,
+            limit,
+            pageCount: Math.ceil(totalCount / limit),
+          },
+        };
+      } catch (error) {
+        console.error('Error in region.list:', error);
+        throw error;
+      }
     }),
 
   getById: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      const region = await ctx.db
-        .select()
-        .from(regions)
-        .where(eq(regions.id, input.id))
-        .then((results) => results[0] ?? null);
+      try {
+        const results = await ctx.db
+          .select()
+          .from(regions)
+          .where(eq(regions.id, input.id));
 
-      return region;
+        return results[0] ?? null;
+      } catch (error) {
+        console.error('Error in region.getById:', error);
+        throw error;
+      }
     }),
 
   create: protectedProcedure
@@ -83,17 +98,27 @@ export const regionRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const result = await ctx.db.insert(regions).values({
-        name: input.name,
-        slug: input.slug,
-        description: input.description,
-        imageUrls: input.imageUrls,
-        metaTitle: input.metaTitle,
-        metaDescription: input.metaDescription,
-        keywords: input.keywords,
-      }).returning();
-
-      return result[0];
+      try {
+        // Generate a slug if not provided
+        const slug = input.slug || input.name.toLowerCase().replace(/\s+/g, '-');
+        
+        const newRegion = {
+          id: createId(),
+          name: input.name,
+          slug,
+          description: input.description,
+          imageUrls: input.imageUrls || [],
+          metaTitle: input.metaTitle,
+          metaDescription: input.metaDescription,
+          keywords: input.keywords || [],
+        };
+        
+        const result = await ctx.db.insert(regions).values(newRegion).returning();
+        return result[0];
+      } catch (error) {
+        console.error('Error in region.create:', error);
+        throw error;
+      }
     }),
 
   update: protectedProcedure
@@ -111,21 +136,31 @@ export const regionRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { id, ...data } = input;
-      
-      const result = await ctx.db
-        .update(regions)
-        .set(data)
-        .where(eq(regions.id, id))
-        .returning();
+      try {
+        const { id, ...data } = input;
+        
+        const result = await ctx.db
+          .update(regions)
+          .set(data)
+          .where(eq(regions.id, id))
+          .returning();
 
-      return result[0];
+        return result[0];
+      } catch (error) {
+        console.error('Error in region.update:', error);
+        throw error;
+      }
     }),
 
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      await ctx.db.delete(regions).where(eq(regions.id, input.id));
-      return { success: true };
+      try {
+        await ctx.db.delete(regions).where(eq(regions.id, input.id));
+        return { success: true };
+      } catch (error) {
+        console.error('Error in region.delete:', error);
+        throw error;
+      }
     }),
 });

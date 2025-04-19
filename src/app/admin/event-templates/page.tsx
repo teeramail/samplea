@@ -129,9 +129,8 @@ export default function EventTemplatesListPage() {
           </div>
           <div>
             <PageSizeSelector 
-              value={itemsPerPage} 
-              onChange={handlePageSizeChange} 
-              options={[10, 20, 50, 100]} 
+              itemsPerPage={itemsPerPage} 
+              onItemsPerPageChange={handlePageSizeChange} 
             />
           </div>
         </div>
