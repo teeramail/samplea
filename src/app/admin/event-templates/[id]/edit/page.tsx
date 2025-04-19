@@ -235,12 +235,13 @@ export default function EditEventTemplatePage({ params }: PageProps) {
       
       // Format time to ensure consistent format (HH:MM)
       if (templateData.defaultStartTime) {
-        // Ensure time is in HH:MM format
-        const timeRegex = /^([01]?\d|2[0-3]):([0-5]\d)$/;
-        const startTimeMatch = timeRegex.exec(templateData.defaultStartTime);
-        if (startTimeMatch?.[1] && startTimeMatch?.[2]) {
-          const hours = startTimeMatch[1].padStart(2, '0');
-          const minutes = startTimeMatch[2];
+        // Handle both HH:MM and HH:MM:SS formats
+        const timeString = templateData.defaultStartTime;
+        // Split by colon and take only hours and minutes
+        const timeParts = timeString.split(':');
+        if (timeParts.length >= 2 && timeParts[0] && timeParts[1]) {
+          const hours = timeParts[0].padStart(2, '0');
+          const minutes = timeParts[1].padStart(2, '0');
           setValue("defaultStartTime", `${hours}:${minutes}`);
         } else {
           setValue("defaultStartTime", templateData.defaultStartTime);
@@ -248,12 +249,13 @@ export default function EditEventTemplatePage({ params }: PageProps) {
       }
       
       if (templateData.defaultEndTime) {
-        // Ensure time is in HH:MM format
-        const endTimeRegex = /^([01]?\d|2[0-3]):([0-5]\d)$/;
-        const endTimeMatch = endTimeRegex.exec(templateData.defaultEndTime);
-        if (endTimeMatch?.[1] && endTimeMatch?.[2]) {
-          const hours = endTimeMatch[1].padStart(2, '0');
-          const minutes = endTimeMatch[2];
+        // Handle both HH:MM and HH:MM:SS formats
+        const timeString = templateData.defaultEndTime;
+        // Split by colon and take only hours and minutes
+        const timeParts = timeString.split(':');
+        if (timeParts.length >= 2 && timeParts[0] && timeParts[1]) {
+          const hours = timeParts[0].padStart(2, '0');
+          const minutes = timeParts[1].padStart(2, '0');
           setValue("defaultEndTime", `${hours}:${minutes}`);
         } else {
           setValue("defaultEndTime", templateData.defaultEndTime);
@@ -329,6 +331,9 @@ export default function EditEventTemplatePage({ params }: PageProps) {
           defaultDescription: "",
         });
       }
+      
+      // Log the loaded recurring days for debugging
+      console.log("Loaded recurring days:", templateData.recurringDaysOfWeek);
     }
   }, [templateData, reset, fields.length, remove, append]);
 
@@ -726,6 +731,7 @@ export default function EditEventTemplatePage({ params }: PageProps) {
                       type="checkbox"
                       value={day.id}
                       {...register("recurringDaysOfWeek")}
+                      defaultChecked={templateData?.recurringDaysOfWeek?.includes(day.id)}
                       className="h-4 w-4 rounded border-gray-300 text-indigo-600"
                     />
                     <span>{day.name}</span>
@@ -745,13 +751,12 @@ export default function EditEventTemplatePage({ params }: PageProps) {
                   Start Time*
                 </label>
                 <input
-                  type="time"
-                  placeholder="HH:MM"
-                  pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]"
+                  type="text"
+                  placeholder="21:00"
                   {...register("defaultStartTime")}
                   className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm"
                 />
-                <small className="text-xs text-gray-500">Format: HH:MM (24-hour)</small>
+                <small className="text-xs text-gray-500">Format: HH:MM (24-hour, e.g. 21:00)</small>
                 {errors.defaultStartTime && (
                   <p className="mt-1 text-sm text-red-600">
                     {errors.defaultStartTime.message}
@@ -764,13 +769,12 @@ export default function EditEventTemplatePage({ params }: PageProps) {
                   End Time (Optional)
                 </label>
                 <input
-                  type="time"
-                  placeholder="HH:MM"
-                  pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]"
+                  type="text"
+                  placeholder="22:00"
                   {...register("defaultEndTime")}
                   className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm"
                 />
-                <small className="text-xs text-gray-500">Format: HH:MM (24-hour)</small>
+                <small className="text-xs text-gray-500">Format: HH:MM (24-hour, e.g. 22:00)</small>
                 {errors.defaultEndTime && (
                   <p className="mt-1 text-sm text-red-600">
                     {errors.defaultEndTime.message}
