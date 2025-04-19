@@ -1,4 +1,4 @@
-import { Suspense } from 'react';
+import { Suspense } from "react";
 import { api } from "~/trpc/server";
 import CourseCard from "~/app/_components/CourseCard";
 // import { Metadata } from 'next'; // Uncomment if setting metadata
@@ -15,7 +15,11 @@ async function CourseList() {
   const initialCourses = await api.trainingCourse.list({ limit: 20 });
 
   if (!initialCourses || initialCourses.items.length === 0) {
-    return <p className="text-center text-gray-500 dark:text-gray-400 mt-8">No courses available at the moment. Please check back later.</p>;
+    return (
+      <p className="mt-8 text-center text-gray-500 dark:text-gray-400">
+        No courses available at the moment. Please check back later.
+      </p>
+    );
   }
 
   return (
@@ -25,7 +29,7 @@ async function CourseList() {
       ))}
       {/* Placeholder for loading more button/indicator */}
       {initialCourses.nextCursor && (
-        <div className="col-span-full text-center mt-6">
+        <div className="col-span-full mt-6 text-center">
           {/* Button to load more will go here */}
           {/* <LoadMoreCourses initialCursor={initialCourses.nextCursor} /> */}
         </div>
@@ -37,15 +41,17 @@ async function CourseList() {
 export default function CoursesPage() {
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="mb-6 text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl">
+      <h1 className="mb-6 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl dark:text-white">
         Muay Thai Training Courses
       </h1>
       {/* Add filtering options here later if needed */}
       {/* <CourseFilters /> */}
 
-      <Suspense fallback={<div className="text-center p-8">Loading courses...</div>}>
+      <Suspense
+        fallback={<div className="p-8 text-center">Loading courses...</div>}
+      >
         <CourseList />
       </Suspense>
     </div>
   );
-} 
+}

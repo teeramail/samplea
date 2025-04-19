@@ -1,9 +1,9 @@
-import { NextResponse } from 'next/server';
-import { db } from '~/server/db';
-import { eventTemplates, eventTemplateTickets } from '~/server/db/schema';
-import { nanoid } from 'nanoid';
-import { z } from 'zod';
-import { eq } from 'drizzle-orm';
+import { NextResponse } from "next/server";
+import { db } from "~/server/db";
+import { eventTemplates, eventTemplateTickets } from "~/server/db/schema";
+import { nanoid } from "nanoid";
+import { z } from "zod";
+import { eq } from "drizzle-orm";
 
 // Zod schema for validation on the backend (reuse or redefine if needed)
 const eventTemplateTicketSchema = z.object({
@@ -40,7 +40,10 @@ export async function GET() {
     return NextResponse.json({ data: templates });
   } catch (error) {
     console.error("Error fetching event templates:", error);
-    return NextResponse.json({ error: 'Failed to fetch event templates' }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch event templates" },
+      { status: 500 },
+    );
   }
 }
 
@@ -53,8 +56,8 @@ export async function POST(request: Request) {
     const validationResult = eventTemplateSchema.safeParse(data);
     if (!validationResult.success) {
       return NextResponse.json(
-        { error: 'Invalid input data', details: validationResult.error.errors }, 
-        { status: 400 }
+        { error: "Invalid input data", details: validationResult.error.errors },
+        { status: 400 },
       );
     }
 
@@ -78,7 +81,7 @@ export async function POST(request: Request) {
       });
 
       // Prepare ticket data
-      const ticketsData = validatedData.templateTickets.map(ticket => ({
+      const ticketsData = validatedData.templateTickets.map((ticket) => ({
         id: nanoid(),
         eventTemplateId: templateId,
         seatType: ticket.seatType,
@@ -92,10 +95,12 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ success: true, templateId }, { status: 201 });
-
   } catch (error) {
     console.error("Error creating event template:", error);
     // Basic error handling, consider more specific checks (e.g., duplicate name?)
-    return NextResponse.json({ error: 'Failed to create event template' }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to create event template" },
+      { status: 500 },
+    );
   }
-} 
+}

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
+import { useState } from "react";
+import Link from "next/link";
 
 // Define the type for a single ticket based on expected properties
 // Adjust this based on the actual shape of your ticket data from the database
@@ -19,14 +19,18 @@ interface TicketSelectionProps {
   eventTitle: string;
 }
 
-export default function TicketSelection({ tickets, eventId, eventTitle }: TicketSelectionProps) {
+export default function TicketSelection({
+  tickets,
+  eventId,
+  eventTitle,
+}: TicketSelectionProps) {
   const [quantities, setQuantities] = useState<Record<string, number>>(() => {
     // Initialize quantities to 0 for each ticket
     const initialQuantities: Record<string, number> = {};
     if (Array.isArray(tickets)) {
-        tickets.forEach(ticket => {
-          initialQuantities[ticket.id] = 0;
-        });
+      tickets.forEach((ticket) => {
+        initialQuantities[ticket.id] = 0;
+      });
     }
     return initialQuantities;
   });
@@ -35,27 +39,27 @@ export default function TicketSelection({ tickets, eventId, eventTitle }: Ticket
     const quantity = parseInt(value, 10);
     // Allow setting quantity to 0 or any positive integer
     if (!isNaN(quantity) && quantity >= 0) {
-      setQuantities(prev => ({ ...prev, [ticketId]: quantity }));
-    } else if (value === '') {
-        // Treat empty input as 0
-         setQuantities(prev => ({ ...prev, [ticketId]: 0 }));
+      setQuantities((prev) => ({ ...prev, [ticketId]: quantity }));
+    } else if (value === "") {
+      // Treat empty input as 0
+      setQuantities((prev) => ({ ...prev, [ticketId]: 0 }));
     }
   };
 
   const getTotalQuantity = () => {
-     if (typeof quantities !== 'object' || quantities === null) return 0;
+    if (typeof quantities !== "object" || quantities === null) return 0;
     return Object.values(quantities).reduce((sum, qty) => sum + qty, 0);
   };
 
   const generateCheckoutLink = () => {
-    if (typeof quantities !== 'object' || quantities === null) return '#';
+    if (typeof quantities !== "object" || quantities === null) return "#";
     const selectedTickets = Object.entries(quantities)
       .filter(([, qty]) => qty > 0) // Only include tickets with quantity > 0
       .map(([id, qty]) => `${id}:${qty}`) // Format: ticketId:qty
-      .join(','); // Join multiple selections with a comma
+      .join(","); // Join multiple selections with a comma
 
     // If no tickets are selected, return '#' to prevent navigation
-    if (!selectedTickets) return '#';
+    if (!selectedTickets) return "#";
 
     // Construct the URL with eventId, eventTitle, and the encoded tickets string
     return `/checkout?eventId=${eventId}&eventTitle=${encodeURIComponent(eventTitle)}&tickets=${encodeURIComponent(selectedTickets)}`;
@@ -67,34 +71,51 @@ export default function TicketSelection({ tickets, eventId, eventTitle }: Ticket
     <>
       {/* The old static table section is removed from page.tsx */}
       {/* This component replaces it */}
-      <div className="bg-gray-50 p-4 rounded-lg mb-6">
-        <h3 className="text-lg font-semibold mb-4">Select Tickets</h3>
+      <div className="mb-6 rounded-lg bg-gray-50 p-4">
+        <h3 className="mb-4 text-lg font-semibold">Select Tickets</h3>
 
         {tickets && tickets.length > 0 ? (
           <div className="space-y-4">
             {tickets.map((ticket) => (
-              <div key={ticket.id} className="flex items-center justify-between p-3 bg-white rounded shadow-sm flex-wrap gap-2">
-                <div className="flex-grow min-w-[150px]"> {/* Added min-width */}
-                  <div className="text-sm font-medium text-gray-900">{ticket.seatType}</div>
+              <div
+                key={ticket.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded bg-white p-3 shadow-sm"
+              >
+                <div className="min-w-[150px] flex-grow">
+                  {" "}
+                  {/* Added min-width */}
+                  <div className="text-sm font-medium text-gray-900">
+                    {ticket.seatType}
+                  </div>
                   {ticket.description && (
-                    <div className="text-xs text-gray-500 mt-1">{ticket.description}</div>
+                    <div className="mt-1 text-xs text-gray-500">
+                      {ticket.description}
+                    </div>
                   )}
-                  <div className="text-sm text-gray-700 font-semibold mt-1">{ticket.price} THB</div>
+                  <div className="mt-1 text-sm font-semibold text-gray-700">
+                    {ticket.price} THB
+                  </div>
                 </div>
                 <div className="flex items-center">
-                   <label htmlFor={`quantity-${ticket.id}`} className="sr-only">Quantity for {ticket.seatType}</label>
-                   <input
-                     type="number"
-                     id={`quantity-${ticket.id}`}
-                     name={`quantity-${ticket.id}`}
-                     min="0"
-                     // Use the state value, explicitly converting to string
-                     value={String(quantities[ticket.id] ?? 0)}
-                     onChange={(e) => handleQuantityChange(ticket.id, e.target.value)}
-                     className="w-16 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-2 py-1 border text-center"
-                     aria-describedby={`price-${ticket.id}`}
-                   />
-                   <span id={`price-${ticket.id}`} className="sr-only">{ticket.price} THB</span>
+                  <label htmlFor={`quantity-${ticket.id}`} className="sr-only">
+                    Quantity for {ticket.seatType}
+                  </label>
+                  <input
+                    type="number"
+                    id={`quantity-${ticket.id}`}
+                    name={`quantity-${ticket.id}`}
+                    min="0"
+                    // Use the state value, explicitly converting to string
+                    value={String(quantities[ticket.id] ?? 0)}
+                    onChange={(e) =>
+                      handleQuantityChange(ticket.id, e.target.value)
+                    }
+                    className="w-16 rounded-md border border-gray-300 px-2 py-1 text-center shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    aria-describedby={`price-${ticket.id}`}
+                  />
+                  <span id={`price-${ticket.id}`} className="sr-only">
+                    {ticket.price} THB
+                  </span>
                 </div>
               </div>
             ))}
@@ -109,11 +130,13 @@ export default function TicketSelection({ tickets, eventId, eventTitle }: Ticket
           href={generateCheckoutLink()}
           aria-disabled={totalQuantity === 0}
           // Prevent click event propagation if disabled
-          onClick={(e) => { if (totalQuantity === 0) e.preventDefault(); }}
-          className={`w-full py-3 text-white font-medium rounded-lg inline-block text-center transition-colors duration-150 ${
+          onClick={(e) => {
+            if (totalQuantity === 0) e.preventDefault();
+          }}
+          className={`inline-block w-full rounded-lg py-3 text-center font-medium text-white transition-colors duration-150 ${
             totalQuantity > 0
-              ? 'bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-300 cursor-pointer'
-              : 'bg-gray-400 cursor-not-allowed' // Style for disabled state
+              ? "cursor-pointer bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-300"
+              : "cursor-not-allowed bg-gray-400" // Style for disabled state
           }`}
         >
           Buy Tickets ({totalQuantity} selected)

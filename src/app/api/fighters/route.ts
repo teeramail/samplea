@@ -15,45 +15,48 @@ export async function GET() {
     const allFighters = await db.query.fighters.findMany({
       orderBy: (fighters, { asc }) => [asc(fighters.name)],
     });
-    
+
     return NextResponse.json(allFighters);
   } catch (error) {
     console.error("Error getting fighters:", error);
     return NextResponse.json(
       { error: "Failed to get fighters" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json() as z.infer<typeof fighterSchema>;
-    
+    const body = (await request.json()) as z.infer<typeof fighterSchema>;
+
     const validation = fighterSchema.safeParse(body);
     if (!validation.success) {
       return NextResponse.json(
-        { error: 'Invalid fighter data', details: validation.error.errors },
-        { status: 400 }
+        { error: "Invalid fighter data", details: validation.error.errors },
+        { status: 400 },
       );
     }
-    
-    const newFighter = await db.insert(fighters).values({
-      id: uuidv4(),
-      name: body.name,
-      nickname: body.nickname ?? null,
-      weightClass: body.weightClass ?? null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }).returning();
-    
+
+    const newFighter = await db
+      .insert(fighters)
+      .values({
+        id: uuidv4(),
+        name: body.name,
+        nickname: body.nickname ?? null,
+        weightClass: body.weightClass ?? null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+
     return NextResponse.json(newFighter[0], { status: 201 });
   } catch (error) {
     console.error("Error creating fighter:", error);
-    
+
     return NextResponse.json(
       { error: "Failed to create fighter" },
-      { status: 500 }
+      { status: 500 },
     );
   }
-} 
+}

@@ -23,37 +23,37 @@ export const regionRouter = createTRPCRouter({
       try {
         // Get all regions first (we'll handle pagination in memory for simplicity)
         let allRegions = await ctx.db.select().from(regions);
-        
+
         // Apply search filter if query exists
-        if (query && query.trim() !== '') {
-          allRegions = allRegions.filter(region => 
-            region.name.toLowerCase().includes(query.toLowerCase())
+        if (query && query.trim() !== "") {
+          allRegions = allRegions.filter((region) =>
+            region.name.toLowerCase().includes(query.toLowerCase()),
           );
         }
-        
+
         // Get total count
         const totalCount = allRegions.length;
-        
+
         // Sort the regions
         allRegions.sort((a, b) => {
           const fieldA = a[sortField as keyof typeof a];
           const fieldB = b[sortField as keyof typeof b];
-          
-          if (typeof fieldA === 'string' && typeof fieldB === 'string') {
-            return sortDirection === 'asc' 
+
+          if (typeof fieldA === "string" && typeof fieldB === "string") {
+            return sortDirection === "asc"
               ? fieldA.localeCompare(fieldB)
               : fieldB.localeCompare(fieldA);
           }
-          
+
           // Default comparison for non-string fields
-          const numA = typeof fieldA === 'number' ? fieldA : 0;
-          const numB = typeof fieldB === 'number' ? fieldB : 0;
-          return sortDirection === 'asc' ? numA - numB : numB - numA;
+          const numA = typeof fieldA === "number" ? fieldA : 0;
+          const numB = typeof fieldB === "number" ? fieldB : 0;
+          return sortDirection === "asc" ? numA - numB : numB - numA;
         });
-        
+
         // Apply pagination
         const items = allRegions.slice(offset, offset + limit);
-        
+
         return {
           items,
           meta: {
@@ -64,7 +64,7 @@ export const regionRouter = createTRPCRouter({
           },
         };
       } catch (error) {
-        console.error('Error in region.list:', error);
+        console.error("Error in region.list:", error);
         throw error;
       }
     }),
@@ -80,7 +80,7 @@ export const regionRouter = createTRPCRouter({
 
         return results[0] ?? null;
       } catch (error) {
-        console.error('Error in region.getById:', error);
+        console.error("Error in region.getById:", error);
         throw error;
       }
     }),
@@ -100,8 +100,9 @@ export const regionRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       try {
         // Generate a slug if not provided
-        const slug = input.slug ?? input.name.toLowerCase().replace(/\s+/g, '-');
-        
+        const slug =
+          input.slug ?? input.name.toLowerCase().replace(/\s+/g, "-");
+
         const newRegion = {
           id: createId(),
           name: input.name,
@@ -112,11 +113,14 @@ export const regionRouter = createTRPCRouter({
           metaDescription: input.metaDescription,
           keywords: input.keywords ?? [],
         };
-        
-        const result = await ctx.db.insert(regions).values(newRegion).returning();
+
+        const result = await ctx.db
+          .insert(regions)
+          .values(newRegion)
+          .returning();
         return result[0];
       } catch (error) {
-        console.error('Error in region.create:', error);
+        console.error("Error in region.create:", error);
         throw error;
       }
     }),
@@ -138,7 +142,7 @@ export const regionRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       try {
         const { id, ...data } = input;
-        
+
         const result = await ctx.db
           .update(regions)
           .set(data)
@@ -147,7 +151,7 @@ export const regionRouter = createTRPCRouter({
 
         return result[0];
       } catch (error) {
-        console.error('Error in region.update:', error);
+        console.error("Error in region.update:", error);
         throw error;
       }
     }),
@@ -159,7 +163,7 @@ export const regionRouter = createTRPCRouter({
         await ctx.db.delete(regions).where(eq(regions.id, input.id));
         return { success: true };
       } catch (error) {
-        console.error('Error in region.delete:', error);
+        console.error("Error in region.delete:", error);
         throw error;
       }
     }),

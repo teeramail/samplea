@@ -17,20 +17,24 @@ const ticketTypeSchema = z.object({
 // Define schema for event update
 const updateEventSchema = z.object({
   title: z.string().min(2, "Title must be at least 2 characters long"),
-  description: z.string().min(5, "Description must be at least 5 characters long"),
+  description: z
+    .string()
+    .min(5, "Description must be at least 5 characters long"),
   date: z.string().datetime(),
   startTime: z.string().datetime(),
   endTime: z.string().datetime(),
   imageUrl: z.string().optional().nullable(),
   venueId: z.string().min(1, "Please select a venue"),
   regionId: z.string().min(1, "Please select a region"),
-  ticketTypes: z.array(ticketTypeSchema).min(1, "At least one ticket type is required"),
+  ticketTypes: z
+    .array(ticketTypeSchema)
+    .min(1, "At least one ticket type is required"),
 });
 
 // GET event by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     // Using the asynchronous param pattern required by Next.js 15
@@ -50,10 +54,7 @@ export async function GET(
 
     if (!event) {
       console.log(`Event with ID ${id} not found`);
-      return NextResponse.json(
-        { error: "Event not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
     return NextResponse.json(event); // Return the event object directly
@@ -61,7 +62,7 @@ export async function GET(
     console.error("Error fetching event:", error);
     return NextResponse.json(
       { error: "Failed to fetch event", details: (error as Error).message },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -69,14 +70,14 @@ export async function GET(
 // UPDATE event by ID
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     // Using the asynchronous param pattern required by Next.js 15
     const { id } = await params;
-    
+
     console.log(`Updating event with ID: ${id}`);
-    
+
     // Check if event exists
     const existingEvent = await db.query.events.findFirst({
       where: eq(events.id, id),
@@ -87,48 +88,52 @@ export async function PATCH(
 
     if (!existingEvent) {
       console.log(`Event with ID ${id} not found`);
-      return NextResponse.json(
-        { error: "Event not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
     // Get the request body and validate it
-    const body = await request.json() as z.infer<typeof updateEventSchema>;
-    
+    const body = (await request.json()) as z.infer<typeof updateEventSchema>;
+
     // Validate the request body
     const validation = updateEventSchema.safeParse(body);
     if (!validation.success) {
       return NextResponse.json(
         { error: "Invalid request body", details: validation.error.errors },
-        { status: 400 }
+        { status: 400 },
       );
     }
-    
+
     // Begin a transaction
     await db.transaction(async (tx) => {
       // Update the event
       const now = new Date();
-      
-      await tx.update(events).set({
-        title: body.title,
-        description: body.description,
-        date: new Date(body.date),
-        startTime: new Date(body.startTime),
-        endTime: new Date(body.endTime),
-        imageUrl: body.imageUrl,
-        venueId: body.venueId,
-        regionId: body.regionId,
-        usesDefaultPoster: !body.imageUrl, // Set to true if no image URL is provided
-        updatedAt: now,
-      }).where(eq(events.id, id));
-      
+
+      await tx
+        .update(events)
+        .set({
+          title: body.title,
+          description: body.description,
+          date: new Date(body.date),
+          startTime: new Date(body.startTime),
+          endTime: new Date(body.endTime),
+          imageUrl: body.imageUrl,
+          venueId: body.venueId,
+          regionId: body.regionId,
+          usesDefaultPoster: !body.imageUrl, // Set to true if no image URL is provided
+          updatedAt: now,
+        })
+        .where(eq(events.id, id));
+
       // Process ticket types - convert from event.eventTickets to existing ticket IDs
-      const existingTicketIds = new Set(existingEvent.eventTickets.map(t => t.id));
-      const updatedTicketIds = new Set(body.ticketTypes.filter(t => t.id).map(t => t.id!));
-      
+      const existingTicketIds = new Set(
+        existingEvent.eventTickets.map((t) => t.id),
+      );
+      const updatedTicketIds = new Set(
+        body.ticketTypes.filter((t) => t.id).map((t) => t.id!),
+      );
+
       console.log(`Processing ${body.ticketTypes.length} ticket types`);
-      
+
       // Delete tickets that are no longer present
       for (const ticketId of existingTicketIds) {
         if (!updatedTicketIds.has(ticketId)) {
@@ -136,19 +141,22 @@ export async function PATCH(
           await tx.delete(eventTickets).where(eq(eventTickets.id, ticketId));
         }
       }
-      
+
       // Update or create ticket types
       for (const ticketType of body.ticketTypes) {
         if (ticketType.id && existingTicketIds.has(ticketType.id)) {
           // Update existing ticket type
           console.log(`Updating ticket: ${ticketType.id}`);
-          await tx.update(eventTickets).set({
-            seatType: ticketType.seatType,
-            price: ticketType.price,
-            capacity: ticketType.capacity,
-            description: ticketType.description,
-            updatedAt: now,
-          }).where(eq(eventTickets.id, ticketType.id));
+          await tx
+            .update(eventTickets)
+            .set({
+              seatType: ticketType.seatType,
+              price: ticketType.price,
+              capacity: ticketType.capacity,
+              description: ticketType.description,
+              updatedAt: now,
+            })
+            .where(eq(eventTickets.id, ticketType.id));
         } else {
           // Create new ticket type
           const newTicketId = uuidv4();
@@ -167,9 +175,9 @@ export async function PATCH(
         }
       }
     });
-    
+
     console.log(`Event ${id} updated successfully`);
-    
+
     // Get the updated event with related data
     const updatedEvent = await db.query.events.findFirst({
       where: eq(events.id, id),
@@ -179,28 +187,28 @@ export async function PATCH(
         eventTickets: true, // Corrected relation name
       },
     });
-    
+
     if (!updatedEvent) {
       return NextResponse.json(
         { error: "Failed to retrieve updated event" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     return NextResponse.json(updatedEvent); // Return the updated event directly
   } catch (error) {
     console.error("Error updating event:", error);
-    
+
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: "Validation error", details: error.errors },
-        { status: 400 }
+        { status: 400 },
       );
     }
-    
+
     return NextResponse.json(
       { error: "Failed to update event", details: (error as Error).message },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -208,14 +216,14 @@ export async function PATCH(
 // DELETE event by ID
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     // Using the asynchronous param pattern required by Next.js 15
     const { id } = await params;
-    
+
     console.log(`Deleting event with ID: ${id}`);
-    
+
     // Check if event exists
     const existingEvent = await db.query.events.findFirst({
       where: eq(events.id, id),
@@ -223,10 +231,7 @@ export async function DELETE(
 
     if (!existingEvent) {
       console.log(`Event with ID ${id} not found`);
-      return NextResponse.json(
-        { error: "Event not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
     // Delete the event and related ticket types in a transaction
@@ -234,20 +239,20 @@ export async function DELETE(
       // Delete all ticket types for this event
       console.log(`Deleting all tickets for event: ${id}`);
       await tx.delete(eventTickets).where(eq(eventTickets.eventId, id));
-      
+
       // Delete the event
       console.log(`Deleting event: ${id}`);
       await tx.delete(events).where(eq(events.id, id));
     });
-    
+
     console.log(`Event ${id} deleted successfully`);
-    
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting event:", error);
     return NextResponse.json(
       { error: "Failed to delete event", details: (error as Error).message },
-      { status: 500 }
+      { status: 500 },
     );
   }
-} 
+}

@@ -13,73 +13,98 @@ export function Navbar() {
   };
 
   return (
-    <nav className="bg-gradient-to-r from-purple-900 to-purple-800 border-b border-purple-900">
-      <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
+    <nav className="border-b border-purple-900 bg-gradient-to-r from-purple-900 to-purple-800">
+      <div className="mx-auto flex max-w-screen-xl flex-wrap items-center justify-between p-4">
         <Link href="/" className="flex items-center space-x-3">
-          <span className="self-center text-2xl font-semibold whitespace-nowrap text-white">
-            <span className="text-red-400">Thai</span>Boxing<span className="text-red-400">Hub</span>
+          <span className="self-center whitespace-nowrap text-2xl font-semibold text-white">
+            <span className="text-red-400">Thai</span>Boxing
+            <span className="text-red-400">Hub</span>
           </span>
         </Link>
-        
-        <button 
-          type="button" 
-          className="inline-flex items-center p-2 w-10 h-10 justify-center text-sm text-gray-200 rounded-lg md:hidden hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-300" 
+
+        <button
+          type="button"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-lg p-2 text-sm text-gray-200 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-300 md:hidden"
           onClick={() => setIsMenuOpen(!isMenuOpen)}
         >
           <span className="sr-only">Open main menu</span>
-          <svg className="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 17 14">
-            <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M1 1h15M1 7h15M1 13h15"/>
+          <svg
+            className="h-5 w-5"
+            aria-hidden="true"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 17 14"
+          >
+            <path
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M1 1h15M1 7h15M1 13h15"
+            />
           </svg>
         </button>
-        
-        <div className={`${isMenuOpen ? 'block' : 'hidden'} w-full md:block md:w-auto`}>
-          <ul className="flex flex-col font-medium p-4 md:p-0 mt-4 border border-purple-700 rounded-lg bg-purple-800 md:space-x-8 md:flex-row md:mt-0 md:border-0 md:bg-transparent">
+
+        <div
+          className={`${isMenuOpen ? "block" : "hidden"} w-full md:block md:w-auto`}
+        >
+          <ul className="mt-4 flex flex-col rounded-lg border border-purple-700 bg-purple-800 p-4 font-medium md:mt-0 md:flex-row md:space-x-8 md:border-0 md:bg-transparent md:p-0">
             <li>
-              <Link 
-                href="/" 
-                className={`block py-2 px-3 rounded md:p-0 ${isActive('/') 
-                  ? 'text-white bg-purple-700 md:bg-transparent md:text-red-400' 
-                  : 'text-white hover:bg-purple-700 md:hover:bg-transparent md:hover:text-red-300'}`}
+              <Link
+                href="/"
+                className={`block rounded px-3 py-2 md:p-0 ${
+                  isActive("/")
+                    ? "bg-purple-700 text-white md:bg-transparent md:text-red-400"
+                    : "text-white hover:bg-purple-700 md:hover:bg-transparent md:hover:text-red-300"
+                }`}
               >
                 Home
               </Link>
             </li>
             <li>
-              <Link 
-                href="/events" 
-                className={`block py-2 px-3 rounded md:p-0 ${isActive('/events') 
-                  ? 'text-white bg-purple-700 md:bg-transparent md:text-red-400' 
-                  : 'text-white hover:bg-purple-700 md:hover:bg-transparent md:hover:text-red-300'}`}
+              <Link
+                href="/events"
+                className={`block rounded px-3 py-2 md:p-0 ${
+                  isActive("/events")
+                    ? "bg-purple-700 text-white md:bg-transparent md:text-red-400"
+                    : "text-white hover:bg-purple-700 md:hover:bg-transparent md:hover:text-red-300"
+                }`}
               >
                 Events
               </Link>
             </li>
             <li>
-              <Link 
-                href="/regions" 
-                className={`block py-2 px-3 rounded md:p-0 ${isActive('/regions') 
-                  ? 'text-white bg-purple-700 md:bg-transparent md:text-red-400' 
-                  : 'text-white hover:bg-purple-700 md:hover:bg-transparent md:hover:text-red-300'}`}
+              <Link
+                href="/regions"
+                className={`block rounded px-3 py-2 md:p-0 ${
+                  isActive("/regions")
+                    ? "bg-purple-700 text-white md:bg-transparent md:text-red-400"
+                    : "text-white hover:bg-purple-700 md:hover:bg-transparent md:hover:text-red-300"
+                }`}
               >
                 Regions
               </Link>
             </li>
             <li>
-              <Link 
-                href="/fighters" 
-                className={`block py-2 px-3 rounded md:p-0 ${isActive('/fighters') 
-                  ? 'text-white bg-purple-700 md:bg-transparent md:text-red-400' 
-                  : 'text-white hover:bg-purple-700 md:hover:bg-transparent md:hover:text-red-300'}`}
+              <Link
+                href="/fighters"
+                className={`block rounded px-3 py-2 md:p-0 ${
+                  isActive("/fighters")
+                    ? "bg-purple-700 text-white md:bg-transparent md:text-red-400"
+                    : "text-white hover:bg-purple-700 md:hover:bg-transparent md:hover:text-red-300"
+                }`}
               >
                 Fighters
               </Link>
             </li>
             <li>
-              <Link 
-                href="/venues" 
-                className={`block py-2 px-3 rounded md:p-0 ${isActive('/venues') 
-                  ? 'text-white bg-purple-700 md:bg-transparent md:text-red-400' 
-                  : 'text-white hover:bg-purple-700 md:hover:bg-transparent md:hover:text-red-300'}`}
+              <Link
+                href="/venues"
+                className={`block rounded px-3 py-2 md:p-0 ${
+                  isActive("/venues")
+                    ? "bg-purple-700 text-white md:bg-transparent md:text-red-400"
+                    : "text-white hover:bg-purple-700 md:hover:bg-transparent md:hover:text-red-300"
+                }`}
               >
                 Venues
               </Link>
@@ -89,4 +114,4 @@ export function Navbar() {
       </div>
     </nav>
   );
-} 
+}

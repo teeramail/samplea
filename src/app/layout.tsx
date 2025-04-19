@@ -22,15 +22,13 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={GeistSans.variable} suppressHydrationWarning>
-      <body className="flex flex-col min-h-screen">
+      <body className="flex min-h-screen flex-col">
         <TRPCReactProvider>
           <ThemeProvider>
             <ClientLayout>
               <Navbar />
               <RegionsNav />
-              <div className="flex-grow">
-                {children}
-              </div>
+              <div className="flex-grow">{children}</div>
               <Footer />
               <ChatWidgetWrapper />
             </ClientLayout>

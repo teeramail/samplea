@@ -14,10 +14,10 @@ const globalForDb = globalThis as unknown as {
 
 // Configure connection pooling options to prevent "too many clients" errors
 const connectionOptions = {
-  max: 10,                 // Max 10 connections
-  idle_timeout: 20,        // Close idle connections after 20 seconds
-  connect_timeout: 10,     // Connection timeout after 10 seconds
-  prepare: false,          // Disable prepared statements for better connection reuse
+  max: 10, // Max 10 connections
+  idle_timeout: 20, // Close idle connections after 20 seconds
+  connect_timeout: 10, // Connection timeout after 10 seconds
+  prepare: false, // Disable prepared statements for better connection reuse
 };
 
 // Use cached connection or create a new one with pooling

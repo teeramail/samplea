@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import dynamic from 'next/dynamic';
+import dynamic from "next/dynamic";
 
 // Import ChatWidget with dynamic loading to prevent SSR issues
-const ChatWidget = dynamic(() => import('./ChatWidget'), {
+const ChatWidget = dynamic(() => import("./ChatWidget"), {
   ssr: false,
 });
 

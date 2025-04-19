@@ -1,7 +1,12 @@
 import { createId } from "@paralleldrive/cuid2";
 import { NextResponse } from "next/server";
 import { db } from "~/server/db";
-import { regions, venueTypes, venues, venueToVenueTypes } from "~/server/db/schema";
+import {
+  regions,
+  venueTypes,
+  venues,
+  venueToVenueTypes,
+} from "~/server/db/schema";
 
 // Common seeding logic used by both GET and POST handlers
 async function seedVenues() {
@@ -11,19 +16,23 @@ async function seedVenues() {
     // First, check if we already have venue types to avoid duplicates
     const existingTypes = await db.query.venueTypes.findMany();
     if (existingTypes.length > 0) {
-      console.log(`Found ${existingTypes.length} existing venue types. Skipping venue type creation.`);
+      console.log(
+        `Found ${existingTypes.length} existing venue types. Skipping venue type creation.`,
+      );
     } else {
       // Create venue types
       const venueTypeData = [
         {
           id: "vtype_muaythai",
           name: "Muay Thai",
-          description: "Traditional Thai boxing gyms offering authentic Muay Thai training",
+          description:
+            "Traditional Thai boxing gyms offering authentic Muay Thai training",
         },
         {
           id: "vtype_kickboxing",
           name: "Kickboxing",
-          description: "Gyms specializing in kickboxing techniques and training",
+          description:
+            "Gyms specializing in kickboxing techniques and training",
         },
         {
           id: "vtype_mma",
@@ -54,7 +63,9 @@ async function seedVenues() {
 
     if (existingRegions.length > 0 && existingRegions[0]?.id) {
       defaultRegionId = existingRegions[0].id;
-      console.log(`Using existing region: ${existingRegions[0].name ?? 'Unknown'}`);
+      console.log(
+        `Using existing region: ${existingRegions[0].name ?? "Unknown"}`,
+      );
     } else {
       // Create a default region
       const bangkokRegion = {
@@ -74,7 +85,9 @@ async function seedVenues() {
     // Check if we already have venues to avoid duplicates
     const existingVenues = await db.query.venues.findMany();
     if (existingVenues.length > 0) {
-      console.log(`Found ${existingVenues.length} existing venues. Skipping venue creation.`);
+      console.log(
+        `Found ${existingVenues.length} existing venues. Skipping venue creation.`,
+      );
     } else {
       // Sample venue data
       const venueData = [
@@ -84,7 +97,8 @@ async function seedVenues() {
           address: "123 Sukhumvit Rd, Bangkok",
           regionId: defaultRegionId,
           capacity: 100,
-          thumbnailUrl: "https://images.unsplash.com/photo-1517438476312-10d79c077509?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NXx8bXVheSUyMHRoYWl8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&w=500&q=60",
+          thumbnailUrl:
+            "https://images.unsplash.com/photo-1517438476312-10d79c077509?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NXx8bXVheSUyMHRoYWl8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&w=500&q=60",
           isFeatured: true,
           types: ["vtype_muaythai", "vtype_kickboxing"],
           primaryType: "vtype_muaythai",
@@ -95,7 +109,8 @@ async function seedVenues() {
           address: "456 Phuket Rd, Phuket",
           regionId: defaultRegionId,
           capacity: 200,
-          thumbnailUrl: "https://images.unsplash.com/photo-1562771379-eafdca7a02f8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8bXVheSUyMHRoYWl8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&w=500&q=60",
+          thumbnailUrl:
+            "https://images.unsplash.com/photo-1562771379-eafdca7a02f8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8bXVheSUyMHRoYWl8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&w=500&q=60",
           isFeatured: true,
           types: ["vtype_muaythai"],
           primaryType: "vtype_muaythai",
@@ -106,7 +121,8 @@ async function seedVenues() {
           address: "789 Silom Rd, Bangkok",
           regionId: defaultRegionId,
           capacity: 150,
-          thumbnailUrl: "https://images.unsplash.com/photo-1599058917765-a780eda07a3e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8bXVheSUyMHRoYWl8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&w=500&q=60",
+          thumbnailUrl:
+            "https://images.unsplash.com/photo-1599058917765-a780eda07a3e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8bXVheSUyMHRoYWl8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&w=500&q=60",
           isFeatured: true,
           types: ["vtype_mma", "vtype_muaythai"],
           primaryType: "vtype_mma",
@@ -117,7 +133,8 @@ async function seedVenues() {
           address: "101 Ratchada Rd, Bangkok",
           regionId: defaultRegionId,
           capacity: 80,
-          thumbnailUrl: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8a2lja2JveGluZ3xlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&w=500&q=60",
+          thumbnailUrl:
+            "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8a2lja2JveGluZ3xlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&w=500&q=60",
           isFeatured: true,
           types: ["vtype_kickboxing"],
           primaryType: "vtype_kickboxing",
@@ -128,7 +145,8 @@ async function seedVenues() {
           address: "202 Thonglor Rd, Bangkok",
           regionId: defaultRegionId,
           capacity: 60,
-          thumbnailUrl: "https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8Ym94aW5nfGVufDB8fDB8fHww&auto=format&fit=crop&w=500&q=60",
+          thumbnailUrl:
+            "https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8Ym94aW5nfGVufDB8fDB8fHww&auto=format&fit=crop&w=500&q=60",
           isFeatured: true,
           types: ["vtype_boxing"],
           primaryType: "vtype_boxing",
@@ -139,7 +157,8 @@ async function seedVenues() {
           address: "303 Asoke Rd, Bangkok",
           regionId: defaultRegionId,
           capacity: 120,
-          thumbnailUrl: "https://images.unsplash.com/photo-1544117519-31a4a39cb2bc?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NXx8dGhhaSUyMGJveGluZ3xlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&w=500&q=60",
+          thumbnailUrl:
+            "https://images.unsplash.com/photo-1544117519-31a4a39cb2bc?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NXx8dGhhaSUyMGJveGluZ3xlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&w=500&q=60",
           isFeatured: true,
           types: ["vtype_muaythai"],
           primaryType: "vtype_muaythai",
@@ -148,8 +167,18 @@ async function seedVenues() {
 
       console.log("Creating venues and venue type associations...");
       for (const venueInfo of venueData) {
-        const { id, name, address, regionId, capacity, thumbnailUrl, isFeatured, types, primaryType } = venueInfo;
-        
+        const {
+          id,
+          name,
+          address,
+          regionId,
+          capacity,
+          thumbnailUrl,
+          isFeatured,
+          types,
+          primaryType,
+        } = venueInfo;
+
         // Insert venue
         await db.insert(venues).values({
           id,
@@ -200,7 +229,7 @@ export async function GET() {
         message: "Failed to seed venues",
         error: error instanceof Error ? error.message : String(error),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -217,7 +246,7 @@ export async function POST() {
         message: "Failed to seed venues",
         error: error instanceof Error ? error.message : String(error),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

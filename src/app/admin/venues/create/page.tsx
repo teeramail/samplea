@@ -19,32 +19,62 @@ const venueSchema = z.object({
     z.string().url("Must be a valid URL"),
     z.string().max(0),
     z.null(),
-    z.undefined()
+    z.undefined(),
   ]),
   remarks: z.string().optional(),
-  socialMediaLinks: z.object({
-    facebook: z.string().url("Must be a valid URL").optional().or(z.literal('')),
-    instagram: z.string().url("Must be a valid URL").optional().or(z.literal('')),
-    tiktok: z.string().url("Must be a valid URL").optional().or(z.literal('')),
-    twitter: z.string().url("Must be a valid URL").optional().or(z.literal('')),
-    youtube: z.string().url("Must be a valid URL").optional().or(z.literal('')),
-  }).optional(),
+  socialMediaLinks: z
+    .object({
+      facebook: z
+        .string()
+        .url("Must be a valid URL")
+        .optional()
+        .or(z.literal("")),
+      instagram: z
+        .string()
+        .url("Must be a valid URL")
+        .optional()
+        .or(z.literal("")),
+      tiktok: z
+        .string()
+        .url("Must be a valid URL")
+        .optional()
+        .or(z.literal("")),
+      twitter: z
+        .string()
+        .url("Must be a valid URL")
+        .optional()
+        .or(z.literal("")),
+      youtube: z
+        .string()
+        .url("Must be a valid URL")
+        .optional()
+        .or(z.literal("")),
+    })
+    .optional(),
   venueTypeIds: z.array(z.string()).min(1, "Select at least one venue type"),
   primaryVenueTypeId: z.string().optional(),
 });
 
-type VenueFormData = Omit<z.infer<typeof venueSchema>, 'thumbnailUrl' | 'imageUrls'>;
+type VenueFormData = Omit<
+  z.infer<typeof venueSchema>,
+  "thumbnailUrl" | "imageUrls"
+>;
 
 type UploadResponse = {
   urls: string[];
 };
 
-async function uploadFile(file: File, isThumbnail: boolean): Promise<string | null> {
+async function uploadFile(
+  file: File,
+  isThumbnail: boolean,
+): Promise<string | null> {
   const formData = new FormData();
   formData.append("image", file);
 
   try {
-    const endpoint = isThumbnail ? "/api/upload-thumbnail" : "/api/upload-venue-images";
+    const endpoint = isThumbnail
+      ? "/api/upload-thumbnail"
+      : "/api/upload-venue-images";
     const response = await fetch(endpoint, {
       method: "POST",
       body: formData,
@@ -60,7 +90,10 @@ async function uploadFile(file: File, isThumbnail: boolean): Promise<string | nu
     if (result.urls && Array.isArray(result.urls) && result.urls.length > 0) {
       return result.urls[0] ?? null;
     } else {
-      console.error("Upload API response missing urls or urls array is empty:", result);
+      console.error(
+        "Upload API response missing urls or urls array is empty:",
+        result,
+      );
       return null;
     }
   } catch (error) {
@@ -74,7 +107,9 @@ export default function CreateVenuePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [regions, setRegions] = useState<{ id: string; name: string }[]>([]);
-  const [venueTypes, setVenueTypes] = useState<{ id: string; name: string; description: string }[]>([]);
+  const [venueTypes, setVenueTypes] = useState<
+    { id: string; name: string; description: string }[]
+  >([]);
   const [isLoadingRegions, setIsLoadingRegions] = useState(true);
   const [isLoadingVenueTypes, setIsLoadingVenueTypes] = useState(true);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
@@ -83,7 +118,7 @@ export default function CreateVenuePage() {
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [selectedVenueTypes, setSelectedVenueTypes] = useState<string[]>([]);
   const [primaryVenueType, setPrimaryVenueType] = useState<string>("");
-  
+
   const {
     register,
     handleSubmit,
@@ -130,7 +165,7 @@ export default function CreateVenuePage() {
         setIsLoadingRegions(false);
       }
     };
-    
+
     const fetchVenueTypes = async () => {
       setIsLoadingVenueTypes(true);
       try {
@@ -138,7 +173,11 @@ export default function CreateVenuePage() {
         if (!response.ok) {
           throw new Error("Failed to fetch venue types");
         }
-        const data = (await response.json()) as { id: string; name: string; description: string }[];
+        const data = (await response.json()) as {
+          id: string;
+          name: string;
+          description: string;
+        }[];
         setVenueTypes(data);
       } catch (error) {
         console.error("Error fetching venue types:", error);
@@ -147,20 +186,20 @@ export default function CreateVenuePage() {
         setIsLoadingVenueTypes(false);
       }
     };
-    
+
     void fetchRegions();
     void fetchVenueTypes();
   }, []);
-  
+
   // Handle venue type selection
   const handleVenueTypeChange = (typeId: string) => {
-    setSelectedVenueTypes(prev => {
+    setSelectedVenueTypes((prev) => {
       if (prev.includes(typeId)) {
         // If removing the primary type, also clear the primary type
         if (primaryVenueType === typeId) {
           setPrimaryVenueType("");
         }
-        return prev.filter(id => id !== typeId);
+        return prev.filter((id) => id !== typeId);
       } else {
         // If this is the first type selected, make it primary
         if (prev.length === 0) {
@@ -170,7 +209,7 @@ export default function CreateVenuePage() {
       }
     });
   };
-  
+
   // Update form values when venue types change
   useEffect(() => {
     setValue("venueTypeIds", selectedVenueTypes);
@@ -195,9 +234,9 @@ export default function CreateVenuePage() {
   const handleImagesChange = (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files ? Array.from(e.target.files) : [];
     setImageFiles(files);
-    
+
     const newPreviews: string[] = [];
-    files.forEach(file => {
+    files.forEach((file) => {
       const reader = new FileReader();
       reader.onloadend = () => {
         newPreviews.push(reader.result as string);
@@ -215,7 +254,7 @@ export default function CreateVenuePage() {
   const onSubmit = async (data: VenueFormData) => {
     setIsLoading(true);
     setError("");
-    
+
     let uploadedThumbnailUrl: string | null = null;
     const uploadedImageUrls: string[] = [];
 
@@ -223,7 +262,9 @@ export default function CreateVenuePage() {
       if (thumbnailFile) {
         uploadedThumbnailUrl = await uploadFile(thumbnailFile, true);
         if (!uploadedThumbnailUrl) {
-          throw new Error("Failed to upload thumbnail image. Please try again.");
+          throw new Error(
+            "Failed to upload thumbnail image. Please try again.",
+          );
         }
       }
 
@@ -244,31 +285,41 @@ export default function CreateVenuePage() {
         };
         const urls = await uploadVenueImages(imageFiles);
         if (urls.length !== imageFiles.length) {
-          throw new Error("Failed to upload one or more venue images. Please try again.");
+          throw new Error(
+            "Failed to upload one or more venue images. Please try again.",
+          );
         }
         uploadedImageUrls.push(...urls);
       }
       // Filter out empty social media links
-      const socialMediaLinks = data.socialMediaLinks ? 
-        Object.fromEntries(
-          Object.entries(data.socialMediaLinks)
-            .filter(([_, value]) => value && value.trim() !== '')
-        ) : {};
+      const socialMediaLinks = data.socialMediaLinks
+        ? Object.fromEntries(
+            Object.entries(data.socialMediaLinks).filter(
+              ([_, value]) => value && value.trim() !== "",
+            ),
+          )
+        : {};
 
       const venueData = {
         ...data,
-        latitude: data.latitude === undefined || isNaN(data.latitude) ? null : data.latitude,
-        longitude: data.longitude === undefined || isNaN(data.longitude) ? null : data.longitude,
+        latitude:
+          data.latitude === undefined || isNaN(data.latitude)
+            ? null
+            : data.latitude,
+        longitude:
+          data.longitude === undefined || isNaN(data.longitude)
+            ? null
+            : data.longitude,
         thumbnailUrl: uploadedThumbnailUrl,
         imageUrls: uploadedImageUrls,
         socialMediaLinks,
         // Include venue type information
-        venueTypes: data.venueTypeIds.map(typeId => ({
+        venueTypes: data.venueTypeIds.map((typeId) => ({
           venueTypeId: typeId,
-          isPrimary: typeId === data.primaryVenueTypeId
-        }))
+          isPrimary: typeId === data.primaryVenueTypeId,
+        })),
       };
-      
+
       console.log("Submitting final venue data:", venueData);
 
       const response = await fetch("/api/venues", {
@@ -278,16 +329,22 @@ export default function CreateVenuePage() {
         },
         body: JSON.stringify(venueData),
       });
-      
+
       if (!response.ok) {
-        const errorData = (await response.json().catch(() => ({}))) as { error?: string };
+        const errorData = (await response.json().catch(() => ({}))) as {
+          error?: string;
+        };
         throw new Error(errorData.error ?? "Failed to create venue");
       }
-      
+
       router.push("/admin/venues");
     } catch (error) {
       console.error("Error creating venue:", error);
-      setError(error instanceof Error ? error.message : "Failed to create venue. Please check uploads and try again.");
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to create venue. Please check uploads and try again.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -298,18 +355,24 @@ export default function CreateVenuePage() {
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md">
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Add New Venue</h1>
-      
+    <div className="rounded-lg bg-white p-6 shadow-md">
+      <h1 className="mb-6 text-2xl font-bold text-gray-800">Add New Venue</h1>
+
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
+        <div
+          className="mb-4 rounded border border-red-400 bg-red-100 px-4 py-3 text-red-700"
+          role="alert"
+        >
           <span className="block sm:inline">{error}</span>
         </div>
       )}
-      
+
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="name"
+            className="block text-sm font-medium text-gray-700"
+          >
             Venue Name
           </label>
           <input
@@ -323,10 +386,13 @@ export default function CreateVenuePage() {
             <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
           )}
         </div>
-        
+
         <div>
-          <div className="flex justify-between items-center">
-            <label htmlFor="regionId" className="block text-sm font-medium text-gray-700">
+          <div className="flex items-center justify-between">
+            <label
+              htmlFor="regionId"
+              className="block text-sm font-medium text-gray-700"
+            >
               Region
             </label>
             <button
@@ -354,12 +420,17 @@ export default function CreateVenuePage() {
             <p className="mt-1 text-sm text-gray-500">Loading regions...</p>
           )}
           {errors.regionId && (
-            <p className="mt-1 text-sm text-red-600">{errors.regionId.message}</p>
+            <p className="mt-1 text-sm text-red-600">
+              {errors.regionId.message}
+            </p>
           )}
         </div>
-        
+
         <div>
-          <label htmlFor="address" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="address"
+            className="block text-sm font-medium text-gray-700"
+          >
             Address
           </label>
           <textarea
@@ -370,13 +441,18 @@ export default function CreateVenuePage() {
             placeholder="Full address of the venue"
           />
           {errors.address && (
-            <p className="mt-1 text-sm text-red-600">{errors.address.message}</p>
+            <p className="mt-1 text-sm text-red-600">
+              {errors.address.message}
+            </p>
           )}
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <div>
-            <label htmlFor="latitude" className="block text-sm font-medium text-gray-700">
+            <label
+              htmlFor="latitude"
+              className="block text-sm font-medium text-gray-700"
+            >
               Latitude (Optional)
             </label>
             <input
@@ -388,11 +464,16 @@ export default function CreateVenuePage() {
               placeholder="e.g., 13.7563"
             />
             {errors.latitude && (
-              <p className="mt-1 text-sm text-red-600">{errors.latitude.message}</p>
+              <p className="mt-1 text-sm text-red-600">
+                {errors.latitude.message}
+              </p>
             )}
           </div>
           <div>
-            <label htmlFor="longitude" className="block text-sm font-medium text-gray-700">
+            <label
+              htmlFor="longitude"
+              className="block text-sm font-medium text-gray-700"
+            >
               Longitude (Optional)
             </label>
             <input
@@ -404,13 +485,18 @@ export default function CreateVenuePage() {
               placeholder="e.g., 100.5018"
             />
             {errors.longitude && (
-              <p className="mt-1 text-sm text-red-600">{errors.longitude.message}</p>
+              <p className="mt-1 text-sm text-red-600">
+                {errors.longitude.message}
+              </p>
             )}
           </div>
         </div>
 
         <div>
-          <label htmlFor="capacity" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="capacity"
+            className="block text-sm font-medium text-gray-700"
+          >
             Capacity
           </label>
           <input
@@ -420,12 +506,17 @@ export default function CreateVenuePage() {
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
           />
           {errors.capacity && (
-            <p className="mt-1 text-sm text-red-600">{errors.capacity.message}</p>
+            <p className="mt-1 text-sm text-red-600">
+              {errors.capacity.message}
+            </p>
           )}
         </div>
 
         <div>
-          <label htmlFor="googleMapsUrl" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="googleMapsUrl"
+            className="block text-sm font-medium text-gray-700"
+          >
             Google Maps URL
           </label>
           <input
@@ -436,12 +527,17 @@ export default function CreateVenuePage() {
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
           />
           {errors.googleMapsUrl && (
-            <p className="mt-1 text-sm text-red-600">{errors.googleMapsUrl.message}</p>
+            <p className="mt-1 text-sm text-red-600">
+              {errors.googleMapsUrl.message}
+            </p>
           )}
         </div>
 
         <div>
-          <label htmlFor="remarks" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="remarks"
+            className="block text-sm font-medium text-gray-700"
+          >
             Remarks
           </label>
           <textarea
@@ -452,7 +548,9 @@ export default function CreateVenuePage() {
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
           />
           {errors.remarks && (
-            <p className="mt-1 text-sm text-red-600">{errors.remarks.message}</p>
+            <p className="mt-1 text-sm text-red-600">
+              {errors.remarks.message}
+            </p>
           )}
         </div>
 
@@ -460,10 +558,13 @@ export default function CreateVenuePage() {
           <label className="block text-sm font-medium text-gray-700">
             Social Media Links
           </label>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label htmlFor="facebook" className="block text-sm font-medium text-gray-500">
+              <label
+                htmlFor="facebook"
+                className="block text-sm font-medium text-gray-500"
+              >
                 Facebook
               </label>
               <input
@@ -474,12 +575,17 @@ export default function CreateVenuePage() {
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               />
               {errors.socialMediaLinks?.facebook && (
-                <p className="mt-1 text-sm text-red-600">{errors.socialMediaLinks.facebook.message}</p>
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.socialMediaLinks.facebook.message}
+                </p>
               )}
             </div>
-            
+
             <div>
-              <label htmlFor="instagram" className="block text-sm font-medium text-gray-500">
+              <label
+                htmlFor="instagram"
+                className="block text-sm font-medium text-gray-500"
+              >
                 Instagram
               </label>
               <input
@@ -490,12 +596,17 @@ export default function CreateVenuePage() {
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               />
               {errors.socialMediaLinks?.instagram && (
-                <p className="mt-1 text-sm text-red-600">{errors.socialMediaLinks.instagram.message}</p>
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.socialMediaLinks.instagram.message}
+                </p>
               )}
             </div>
-            
+
             <div>
-              <label htmlFor="tiktok" className="block text-sm font-medium text-gray-500">
+              <label
+                htmlFor="tiktok"
+                className="block text-sm font-medium text-gray-500"
+              >
                 TikTok
               </label>
               <input
@@ -506,12 +617,17 @@ export default function CreateVenuePage() {
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               />
               {errors.socialMediaLinks?.tiktok && (
-                <p className="mt-1 text-sm text-red-600">{errors.socialMediaLinks.tiktok.message}</p>
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.socialMediaLinks.tiktok.message}
+                </p>
               )}
             </div>
-            
+
             <div>
-              <label htmlFor="twitter" className="block text-sm font-medium text-gray-500">
+              <label
+                htmlFor="twitter"
+                className="block text-sm font-medium text-gray-500"
+              >
                 Twitter
               </label>
               <input
@@ -522,12 +638,17 @@ export default function CreateVenuePage() {
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               />
               {errors.socialMediaLinks?.twitter && (
-                <p className="mt-1 text-sm text-red-600">{errors.socialMediaLinks.twitter.message}</p>
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.socialMediaLinks.twitter.message}
+                </p>
               )}
             </div>
-            
+
             <div>
-              <label htmlFor="youtube" className="block text-sm font-medium text-gray-500">
+              <label
+                htmlFor="youtube"
+                className="block text-sm font-medium text-gray-500"
+              >
                 YouTube
               </label>
               <input
@@ -538,31 +659,36 @@ export default function CreateVenuePage() {
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               />
               {errors.socialMediaLinks?.youtube && (
-                <p className="mt-1 text-sm text-red-600">{errors.socialMediaLinks.youtube.message}</p>
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.socialMediaLinks.youtube.message}
+                </p>
               )}
             </div>
           </div>
         </div>
 
         <div>
-          <label htmlFor="thumbnail" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="thumbnail"
+            className="block text-sm font-medium text-gray-700"
+          >
             Thumbnail Image (for listings)
           </label>
-          <input 
+          <input
             id="thumbnail"
             type="file"
             accept="image/*"
             onChange={handleThumbnailChange}
-            className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100"
           />
           {thumbnailPreview && (
             <div className="mt-2">
-              <Image 
-                src={thumbnailPreview} 
-                alt="Thumbnail preview" 
-                width={150} 
-                height={96} 
-                unoptimized 
+              <Image
+                src={thumbnailPreview}
+                alt="Thumbnail preview"
+                width={150}
+                height={96}
+                unoptimized
                 className="rounded-md object-cover"
               />
             </div>
@@ -570,59 +696,67 @@ export default function CreateVenuePage() {
         </div>
 
         <div>
-          <label htmlFor="images" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="images"
+            className="block text-sm font-medium text-gray-700"
+          >
             Venue Images (Multiple allowed)
           </label>
-          <input 
+          <input
             id="images"
             type="file"
             accept="image/*"
             multiple
             onChange={handleImagesChange}
-            className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100"
           />
           {imagePreviews.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-2">
               {imagePreviews.map((preview, index) => (
-                <Image 
-                  key={index} 
-                  src={preview} 
-                  alt={`Venue image preview ${index + 1}`} 
-                  width={150} 
-                  height={96} 
-                  unoptimized 
+                <Image
+                  key={index}
+                  src={preview}
+                  alt={`Venue image preview ${index + 1}`}
+                  width={150}
+                  height={96}
+                  unoptimized
                   className="rounded-md object-cover"
                 />
               ))}
             </div>
           )}
         </div>
-        
+
         <div className="space-y-4">
           <label className="block text-sm font-medium text-gray-700">
             Venue Types
           </label>
-          
+
           {isLoadingVenueTypes ? (
             <div className="py-4 text-center">Loading venue types...</div>
           ) : venueTypes.length === 0 ? (
-            <div className="py-4 text-center text-red-500">No venue types available. Please try refreshing the page.</div>
+            <div className="py-4 text-center text-red-500">
+              No venue types available. Please try refreshing the page.
+            </div>
           ) : (
             <div>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+              <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3">
                 {venueTypes.map((type) => (
                   <div key={type.id} className="flex items-start">
-                    <div className="flex items-center h-5">
+                    <div className="flex h-5 items-center">
                       <input
                         id={`type-${type.id}`}
                         type="checkbox"
                         checked={selectedVenueTypes.includes(type.id)}
                         onChange={() => handleVenueTypeChange(type.id)}
-                        className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded"
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
                     </div>
                     <div className="ml-3 text-sm">
-                      <label htmlFor={`type-${type.id}`} className="font-medium text-gray-700">
+                      <label
+                        htmlFor={`type-${type.id}`}
+                        className="font-medium text-gray-700"
+                      >
                         {type.name}
                       </label>
                       {type.description && (
@@ -632,10 +766,10 @@ export default function CreateVenuePage() {
                   </div>
                 ))}
               </div>
-              
+
               {selectedVenueTypes.length > 0 && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
                     Primary Venue Type
                   </label>
                   <select
@@ -645,15 +779,18 @@ export default function CreateVenuePage() {
                   >
                     {selectedVenueTypes.map((typeId) => (
                       <option key={typeId} value={typeId}>
-                        {venueTypes.find(t => t.id === typeId)?.name || typeId}
+                        {venueTypes.find((t) => t.id === typeId)?.name ||
+                          typeId}
                       </option>
                     ))}
                   </select>
                 </div>
               )}
-              
+
               {errors.venueTypeIds && (
-                <p className="mt-1 text-sm text-red-600">{errors.venueTypeIds.message}</p>
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.venueTypeIds.message}
+                </p>
               )}
             </div>
           )}
@@ -663,14 +800,14 @@ export default function CreateVenuePage() {
           <button
             type="button"
             onClick={() => router.push("/admin/venues")}
-            className="bg-gray-200 py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 mr-3"
+            className="mr-3 rounded-md border border-gray-300 bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={isLoading}
-            className="bg-blue-600 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
             {isLoading ? "Creating..." : "Create Venue"}
           </button>

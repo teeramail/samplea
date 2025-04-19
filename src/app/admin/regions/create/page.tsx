@@ -22,8 +22,8 @@ const regionSchema = z.object({
 const nameToSlug = (name: string) => {
   return name
     .toLowerCase()
-    .replace(/[^\w\s-]/g, '') // Remove special characters
-    .replace(/\s+/g, '-')     // Replace spaces with hyphens
+    .replace(/[^\w\s-]/g, "") // Remove special characters
+    .replace(/\s+/g, "-") // Replace spaces with hyphens
     .trim();
 };
 
@@ -63,7 +63,7 @@ export default function CreateRegionPage() {
   const [primaryImageIndex, setPrimaryImageIndex] = useState<number>(0);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const {
     register,
     handleSubmit,
@@ -94,101 +94,103 @@ export default function CreateRegionPage() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
-    
+
     const newFiles = Array.from(e.target.files);
-    
+
     // Check if we've reached max images
     if (images.length + newFiles.length > MAX_IMAGES) {
       setError(`You can only upload a maximum of ${MAX_IMAGES} images`);
       return;
     }
-    
+
     // Check file sizes and types
-    const validFiles = newFiles.filter(file => {
+    const validFiles = newFiles.filter((file) => {
       // Check if it's an image
-      if (!file.type.startsWith('image/')) {
+      if (!file.type.startsWith("image/")) {
         setError(`File ${file.name} is not an image`);
         return false;
       }
-      
+
       // Check file size
       if (file.size > MAX_FILE_SIZE) {
         setError(`File ${file.name} is too large. Maximum size is 120KB`);
         return false;
       }
-      
+
       return true;
     });
-    
+
     if (validFiles.length === 0) return;
-    
+
     // Create image previews
-    const previews = validFiles.map(file => URL.createObjectURL(file));
-    
-    setImages(prev => [...prev, ...validFiles]);
-    setImagePreviews(prev => [...prev, ...previews]);
-    
+    const previews = validFiles.map((file) => URL.createObjectURL(file));
+
+    setImages((prev) => [...prev, ...validFiles]);
+    setImagePreviews((prev) => [...prev, ...previews]);
+
     // Clear file input
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
-    
+
     // Clear error if successful
     setError("");
   };
-  
+
   const removeImage = (index: number) => {
-    setImages(prev => prev.filter((_, i) => i !== index));
-    
+    setImages((prev) => prev.filter((_, i) => i !== index));
+
     // Add a null check before revoking the object URL
     const previewUrl = imagePreviews[index];
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
     }
-    setImagePreviews(prev => prev.filter((_, i) => i !== index));
-    
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+
     // Update primary image index if needed
     if (primaryImageIndex === index) {
       setPrimaryImageIndex(0);
     } else if (primaryImageIndex > index) {
-      setPrimaryImageIndex(prev => prev - 1);
+      setPrimaryImageIndex((prev) => prev - 1);
     }
   };
-  
+
   const setPrimaryImage = (index: number) => {
     setPrimaryImageIndex(index);
   };
 
   const uploadImages = async (): Promise<string[]> => {
     if (images.length === 0) return [];
-    
+
     setUploadingImages(true);
-    
+
     try {
       const formData = new FormData();
       formData.append("entityType", "region");
-      
+
       // Add each image to form data with the same field name
       // Formidable will handle arrays of files with the same field name
       images.forEach((file) => {
         formData.append("images", file);
       });
-      
+
       const response = await fetch("/api/upload", {
         method: "POST",
         body: formData,
       });
-      
+
       if (!response.ok) {
-        const errorData = await response.json() as { error?: string };
+        const errorData = (await response.json()) as { error?: string };
         throw new Error(errorData.error ?? "Failed to upload images");
       }
-      
-      const data = await response.json() as { urls?: string[] };
+
+      const data = (await response.json()) as { urls?: string[] };
       return data.urls ?? [];
     } catch (error) {
       console.error("Error uploading images:", error);
-      setError(error instanceof Error ? error.message : "Failed to upload images");
+      setError(
+        error instanceof Error ? error.message : "Failed to upload images",
+      );
       return [];
     } finally {
       setUploadingImages(false);
@@ -198,7 +200,7 @@ export default function CreateRegionPage() {
   const onSubmit = async (data: RegionFormData) => {
     setIsLoading(true);
     setError("");
-    
+
     try {
       // Upload images first if there are any
       let urls: string[] = [];
@@ -209,15 +211,15 @@ export default function CreateRegionPage() {
           throw new Error("Failed to upload images");
         }
       }
-      
+
       const regionData = {
         ...data,
         imageUrls: urls.length > 0 ? urls : undefined,
         primaryImageIndex: urls.length > 0 ? primaryImageIndex : undefined,
       };
-      
+
       console.log("Submitting region data:", regionData);
-      
+
       const response = await fetch("/api/regions", {
         method: "POST",
         headers: {
@@ -225,19 +227,27 @@ export default function CreateRegionPage() {
         },
         body: JSON.stringify(regionData),
       });
-      
+
       // Parse the JSON response
-      let responseData: { error?: string; details?: string; id?: string } | null = null;
+      let responseData: {
+        error?: string;
+        details?: string;
+        id?: string;
+      } | null = null;
       try {
-        responseData = await response.json() as { error?: string; details?: string; id?: string };
+        responseData = (await response.json()) as {
+          error?: string;
+          details?: string;
+          id?: string;
+        };
       } catch (e) {
         console.error("Failed to parse response as JSON:", e);
         responseData = { error: "Failed to parse server response" };
       }
-      
+
       console.log("Response status:", response.status);
       console.log("Response data:", responseData);
-      
+
       if (!response.ok) {
         let errorMessage = "Failed to create region";
         if (responseData?.error) {
@@ -249,34 +259,44 @@ export default function CreateRegionPage() {
         } else if (response.status === 400) {
           errorMessage = "Invalid data submitted. Please check your inputs.";
         }
-        
+
         throw new Error(errorMessage);
       }
-      
+
       console.log("Region created successfully:", responseData);
       router.push("/admin/regions");
       router.refresh();
     } catch (error) {
       console.error("Error creating region:", error);
-      setError(error instanceof Error ? error.message : "Failed to create region. Please try again.");
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to create region. Please try again.",
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md">
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Add New Region</h1>
-      
+    <div className="rounded-lg bg-white p-6 shadow-md">
+      <h1 className="mb-6 text-2xl font-bold text-gray-800">Add New Region</h1>
+
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
+        <div
+          className="mb-4 rounded border border-red-400 bg-red-100 px-4 py-3 text-red-700"
+          role="alert"
+        >
           <span className="block sm:inline">{error}</span>
         </div>
       )}
-      
+
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="name"
+            className="block text-sm font-medium text-gray-700"
+          >
             Region Name
           </label>
           <input
@@ -290,9 +310,12 @@ export default function CreateRegionPage() {
             <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
           )}
         </div>
-        
+
         <div>
-          <label htmlFor="slug" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="slug"
+            className="block text-sm font-medium text-gray-700"
+          >
             URL Slug (used in website URLs)
           </label>
           <input
@@ -301,12 +324,16 @@ export default function CreateRegionPage() {
             {...register("slug")}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
           />
-          {errors.slug && <p className="mt-1 text-sm text-red-600">{errors.slug.message}</p>}
-          <p className="mt-1 text-sm text-gray-500">This will be used in URLs like: /region/your-slug</p>
+          {errors.slug && (
+            <p className="mt-1 text-sm text-red-600">{errors.slug.message}</p>
+          )}
+          <p className="mt-1 text-sm text-gray-500">
+            This will be used in URLs like: /region/your-slug
+          </p>
         </div>
-        
+
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="mb-2 block text-sm font-medium text-gray-700">
             Common Regions in Thailand
           </label>
           <div className="flex flex-wrap gap-2">
@@ -315,16 +342,19 @@ export default function CreateRegionPage() {
                 key={region}
                 type="button"
                 onClick={() => setPresetRegion(region)}
-                className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="inline-flex items-center rounded-md border border-transparent bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               >
                 {region}
               </button>
             ))}
           </div>
         </div>
-        
+
         <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="description"
+            className="block text-sm font-medium text-gray-700"
+          >
             Description (optional)
           </label>
           <textarea
@@ -335,16 +365,18 @@ export default function CreateRegionPage() {
             placeholder="Brief description of the region"
           />
           {errors.description && (
-            <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>
+            <p className="mt-1 text-sm text-red-600">
+              {errors.description.message}
+            </p>
           )}
         </div>
-        
+
         {/* Image Upload Section */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="mb-2 block text-sm font-medium text-gray-700">
             Images (optional, max 5)
           </label>
-          <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+          <div className="mt-1 flex justify-center rounded-md border-2 border-dashed border-gray-300 px-6 pb-6 pt-5">
             <div className="space-y-1 text-center">
               <svg
                 className="mx-auto h-12 w-12 text-gray-400"
@@ -363,7 +395,7 @@ export default function CreateRegionPage() {
               <div className="flex text-sm text-gray-600">
                 <label
                   htmlFor="file-upload"
-                  className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
+                  className="relative cursor-pointer rounded-md bg-white font-medium text-blue-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-2 hover:text-blue-500"
                 >
                   <span>Upload images</span>
                   <input
@@ -380,30 +412,30 @@ export default function CreateRegionPage() {
                 </label>
                 <p className="pl-1">or drag and drop</p>
               </div>
-              <p className="text-xs text-gray-500">
-                PNG, JPG, GIF up to 120KB
-              </p>
+              <p className="text-xs text-gray-500">PNG, JPG, GIF up to 120KB</p>
             </div>
           </div>
-          
+
           {/* Image Previews */}
           {imagePreviews.length > 0 && (
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
               {imagePreviews.map((preview, index) => (
-                <div key={index} className="relative group">
-                  <div className={`relative aspect-w-16 aspect-h-9 rounded-md overflow-hidden border-2 ${index === primaryImageIndex ? 'border-blue-500' : 'border-gray-200'}`}>
+                <div key={index} className="group relative">
+                  <div
+                    className={`aspect-w-16 aspect-h-9 relative overflow-hidden rounded-md border-2 ${index === primaryImageIndex ? "border-blue-500" : "border-gray-200"}`}
+                  >
                     <img
                       src={preview}
                       alt={`Preview ${index + 1}`}
-                      className="object-cover w-full h-full"
+                      className="h-full w-full object-cover"
                     />
                   </div>
-                  
-                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-opacity flex items-center justify-center opacity-0 group-hover:opacity-100">
+
+                  <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 opacity-0 transition-opacity group-hover:bg-opacity-40 group-hover:opacity-100">
                     <button
                       type="button"
                       onClick={() => setPrimaryImage(index)}
-                      className="mx-1 p-1 bg-blue-500 text-white rounded-md"
+                      className="mx-1 rounded-md bg-blue-500 p-1 text-white"
                       title="Set as primary image"
                     >
                       Primary
@@ -411,15 +443,15 @@ export default function CreateRegionPage() {
                     <button
                       type="button"
                       onClick={() => removeImage(index)}
-                      className="mx-1 p-1 bg-red-500 text-white rounded-md"
+                      className="mx-1 rounded-md bg-red-500 p-1 text-white"
                       title="Remove image"
                     >
                       Remove
                     </button>
                   </div>
-                  
+
                   {index === primaryImageIndex && (
-                    <div className="absolute top-2 left-2 bg-blue-500 text-white text-xs px-2 py-1 rounded">
+                    <div className="absolute left-2 top-2 rounded bg-blue-500 px-2 py-1 text-xs text-white">
                       Primary
                     </div>
                   )}
@@ -428,19 +460,19 @@ export default function CreateRegionPage() {
             </div>
           )}
         </div>
-        
+
         <div className="flex justify-end">
           <button
             type="button"
             onClick={() => router.push("/admin/regions")}
-            className="bg-gray-200 py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 mr-3"
+            className="mr-3 rounded-md border border-gray-300 bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={isLoading || uploadingImages}
-            className="bg-blue-600 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
             {isLoading || uploadingImages ? "Creating..." : "Create Region"}
           </button>

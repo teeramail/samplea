@@ -61,7 +61,12 @@ function ToggleSwitch({
 
 export default function AdminFightersPage() {
   // Use the fighter list query directly instead of through a custom hook
-  const { data: fighters = [], isLoading, error, refetch } = api.fighter.list.useQuery();
+  const {
+    data: fighters = [],
+    isLoading,
+    error,
+    refetch,
+  } = api.fighter.list.useQuery();
 
   // Mutation for toggling the featured status with safe error handling
   const toggleFeaturedMutation = api.fighter.toggleFeatured.useMutation({
@@ -88,7 +93,7 @@ export default function AdminFightersPage() {
 
   // Check loading/error states first
   if (isLoading) return <div className="p-4">Loading fighters...</div>;
-  
+
   if (error) {
     const errorMessage =
       typeof error === "object" && error !== null && "message" in error
@@ -100,71 +105,72 @@ export default function AdminFightersPage() {
       </div>
     );
   }
-  
+
   // Now check if fighters were found
-  if (fighters.length === 0) return <div className="p-4">No fighters found.</div>;
+  if (fighters.length === 0)
+    return <div className="p-4">No fighters found.</div>;
 
   return (
     <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">Manage Fighters</h1>
         <Link
           href="/admin/fighters/new"
-          className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md"
+          className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
         >
           Add New Fighter
         </Link>
       </div>
 
-      <div className="overflow-x-auto shadow-md rounded-lg">
+      <div className="overflow-x-auto rounded-lg shadow-md">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
               >
                 Name
               </th>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
               >
                 Record
               </th>
               <th
                 scope="col"
-                className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"
+                className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500"
               >
                 Featured
               </th>
               <th
                 scope="col"
-                className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+                className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
               >
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="divide-y divide-gray-200 bg-white">
             {fighters.map((fighter) => (
               <tr key={fighter.id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
                   {fighter.name}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                   {fighter.record ?? "N/A"}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                <td className="whitespace-nowrap px-6 py-4 text-center text-sm text-gray-500">
                   <ToggleSwitch
                     enabled={fighter.isFeatured}
                     onChange={() => handleToggleFeatured(fighter)}
                   />
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                   <Link
                     href={`/admin/fighters/${fighter.id}/edit`}
-                    className="text-indigo-600 hover:text-indigo-900 mr-3"
+                    className="mr-3 text-indigo-600 hover:text-indigo-900"
                   >
                     Edit
                   </Link>
@@ -176,7 +182,7 @@ export default function AdminFightersPage() {
         </table>
       </div>
       {fighters.length === 0 && (
-        <div className="text-center py-4 text-gray-500">No fighters found.</div>
+        <div className="py-4 text-center text-gray-500">No fighters found.</div>
       )}
     </div>
   );

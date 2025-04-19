@@ -7,7 +7,12 @@ import {
   protectedProcedure,
   publicProcedure,
 } from "~/server/api/trpc";
-import { eventTemplates, eventTemplateTickets, venues, regions } from "~/server/db/schema";
+import {
+  eventTemplates,
+  eventTemplateTickets,
+  venues,
+  regions,
+} from "~/server/db/schema";
 
 export const eventTemplateRouter = createTRPCRouter({
   // Get a paginated list of event templates with sorting and filtering
@@ -25,37 +30,45 @@ export const eventTemplateRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const { page, limit, sortField, sortDirection, query, venueId, regionId, isActive } = input;
+      const {
+        page,
+        limit,
+        sortField,
+        sortDirection,
+        query,
+        venueId,
+        regionId,
+        isActive,
+      } = input;
       const offset = (page - 1) * limit;
 
       // Build where conditions
       const whereConditions = [];
-      
+
       if (query) {
         whereConditions.push(like(eventTemplates.templateName, `%${query}%`));
       }
-      
+
       if (venueId) {
         whereConditions.push(eq(eventTemplates.venueId, venueId));
       }
-      
+
       if (regionId) {
         whereConditions.push(eq(eventTemplates.regionId, regionId));
       }
-      
+
       if (isActive !== undefined) {
         whereConditions.push(eq(eventTemplates.isActive, isActive));
       }
-      
-      const whereClause = whereConditions.length > 0
-        ? and(...whereConditions)
-        : undefined;
-      
+
+      const whereClause =
+        whereConditions.length > 0 ? and(...whereConditions) : undefined;
+
       // Build order by
       let orderBy;
       if (sortField && sortDirection) {
         const direction = sortDirection === "asc" ? asc : desc;
-        
+
         // Map sortField to the corresponding column
         switch (sortField) {
           case "templateName":
@@ -86,10 +99,10 @@ export const eventTemplateRouter = createTRPCRouter({
         .select({ count: sql<number>`count(*)` })
         .from(eventTemplates)
         .where(whereClause);
-      
+
       const totalItems = countResult[0]?.count ?? 0;
       const totalPages = Math.ceil(totalItems / limit);
-      
+
       // Get templates with venue and region info
       const templates = await ctx.db.query.eventTemplates.findMany({
         where: whereClause,
@@ -162,29 +175,34 @@ export const eventTemplateRouter = createTRPCRouter({
         defaultDescription: z.string().optional(),
         recurringDaysOfWeek: z.array(z.number().min(0).max(6)),
         defaultStartTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
-        defaultEndTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).optional(),
+        defaultEndTime: z
+          .string()
+          .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+          .optional(),
         isActive: z.boolean().default(true),
-        templateTickets: z.array(
-          z.object({
-            seatType: z.string().min(1),
-            defaultPrice: z.number().positive(),
-            defaultCapacity: z.number().positive(),
-            defaultDescription: z.string().optional(),
-          })
-        ).min(1),
-      })
+        templateTickets: z
+          .array(
+            z.object({
+              seatType: z.string().min(1),
+              defaultPrice: z.number().positive(),
+              defaultCapacity: z.number().positive(),
+              defaultDescription: z.string().optional(),
+            }),
+          )
+          .min(1),
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const { templateTickets, ...templateData } = input;
-      
+
       // Create the event template
       const templateId = createId();
-      
+
       await ctx.db.insert(eventTemplates).values({
         id: templateId,
         ...templateData,
       });
-      
+
       // Create the ticket types
       for (const ticket of templateTickets) {
         await ctx.db.insert(eventTemplateTickets).values({
@@ -193,7 +211,7 @@ export const eventTemplateRouter = createTRPCRouter({
           ...ticket,
         });
       }
-      
+
       return { id: templateId };
     }),
 
@@ -209,35 +227,40 @@ export const eventTemplateRouter = createTRPCRouter({
         defaultDescription: z.string().optional(),
         recurringDaysOfWeek: z.array(z.number().min(0).max(6)),
         defaultStartTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
-        defaultEndTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).optional(),
+        defaultEndTime: z
+          .string()
+          .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+          .optional(),
         isActive: z.boolean(),
-        templateTickets: z.array(
-          z.object({
-            id: z.string().optional(),
-            seatType: z.string().min(1),
-            defaultPrice: z.number().positive(),
-            defaultCapacity: z.number().positive(),
-            defaultDescription: z.string().optional(),
-          })
-        ).min(1),
-      })
+        templateTickets: z
+          .array(
+            z.object({
+              id: z.string().optional(),
+              seatType: z.string().min(1),
+              defaultPrice: z.number().positive(),
+              defaultCapacity: z.number().positive(),
+              defaultDescription: z.string().optional(),
+            }),
+          )
+          .min(1),
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const { id, templateTickets, ...templateData } = input;
-      
+
       // Update the event template
       await ctx.db
         .update(eventTemplates)
         .set(templateData)
         .where(eq(eventTemplates.id, id));
-      
+
       // Get existing ticket types
       const existingTickets = await ctx.db.query.eventTemplateTickets.findMany({
         where: eq(eventTemplateTickets.eventTemplateId, id),
       });
-      
-      const existingTicketIds = existingTickets.map(t => t.id);
-      
+
+      const existingTicketIds = existingTickets.map((t) => t.id);
+
       // Process ticket types (update, create, delete)
       for (const ticket of templateTickets) {
         if (ticket.id) {
@@ -263,23 +286,23 @@ export const eventTemplateRouter = createTRPCRouter({
           });
         }
       }
-      
+
       // Find ticket IDs to keep
       const ticketIdsToKeep = templateTickets
-        .filter(t => t.id)
-        .map(t => t.id as string);
-      
+        .filter((t) => t.id)
+        .map((t) => t.id as string);
+
       // Delete tickets that are no longer needed
       const ticketIdsToDelete = existingTicketIds.filter(
-        id => !ticketIdsToKeep.includes(id)
+        (id) => !ticketIdsToKeep.includes(id),
       );
-      
+
       if (ticketIdsToDelete.length > 0) {
         await ctx.db
           .delete(eventTemplateTickets)
           .where(inArray(eventTemplateTickets.id, ticketIdsToDelete));
       }
-      
+
       return { success: true };
     }),
 
@@ -291,7 +314,7 @@ export const eventTemplateRouter = createTRPCRouter({
         .update(eventTemplates)
         .set({ isActive: input.isActive })
         .where(eq(eventTemplates.id, input.id));
-      
+
       return { success: true };
     }),
 
@@ -303,7 +326,7 @@ export const eventTemplateRouter = createTRPCRouter({
       await ctx.db
         .delete(eventTemplates)
         .where(eq(eventTemplates.id, input.id));
-      
+
       return { success: true };
     }),
 });

@@ -11,13 +11,18 @@ export function LatestPost() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [slug, setSlug] = useState("");
-  
+
   // Generate slug from title
   const handleTitleChange = (value: string) => {
     setTitle(value);
-    setSlug(value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''));
+    setSlug(
+      value
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, ""),
+    );
   };
-  
+
   const createPost = api.post.create.useMutation({
     onSuccess: async () => {
       await utils.post.invalidate();
@@ -33,7 +38,7 @@ export function LatestPost() {
         <div>
           <p className="truncate">Your most recent post: {latestPost.title}</p>
           {latestPost.content && (
-            <p className="mt-1 text-sm truncate">{latestPost.content}</p>
+            <p className="mt-1 truncate text-sm">{latestPost.content}</p>
           )}
         </div>
       ) : (
@@ -42,13 +47,13 @@ export function LatestPost() {
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          createPost.mutate({ 
-            title, 
-            content, 
-            slug 
+          createPost.mutate({
+            title,
+            content,
+            slug,
           });
         }}
-        className="flex flex-col gap-2 mt-4"
+        className="mt-4 flex flex-col gap-2"
       >
         <input
           type="text"

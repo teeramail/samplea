@@ -2,10 +2,10 @@
  * This script updates specific regions with known IDs to add slugs.
  */
 
-import { config } from 'dotenv';
+import { config } from "dotenv";
 config();
 
-import postgres from 'postgres';
+import postgres from "postgres";
 
 async function updateSpecificRegions() {
   console.log("Updating specific regions with slugs...");
@@ -35,7 +35,6 @@ async function updateSpecificRegions() {
     // Verify the updates
     const updatedRegions = await sql`SELECT id, name, slug FROM "Region"`;
     console.log("Updated regions:", updatedRegions);
-
   } catch (error) {
     console.error("Error updating regions:", error);
   } finally {
@@ -47,4 +46,4 @@ async function updateSpecificRegions() {
 void updateSpecificRegions().then(() => {
   console.log("Script completed");
   process.exit(0);
-}); 
+});

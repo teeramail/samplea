@@ -1,4 +1,8 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+} from "@aws-sdk/client-s3";
 import { env } from "~/env";
 import sharp from "sharp";
 import { v4 as uuidv4 } from "uuid";
@@ -30,14 +34,14 @@ async function processImage(file: File): Promise<Buffer> {
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
   const maxSize = MAX_FILE_SIZE;
-  
+
   // Start with higher quality and reduce if needed
   let quality = 80;
   let processedBuffer = await sharp(buffer)
     .resize(800) // Resize to max width of 800px
     .jpeg({ quality }) // Convert to JPEG with initial quality
     .toBuffer();
-  
+
   // If still too large, progressively reduce quality until it fits
   while (processedBuffer.length > maxSize && quality > 40) {
     quality -= 10;
@@ -46,7 +50,7 @@ async function processImage(file: File): Promise<Buffer> {
       .jpeg({ quality })
       .toBuffer();
   }
-  
+
   // If still too large, reduce dimensions
   if (processedBuffer.length > maxSize) {
     let width = 700;
@@ -58,7 +62,7 @@ async function processImage(file: File): Promise<Buffer> {
       width -= 100;
     }
   }
-  
+
   return processedBuffer;
 }
 
@@ -66,7 +70,7 @@ async function processImage(file: File): Promise<Buffer> {
  * Check if file is an image
  */
 export function isImageFile(file: File): boolean {
-  return file.type.startsWith('image/');
+  return file.type.startsWith("image/");
 }
 
 /**
@@ -75,59 +79,66 @@ export function isImageFile(file: File): boolean {
 export async function uploadImages(
   files: File[],
   entityType: string, // e.g., 'region', 'fighter', etc.
-  entityId?: string // Optional entity ID for organizing files
+  entityId?: string, // Optional entity ID for organizing files
 ): Promise<UploadResponse> {
   try {
     // Validate number of files
     if (files.length > MAX_IMAGES) {
-      return { 
-        success: false, 
-        error: `Too many files. Maximum allowed is ${MAX_IMAGES}` 
+      return {
+        success: false,
+        error: `Too many files. Maximum allowed is ${MAX_IMAGES}`,
       };
     }
-    
+
     // Filter for image files only
     const imageFiles = files.filter(isImageFile);
-    
+
     if (imageFiles.length === 0) {
-      return { 
-        success: false, 
-        error: "No valid image files found" 
+      return {
+        success: false,
+        error: "No valid image files found",
       };
     }
-    
+
     // Prepend the main directory
-    const baseDirectory = "thaiboxinghub"; 
-    
+    const baseDirectory = "thaiboxinghub";
+
     // Construct folder path under the base directory
-    const entitySpecificPath = entityId 
+    const entitySpecificPath = entityId
       ? `${entityType}/${entityId}`
       : `${entityType}/${uuidv4()}`;
-      
+
     const folderPath = `${baseDirectory}/${entitySpecificPath}`;
-    
+
     // Process and upload each file
     const uploadPromises = imageFiles.map(async (file, index) => {
       try {
         // Check file size before processing - each file must be under 120KB individually
-        if (file.size > MAX_FILE_SIZE * 1.5) { // Allow slightly larger files since we'll compress them
-          throw new Error(`File ${file.name} (${Math.round(file.size / 1024)}KB) is too large. Maximum allowed size before compression is 180KB`);
+        if (file.size > MAX_FILE_SIZE * 1.5) {
+          // Allow slightly larger files since we'll compress them
+          throw new Error(
+            `File ${file.name} (${Math.round(file.size / 1024)}KB) is too large. Maximum allowed size before compression is 180KB`,
+          );
         }
-        
+
         // Process the image
         const processedBuffer = await processImage(file);
-        
+
         // Check processed size - each processed image must still be under 120KB
         if (processedBuffer.length > MAX_FILE_SIZE) {
           // This shouldn't happen with our improved processing, but just in case
-          console.error(`Failed to compress ${file.name} to under 120KB. Final size: ${Math.round(processedBuffer.length / 1024)}KB`);
-          throw new Error(`Unable to compress ${file.name} to under 120KB. Please use a smaller image or compress it manually.`);
+          console.error(
+            `Failed to compress ${file.name} to under 120KB. Final size: ${Math.round(processedBuffer.length / 1024)}KB`,
+          );
+          throw new Error(
+            `Unable to compress ${file.name} to under 120KB. Please use a smaller image or compress it manually.`,
+          );
         }
-        
+
         // Generate unique filename
-        const fileExtension = file.name.split('.').pop();
+        const fileExtension = file.name.split(".").pop();
         const fileName = `${folderPath}/${Date.now()}-${index}.${fileExtension}`;
-        
+
         // Upload to S3
         await s3Client.send(
           new PutObjectCommand({
@@ -136,9 +147,9 @@ export async function uploadImages(
             Body: processedBuffer,
             ContentType: file.type,
             ACL: "public-read",
-          })
+          }),
         );
-        
+
         // Construct the public URL correctly - URLs should look like:
         // https://sgp1.digitaloceanspaces.com/teerabucketone/region/xxx-0.jpg
         const bucketUrl = `${env.AWS_ENDPOINT}/${env.AWS_S3_BUCKET}`;
@@ -148,19 +159,20 @@ export async function uploadImages(
         throw error; // Re-throw to handle in the outer catch
       }
     });
-    
+
     // Wait for all uploads to complete
     const urls = await Promise.all(uploadPromises);
-    
+
     return {
       success: true,
-      urls
+      urls,
     };
   } catch (error) {
     console.error("Error uploading images:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error during upload"
+      error:
+        error instanceof Error ? error.message : "Unknown error during upload",
     };
   }
 }
@@ -173,18 +185,18 @@ export async function deleteImage(url: string): Promise<boolean> {
     // Extract the key from the URL
     const urlObj = new URL(url);
     const key = urlObj.pathname.substring(1); // Remove leading slash
-    
+
     // Use DeleteObjectCommand instead of PutObjectCommand with private ACL
     await s3Client.send(
       new DeleteObjectCommand({
         Bucket: env.AWS_S3_BUCKET ?? "",
         Key: key,
-      })
+      }),
     );
-    
+
     return true;
   } catch (error) {
     console.error("Error deleting image:", error);
     return false;
   }
-} 
+}

@@ -4,11 +4,11 @@
  */
 
 // Load environment variables directly from .env file
-import { config } from 'dotenv';
+import { config } from "dotenv";
 config();
 
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import { regions } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
 
@@ -16,8 +16,8 @@ import { eq } from "drizzle-orm";
 const generateSlug = (name: string): string => {
   return name
     .toLowerCase()
-    .replace(/[^\w\s-]/g, '') // Remove special characters
-    .replace(/\s+/g, '-')     // Replace spaces with hyphens
+    .replace(/[^\w\s-]/g, "") // Remove special characters
+    .replace(/\s+/g, "-") // Replace spaces with hyphens
     .trim();
 };
 
@@ -26,13 +26,13 @@ async function updateRegionSlugs() {
 
   try {
     const databaseUrl = process.env.DATABASE_URL;
-    
+
     if (!databaseUrl) {
       throw new Error("DATABASE_URL environment variable is not set");
     }
-    
+
     console.log("Connecting to database...");
-    
+
     // Create a Postgres client
     const client = postgres(databaseUrl);
     // Create a Drizzle client
@@ -47,14 +47,11 @@ async function updateRegionSlugs() {
       const slug = generateSlug(region.name);
       console.log(`Updating region "${region.name}" with slug "${slug}"`);
 
-      await db
-        .update(regions)
-        .set({ slug })
-        .where(eq(regions.id, region.id));
+      await db.update(regions).set({ slug }).where(eq(regions.id, region.id));
     }
 
     console.log("Successfully updated all region slugs");
-    
+
     // Close the client connection
     await client.end();
   } catch (error) {
@@ -67,4 +64,4 @@ async function updateRegionSlugs() {
 void updateRegionSlugs().then(() => {
   console.log("Script completed");
   process.exit(0);
-}); 
+});

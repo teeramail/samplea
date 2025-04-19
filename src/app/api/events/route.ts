@@ -15,7 +15,9 @@ const ticketTypeSchema = z.object({
 // Define schema for event creation
 const eventSchema = z.object({
   title: z.string().min(2, "Title must be at least 2 characters long"),
-  description: z.string().min(5, "Description must be at least 5 characters long"),
+  description: z
+    .string()
+    .min(5, "Description must be at least 5 characters long"),
   date: z.string().datetime(),
   startTime: z.string().datetime(),
   endTime: z.string().datetime().nullable().optional(),
@@ -23,7 +25,9 @@ const eventSchema = z.object({
   imageUrls: z.array(z.string().url()).nullable().optional(),
   venueId: z.string().min(1, "Please select a venue"),
   regionId: z.string().min(1, "Please select a region"),
-  ticketTypes: z.array(ticketTypeSchema).min(1, "At least one ticket type is required"),
+  ticketTypes: z
+    .array(ticketTypeSchema)
+    .min(1, "At least one ticket type is required"),
 });
 
 // Define interface for the POST request body based on eventSchema
@@ -37,7 +41,8 @@ interface EventCreateRequestBody {
   imageUrls?: string[] | null;
   venueId: string;
   regionId: string;
-  ticketTypes: Array<{ // Keep this structure
+  ticketTypes: Array<{
+    // Keep this structure
     seatType: string;
     price: number;
     capacity: number;
@@ -49,73 +54,83 @@ export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
     const regionId = url.searchParams.get("region");
-    
+
     let query;
     if (regionId) {
       query = db.query.events.findMany({
-        columns: { // Explicitly select columns needed by the frontend
-            id: true,
-            title: true,
-            date: true,
-            thumbnailUrl: true,
+        columns: {
+          // Explicitly select columns needed by the frontend
+          id: true,
+          title: true,
+          date: true,
+          thumbnailUrl: true,
         },
-        where: (eventsTable, { eq }) => eq(eventsTable.regionId, regionId), 
+        where: (eventsTable, { eq }) => eq(eventsTable.regionId, regionId),
         with: {
           venue: {
-            columns: { name: true } // Only select venue name
+            columns: { name: true }, // Only select venue name
           },
           region: {
-            columns: { name: true } // Only select region name
+            columns: { name: true }, // Only select region name
           },
         },
         orderBy: (eventsTable, { desc }) => [desc(eventsTable.date)], // Order by event date
       });
     } else {
       query = db.query.events.findMany({
-        columns: { // Explicitly select columns needed by the frontend
-            id: true,
-            title: true,
-            date: true,
-            thumbnailUrl: true,
+        columns: {
+          // Explicitly select columns needed by the frontend
+          id: true,
+          title: true,
+          date: true,
+          thumbnailUrl: true,
         },
         with: {
           venue: {
-            columns: { name: true } // Only select venue name
+            columns: { name: true }, // Only select venue name
           },
           region: {
-            columns: { name: true } // Only select region name
+            columns: { name: true }, // Only select region name
           },
         },
         orderBy: (eventsTable, { desc }) => [desc(eventsTable.date)], // Order by event date
       });
     }
-    
+
     const result = await query;
     return NextResponse.json(result);
   } catch (error) {
     console.error("Error fetching events:", error);
-    return NextResponse.json({ error: "Failed to fetch events" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch events" },
+      { status: 500 },
+    );
   }
 }
 
 export async function POST(req: Request) {
   try {
     // Use type assertion for the request body
-    const body = await req.json() as EventCreateRequestBody;
-    
+    const body = (await req.json()) as EventCreateRequestBody;
+
     // Zod validation already handles type checking, no need for explicit validation before parse
     const validation = eventSchema.safeParse(body);
     if (!validation.success) {
       console.error("Event validation failed:", validation.error.errors);
-      return NextResponse.json({ /* ... error response ... */ }, { status: 400 });
+      return NextResponse.json(
+        {
+          /* ... error response ... */
+        },
+        { status: 400 },
+      );
     }
 
     const validatedData = validation.data;
-    
+
     const result = await db.transaction(async (tx) => {
       const eventId = uuidv4();
       const now = new Date();
-      
+
       await tx.insert(events).values({
         id: eventId,
         title: validatedData.title,
@@ -127,11 +142,12 @@ export async function POST(req: Request) {
         imageUrls: validatedData.imageUrls,
         venueId: validatedData.venueId,
         regionId: validatedData.regionId,
-        usesDefaultPoster: !validatedData.thumbnailUrl && !validatedData.imageUrls,
+        usesDefaultPoster:
+          !validatedData.thumbnailUrl && !validatedData.imageUrls,
         createdAt: now,
-        updatedAt: now
+        updatedAt: now,
       });
-      
+
       for (const ticketType of validatedData.ticketTypes) {
         await tx.insert(eventTickets).values({
           id: uuidv4(),
@@ -140,29 +156,29 @@ export async function POST(req: Request) {
           price: ticketType.price,
           capacity: ticketType.capacity,
           description: ticketType.description,
-          soldCount: 0, 
+          soldCount: 0,
           createdAt: now,
-          updatedAt: now
+          updatedAt: now,
         });
       }
-      
+
       return { id: eventId };
     });
-    
+
     return NextResponse.json({ success: true, data: result });
   } catch (error) {
     console.error("Error creating event:", error);
-    
+
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: "Validation error", details: error.errors },
-        { status: 400 }
+        { status: 400 },
       );
     }
-    
+
     return NextResponse.json(
       { error: "Failed to create event" },
-      { status: 500 }
+      { status: 500 },
     );
   }
-} 
+}

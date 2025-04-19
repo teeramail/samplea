@@ -27,7 +27,7 @@ export const appRouter = createTRPCRouter({
   eventTemplate: eventTemplateRouter,
   fighter: fighterRouter,
   venue: venueRouter,
-  region: regionRouter
+  region: regionRouter,
 });
 
 // export type definition of API

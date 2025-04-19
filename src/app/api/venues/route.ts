@@ -19,10 +19,14 @@ const venueSchema = z.object({
   remarks: z.string().nullable().optional(),
   socialMediaLinks: z.record(z.string()).nullable().optional(),
   // Venue types
-  venueTypes: z.array(z.object({
-    venueTypeId: z.string(),
-    isPrimary: z.boolean().default(false)
-  })).min(1, "At least one venue type is required"),
+  venueTypes: z
+    .array(
+      z.object({
+        venueTypeId: z.string(),
+        isPrimary: z.boolean().default(false),
+      }),
+    )
+    .min(1, "At least one venue type is required"),
 });
 
 export async function GET() {
@@ -40,7 +44,7 @@ export async function GET() {
     console.error("Error fetching venues:", error);
     return NextResponse.json(
       { error: "Failed to fetch venues" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -49,19 +53,22 @@ export async function POST(request: NextRequest) {
   try {
     // Get request body and validate
     const body = await request.json();
-    
+
     const validation = venueSchema.safeParse(body);
     if (!validation.success) {
       console.error("Venue validation failed:", validation.error.errors);
-      return NextResponse.json({
-        error: "Invalid venue data",
-        details: validation.error.errors,
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: "Invalid venue data",
+          details: validation.error.errors,
+        },
+        { status: 400 },
+      );
     }
-    
+
     const data = validation.data;
     const venueId = createId();
-    
+
     // Insert venue including new fields
     await db.insert(venues).values({
       id: venueId,
@@ -80,10 +87,10 @@ export async function POST(request: NextRequest) {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
-    
+
     // Insert venue types
     if (data.venueTypes && data.venueTypes.length > 0) {
-      const venueTypeEntries = data.venueTypes.map(type => ({
+      const venueTypeEntries = data.venueTypes.map((type) => ({
         id: createId(),
         venueId: venueId,
         venueTypeId: type.venueTypeId,
@@ -91,10 +98,10 @@ export async function POST(request: NextRequest) {
         createdAt: new Date(),
         updatedAt: new Date(),
       }));
-      
+
       await db.insert(venueToVenueTypes).values(venueTypeEntries);
     }
-    
+
     // Get the created venue with region data
     const newVenue = await db.query.venues.findFirst({
       where: (venues, { eq }) => eq(venues.id, venueId),
@@ -102,13 +109,13 @@ export async function POST(request: NextRequest) {
         region: true,
       },
     });
-    
+
     return NextResponse.json(newVenue, { status: 201 });
   } catch (error) {
     console.error("Error creating venue:", error);
     return NextResponse.json(
       { error: "Failed to create venue" },
-      { status: 500 }
+      { status: 500 },
     );
   }
-} 
+}

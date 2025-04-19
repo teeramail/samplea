@@ -8,4 +8,4 @@ interface ClientLayoutProps {
 
 export function ClientLayout({ children }: ClientLayoutProps) {
   return <>{children}</>;
-} 
+}
