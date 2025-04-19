@@ -5,10 +5,10 @@ import { courseEnrollmentRouter } from "~/server/api/routers/courseEnrollment";
 
 // Import routers that exist
 import { eventRouter } from "~/server/api/routers/event";
+import { eventTemplateRouter } from "~/server/api/routers/eventTemplate";
 import { fighterRouter } from "~/server/api/routers/fighter";
 import { venueRouter } from "~/server/api/routers/venue";
-// Still keeping regionRouter commented out until its file is created
-// import { regionRouter } from "~/server/api/routers/region";
+import { regionRouter } from "~/server/api/routers/region";
 
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
@@ -24,9 +24,10 @@ export const appRouter = createTRPCRouter({
   courseEnrollment: courseEnrollmentRouter,
   // Add routers that exist
   event: eventRouter,
+  eventTemplate: eventTemplateRouter,
   fighter: fighterRouter,
   venue: venueRouter,
-  // region: regionRouter, // Router doesn't exist yet
+  region: regionRouter
 });
 
 // export type definition of API

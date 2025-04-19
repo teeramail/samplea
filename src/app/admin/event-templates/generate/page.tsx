@@ -1,0 +1,294 @@
+"use client";
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { api } from '~/trpc/react';
+import { format, addDays } from 'date-fns';
+
+export default function GenerateEventsPage() {
+  const router = useRouter();
+  const [startDate, setStartDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
+  const [endDate, setEndDate] = useState<string>(format(addDays(new Date(), 30), 'yyyy-MM-dd'));
+  const [selectedTemplates, setSelectedTemplates] = useState<string[]>([]);
+  const [previewMode, setPreviewMode] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(false);
+  interface TemplateTicket {
+    seatType: string;
+    defaultPrice: number;
+    defaultCapacity: number;
+    defaultDescription?: string;
+  }
+
+  interface EventTemplate {
+    id: string;
+    templateName: string;
+    venueId: string;
+    regionId: string;
+    venue?: { name: string };
+    region?: { name: string };
+    recurringDaysOfWeek: number[];
+    defaultStartTime: string;
+    defaultEndTime?: string | null;
+    defaultDescription?: string | null;
+    defaultTitleFormat: string;
+    isActive: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }
+
+  interface GeneratedEvent {
+    event: {
+      title: string;
+      date: string | Date;
+      startTime: string | Date;
+      endTime?: string | Date | null;
+      description?: string | null;
+      venueId: string;
+      regionId: string;
+      status: string;
+      usesDefaultPoster?: boolean;
+    };
+    tickets: {
+      seatType: string;
+      price: number;
+      capacity: number;
+      description?: string | null;
+      soldCount?: number;
+    }[];
+    venueName?: string;
+    regionName?: string;
+    templateName?: string;
+  }
+
+  const [generatedEvents, setGeneratedEvents] = useState<GeneratedEvent[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch all active templates
+  const { data: templates, isLoading: templatesLoading } = api.eventTemplate.list.useQuery({
+    page: 1,
+    limit: 100,
+    sortField: "templateName",
+    sortDirection: "asc",
+    isActive: true,
+  });
+
+  // Generate events mutation
+  const generateEventsMutation = api.event.generateEventsFromTemplates.useMutation({
+    onSuccess: (data) => {
+      setGeneratedEvents(data);
+      setIsGenerating(false);
+      
+      if (!previewMode) {
+        // Show success message and redirect after successful generation
+        setTimeout(() => {
+          router.push('/admin/events');
+        }, 3000);
+      }
+    },
+    onError: (err) => {
+      setError(err.message);
+      setIsGenerating(false);
+    }
+  });
+
+  const handleTemplateToggle = (templateId: string) => {
+    if (selectedTemplates.includes(templateId)) {
+      setSelectedTemplates(selectedTemplates.filter(id => id !== templateId));
+    } else {
+      setSelectedTemplates([...selectedTemplates, templateId]);
+    }
+  };
+
+  const handleGeneratePreview = () => {
+    setError(null);
+    setIsGenerating(true);
+    setPreviewMode(true);
+    
+    generateEventsMutation.mutate({
+      startDate: new Date(startDate),
+      endDate: new Date(endDate),
+      templateIds: selectedTemplates.length > 0 ? selectedTemplates : undefined,
+      previewOnly: true,
+    });
+  };
+
+  const handleGenerateEvents = () => {
+    if (!confirm(`Are you sure you want to create ${generatedEvents.length} events?`)) {
+      return;
+    }
+    
+    setError(null);
+    setIsGenerating(true);
+    setPreviewMode(false);
+    
+    generateEventsMutation.mutate({
+      startDate: new Date(startDate),
+      endDate: new Date(endDate),
+      templateIds: selectedTemplates.length > 0 ? selectedTemplates : undefined,
+      previewOnly: false,
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-gray-800">Generate Events from Templates</h1>
+        <button
+          onClick={() => router.back()}
+          className="bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-md text-sm font-medium"
+        >
+          Back
+        </button>
+      </div>
+
+      <div className="bg-white p-6 rounded-lg shadow-md">
+        <h2 className="text-lg font-semibold mb-4">Select Date Range</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full p-2 border rounded-md"
+              min={format(new Date(), 'yyyy-MM-dd')}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full p-2 border rounded-md"
+              min={startDate}
+            />
+          </div>
+        </div>
+
+        <h2 className="text-lg font-semibold mb-4">Select Templates</h2>
+        {templatesLoading ? (
+          <div className="text-center py-4">Loading templates...</div>
+        ) : templates?.items && templates.items.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+            {templates?.items.map((template: EventTemplate) => (
+              <div key={template.id} className="border rounded-md p-4 hover:bg-gray-50">
+                <div className="flex items-start">
+                  <input
+                    type="checkbox"
+                    id={template.id}
+                    checked={selectedTemplates.includes(template.id)}
+                    onChange={() => handleTemplateToggle(template.id)}
+                    className="mt-1 mr-3"
+                  />
+                  <div>
+                    <label htmlFor={template.id} className="block font-medium text-gray-900 cursor-pointer">
+                      {template.templateName}
+                    </label>
+                    <div className="text-sm text-gray-500">
+                      {template.venue?.name} / {template.region?.name}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {template.recurringDaysOfWeek.map((day: number) => [
+                        'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'
+                      ][day]).join(', ')} at {template.defaultStartTime.slice(0, 5)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-4 text-gray-500">
+            No active templates found. Please create templates first.
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            {error}
+          </div>
+        )}
+
+        {!previewMode && generatedEvents.length > 0 && (
+          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+            Successfully created {generatedEvents.length} events! Redirecting to events page...
+          </div>
+        )}
+
+        <div className="flex gap-2 justify-end">
+          <button
+            onClick={handleGeneratePreview}
+            disabled={isGenerating || (templates?.items && templates.items.length === 0)}
+            className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md text-sm font-medium disabled:bg-gray-400"
+          >
+            {isGenerating && previewMode ? "Generating Preview..." : "Preview Events"}
+          </button>
+        </div>
+      </div>
+
+      {/* Preview section */}
+      {generatedEvents.length > 0 && previewMode && (
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-lg font-semibold mb-4">
+            Preview: {generatedEvents.length} Events to Generate
+          </h2>
+          <div className="overflow-auto max-h-96 mb-4">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Time
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Title
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Venue
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Tickets
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {generatedEvents.map((item: GeneratedEvent, index) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {format(new Date(item.event.date), 'MMM d, yyyy')}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {format(new Date(item.event.startTime), 'h:mm a')}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {item.event.title}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {item.venueName}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {item.tickets.length} types
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          <div className="flex justify-end">
+            <button
+              onClick={handleGenerateEvents}
+              disabled={isGenerating}
+              className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-md text-sm font-medium disabled:bg-gray-400"
+            >
+              {isGenerating && !previewMode ? "Generating Events..." : `Generate ${generatedEvents.length} Events`}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

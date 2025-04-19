@@ -20,6 +20,11 @@ const navItems = [
   { name: 'All Events', href: '/admin/events', group: 'events' },
   { name: 'Create Event', href: '/admin/events/create', group: 'events' },
   
+  { name: 'Event Templates', group: 'event-templates' },
+  { name: 'All Templates', href: '/admin/event-templates', group: 'event-templates' },
+  { name: 'Create Template', href: '/admin/event-templates/create', group: 'event-templates' },
+  { name: 'Generate Events', href: '/admin/event-templates/generate', group: 'event-templates' },
+  
   { name: 'Venues', group: 'venues' },
   { name: 'All Venues', href: '/admin/venues', group: 'venues' },
   { name: 'Create Venue', href: '/admin/venues/create', group: 'venues' },
@@ -54,6 +59,7 @@ const navItems = [
 // Top navigation sections for quick access to content management
 const topNavSections = [
   { name: 'Events', href: '/admin/events', icon: '📅' },
+  { name: 'Event Templates', href: '/admin/event-templates', icon: '🔄' },
   { name: 'Venues', href: '/admin/venues', icon: '🏢' },
   { name: 'Fighters', href: '/admin/fighters', icon: '🥊' },
   { name: 'Courses', href: '/admin/courses', icon: '📚' },

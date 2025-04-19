@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { api } from "~/trpc/react";
 
 // Define Zod schema for validation
 const eventTemplateTicketSchema = z.object({
@@ -73,30 +74,31 @@ export default function CreateEventTemplatePage() {
 
   const selectedRegionId = watch("regionId");
 
+  // Fetch venues and regions using tRPC
+  const { data: venuesData, isLoading: isLoadingVenues } = api.venue.list.useQuery({
+    page: 1,
+    limit: 100,
+    sortField: "name",
+    sortDirection: "asc"
+  });
+  const { data: regionsData, isLoading: isLoadingRegions } = api.region.list.useQuery({
+    page: 1,
+    limit: 100,
+    sortField: "name",
+    sortDirection: "asc"
+  });
+  
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
-        const [venueRes, regionRes] = await Promise.all([
-          fetch('/api/venues'),
-          fetch('/api/regions')
-        ]);
-        if (!venueRes.ok || !regionRes.ok) {
-          throw new Error('Failed to fetch venues or regions');
-        }
-        const venueData = await venueRes.json() as Venue[];
-        const regionData = await regionRes.json() as Region[];
-        setAllVenues(venueData ?? []);
-        setRegions(regionData ?? []);
-      } catch (error) {
-        console.error("Failed to load data:", error);
-        // Handle error display
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    void fetchData();
-  }, []);
+    if (venuesData?.items) {
+      setAllVenues(venuesData.items);
+    }
+    if (regionsData?.items) {
+      setRegions(regionsData.items);
+    }
+    if (!isLoadingVenues && !isLoadingRegions) {
+      setIsLoading(false);
+    }
+  }, [venuesData, regionsData, isLoadingVenues, isLoadingRegions]);
 
   const filteredVenues = allVenues.filter(v => v.regionId === selectedRegionId);
 
@@ -107,41 +109,33 @@ export default function CreateEventTemplatePage() {
     }
   }, [selectedRegionId, setValue, watch, allVenues]);
 
+  // Create event template mutation
+  const createTemplate = api.eventTemplate.create.useMutation({
+    onSuccess: () => {
+      router.push('/admin/event-templates');
+    },
+    onError: (error) => {
+      setSubmitError(error.message);
+    }
+  });
+
   const onSubmit: SubmitHandler<EventTemplateFormData> = async (data) => {
-    alert('Form submission started');
-    setSubmitError(null);
     try {
-      console.log("Form data before submission:", data);
+      setSubmitError(null);
       
+      // Format the data for API submission
       const payload = {
         ...data,
-        defaultStartTime: `${data.defaultStartTime}:00`,
-        defaultEndTime: data.defaultEndTime ? `${data.defaultEndTime}:00` : undefined,
+        // Convert time strings to proper format if needed
+        defaultStartTime: data.defaultStartTime,
+        defaultEndTime: data.defaultEndTime || undefined,
       };
+
+      // Submit using tRPC mutation
+      createTemplate.mutate(payload);
       
-      console.log("Prepared payload:", payload);
-      console.log("Submitting to URL:", '/api/event-templates');
-
-      const response = await fetch('/api/event-templates', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      console.log("Response status:", response.status);
-      
-      const responseData = await response.json();
-      console.log("Response data:", responseData);
-
-      if (!response.ok) {
-        const errorMessage = typeof responseData === 'object' && responseData !== null && 'error' in responseData 
-                            ? responseData.error as string 
-                            : 'Failed to create template';
-        throw new Error(errorMessage); 
-      }
-
-      router.push('/admin/event-templates');
     } catch (error) {
+      console.error('Error creating template:', error);
       console.error("Detailed submission error:", error);
       setSubmitError(error instanceof Error ? error.message : 'An unknown error occurred');
     }
