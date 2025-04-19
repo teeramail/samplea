@@ -330,7 +330,7 @@ export default function EditEventTemplatePage({ params }: PageProps) {
         });
       }
     }
-  }, [templateData, reset, setValue, fields, remove, append]);
+  }, [templateData, reset, setValue]);
 
   useEffect(() => {
     if (venuesData?.items) {
