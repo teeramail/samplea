@@ -2,16 +2,18 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import React from "react";
 import { api } from "~/trpc/react";
 import Image from "next/image";
 
 type PageProps = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
 export default function ViewEventTemplatePage({ params }: PageProps) {
-  const { id } = params;
+  // Unwrap params using React.use() to access properties safely
+  const unwrappedParams = React.use(params);
+  const id = unwrappedParams.id;
   const [isLoading, setIsLoading] = useState(true);
 
   // Fetch the event template data
