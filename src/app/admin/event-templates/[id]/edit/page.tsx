@@ -409,6 +409,55 @@ export default function EditEventTemplatePage({ params }: PageProps) {
         return;
       }
 
+      // Format time values to ensure they match HH:MM format
+      // Helper function to format time to HH:MM
+      const formatTimeToHHMM = (timeString: string): string => {
+        const timeRegex = /^([01]?[0-9]|2[0-3]):([0-5][0-9])$/;
+        
+        // If already in correct format, return as is
+        if (timeRegex.test(timeString)) {
+          // Ensure hours are padded to 2 digits
+          const [hours, minutes] = timeString.split(':');
+          return `${hours.padStart(2, '0')}:${minutes}`;
+        }
+        
+        // Try to parse and reformat the time
+        const timeParts = timeString.split(':');
+        if (timeParts.length >= 2) {
+          const hours = parseInt(timeParts[0], 10);
+          const minutes = parseInt(timeParts[1], 10);
+          
+          if (!isNaN(hours) && !isNaN(minutes) && hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+          }
+        }
+        
+        // If we got here, the format is invalid
+        throw new Error("Invalid time format. Please use HH:MM format (24-hour).");
+      };
+      
+      // Process start time (required)
+      let formattedStartTime: string;
+      try {
+        formattedStartTime = formatTimeToHHMM(data.defaultStartTime);
+      } catch (error) {
+        setSubmitError(error instanceof Error ? error.message : "Invalid start time format");
+        setIsSaving(false);
+        return;
+      }
+      
+      // Process end time (optional)
+      let formattedEndTime: string | undefined = undefined;
+      if (data.defaultEndTime && data.defaultEndTime.trim() !== '') {
+        try {
+          formattedEndTime = formatTimeToHHMM(data.defaultEndTime);
+        } catch (error) {
+          setSubmitError(error instanceof Error ? error.message : "Invalid end time format");
+          setIsSaving(false);
+          return;
+        }
+      }
+
       // Handle thumbnail upload if there's a new file
       let thumbnailUrl = data.thumbnailUrl;
       if (thumbnailFile) {
@@ -423,8 +472,8 @@ export default function EditEventTemplatePage({ params }: PageProps) {
         ...data,
         id,
         thumbnailUrl,
-        // Ensure defaultEndTime is properly handled
-        defaultEndTime: data.defaultEndTime ?? undefined,
+        defaultStartTime: formattedStartTime, // Now properly typed as string
+        defaultEndTime: formattedEndTime, // Now properly typed as string | undefined
       };
 
       // Submit using tRPC mutation

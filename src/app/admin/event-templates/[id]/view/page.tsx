@@ -35,8 +35,9 @@ export default function ViewEventTemplatePage({ params }: PageProps) {
     // Ensure time is in HH:MM format
     const timeRegex = /^([01]?\d|2[0-3]):([0-5]\d)$/;
     const timeMatch = timeRegex.exec(time);
-    if (!timeMatch) return time;
+    if (!timeMatch || !timeMatch[1] || !timeMatch[2]) return time;
     
+    // Now we can safely use these values as they're guaranteed to exist
     const hours = timeMatch[1];
     const minutes = timeMatch[2];
     const hour = parseInt(hours, 10);
