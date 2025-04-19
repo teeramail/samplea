@@ -235,11 +235,16 @@ export default function EditEventTemplatePage({ params }: PageProps) {
       
       // Handle thumbnailUrl safely with type checking
       if ('thumbnailUrl' in templateData && templateData.thumbnailUrl !== undefined) {
-        const thumbnailValue = templateData.thumbnailUrl || "";
+        // Ensure thumbnailValue is a string
+        const thumbnailValue = typeof templateData.thumbnailUrl === 'string' 
+          ? templateData.thumbnailUrl 
+          : templateData.thumbnailUrl === null ? "" : String(templateData.thumbnailUrl);
+        
+        // Set the form value
         setValue("thumbnailUrl", thumbnailValue);
         
-        // If there's a thumbnail URL, set the preview
-        if (thumbnailValue && typeof thumbnailValue === 'string') {
+        // If there's a valid thumbnail URL, set the preview
+        if (thumbnailValue) {
           setThumbnailPreview(thumbnailValue);
           setExistingThumbnailUrl(thumbnailValue);
         }
