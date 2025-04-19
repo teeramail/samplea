@@ -664,9 +664,12 @@ export default function EditEventTemplatePage({ params }: PageProps) {
                 </label>
                 <input
                   type="time"
+                  placeholder="HH:MM"
+                  pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]"
                   {...register("defaultStartTime")}
                   className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm"
                 />
+                <small className="text-xs text-gray-500">Format: HH:MM (24-hour)</small>
                 {errors.defaultStartTime && (
                   <p className="mt-1 text-sm text-red-600">
                     {errors.defaultStartTime.message}
@@ -680,9 +683,12 @@ export default function EditEventTemplatePage({ params }: PageProps) {
                 </label>
                 <input
                   type="time"
+                  placeholder="HH:MM"
+                  pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]"
                   {...register("defaultEndTime")}
                   className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm"
                 />
+                <small className="text-xs text-gray-500">Format: HH:MM (24-hour)</small>
                 {errors.defaultEndTime && (
                   <p className="mt-1 text-sm text-red-600">
                     {errors.defaultEndTime.message}
