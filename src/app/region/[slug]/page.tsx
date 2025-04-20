@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { db } from "~/server/db";
 import { events, regions } from "~/server/db/schema";
-import { desc, eq, gte, and } from "drizzle-orm";
+import { desc, asc, eq, gte, and } from "drizzle-orm";
 import Image from "next/image";
 import { MapPinIcon, BuildingLibraryIcon } from "@heroicons/react/24/outline";
 import { notFound } from "next/navigation";
-import { format, startOfDay } from "date-fns";
+import { format, startOfDay, parseISO, isAfter } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
+import { unstable_cache } from 'next/cache';
 
 // Define types for the event data
 type UpcomingEvent = {
@@ -24,19 +25,42 @@ type RegionPageProps = {
   }>;
 };
 
+// Calculate time until next revalidation (10 PM Thai time daily)
+function getRevalidateSeconds(): number {
+  const thaiTimeZone = "Asia/Bangkok";
+  const now = new Date();
+  const thaiNow = toZonedTime(now, thaiTimeZone);
+  
+  // Set revalidation time to 10 PM Thai time
+  const revalidationTime = new Date(thaiNow);
+  revalidationTime.setHours(22, 0, 0, 0); // 10 PM
+  
+  // If it's already past 10 PM, set for tomorrow
+  if (thaiNow > revalidationTime) {
+    revalidationTime.setDate(revalidationTime.getDate() + 1);
+  }
+  
+  // Calculate seconds until revalidation time
+  return Math.floor((revalidationTime.getTime() - thaiNow.getTime()) / 1000);
+}
+
 // Function to get events for a specific region - only today and upcoming events in Thai time
 async function getRegionEvents(regionId: string) {
   try {
-    // Get current date in Thai time zone (UTC+7)
+    // Get current date and time in Thai time zone (UTC+7)
     const thaiTimeZone = "Asia/Bangkok";
     const now = new Date();
     const thaiNow = toZonedTime(now, thaiTimeZone);
-    const thaiToday = startOfDay(thaiNow);
+    
+    // For debugging
+    console.log(`Current Thai time: ${thaiNow.toISOString()}`);
 
-    console.log(
-      `Filtering events from ${thaiToday.toISOString()} in Thai time`,
-    );
-
+    // Get upcoming events directly from the database
+    // Convert current Thai time to UTC for database comparison
+    const currentTimeUTC = new Date(thaiNow.getTime() - (7 * 60 * 60 * 1000)); // Subtract 7 hours to get UTC
+    
+    console.log(`Current UTC time for DB query: ${currentTimeUTC.toISOString()}`);
+    
     const regionEvents = await db.query.events.findMany({
       columns: {
         id: true,
@@ -48,13 +72,15 @@ async function getRegionEvents(regionId: string) {
         venue: { columns: { name: true } },
         region: { columns: { name: true } },
       },
-      orderBy: [desc(events.date)],
       where: and(
         eq(events.regionId, regionId),
-        gte(events.date, thaiToday), // Only events from today onwards in Thai time
+        gte(events.date, currentTimeUTC) // Filter by current time in UTC
       ),
-      limit: 10, // Showing more events on the region page
+      orderBy: [asc(events.date)], // Sort by nearest upcoming events first
+      limit: 8, // Limit to 8 events
     });
+    
+    console.log(`Found ${regionEvents.length} upcoming events in region`);
 
     console.log(`Found ${regionEvents.length} upcoming events in region`);
     return regionEvents;
@@ -64,22 +90,58 @@ async function getRegionEvents(regionId: string) {
   }
 }
 
+// Create a cached data fetcher for region pages that revalidates at 10 PM Thai time daily
+const getRegionPageData = unstable_cache(
+  async (slug: string) => {
+    // Find the region by slug
+    const region = await db.query.regions.findFirst({
+      where: eq(regions.slug, slug),
+    });
+
+    // If region not found, return null
+    if (!region) {
+      return null;
+    }
+
+    // Get events for this region
+    const regionEvents = await getRegionEvents(region.id);
+
+    return {
+      region,
+      regionEvents,
+    };
+  },
+  ['region-page-data'],
+  {
+    revalidate: getRevalidateSeconds(),
+    tags: ['region-page'],
+  }
+);
+
+// Set page-level revalidation
+export const revalidate = getRevalidateSeconds();
+
+// Generate static params for all regions
+export async function generateStaticParams() {
+  const allRegions = await db.query.regions.findMany();
+  return allRegions.map((region) => ({
+    slug: region.slug,
+  }));
+}
+
 export default async function RegionPage({ params }: RegionPageProps) {
   const resolvedParams = await params;
   const { slug } = resolvedParams;
 
-  // Find the region by slug
-  const region = await db.query.regions.findFirst({
-    where: eq(regions.slug, slug),
-  });
-
+  // Get cached data for this region
+  const data = await getRegionPageData(slug);
+  
   // If region not found, return 404
-  if (!region) {
+  if (!data || !data.region) {
     notFound();
   }
-
-  // Get events for this region
-  const regionEvents: UpcomingEvent[] = await getRegionEvents(region.id);
+  
+  const { region, regionEvents } = data;
 
   // Format date function with Thai time zone
   const formatDate = (date: Date) => {
@@ -106,9 +168,9 @@ export default async function RegionPage({ params }: RegionPageProps) {
         {/* Region Events Section */}
         <section className="mt-8 w-full max-w-5xl">
           <div className="mb-6 flex items-center justify-between">
-            <h2 className="text-3xl font-bold">Events in {region.name}</h2>
+            <h2 className="text-3xl font-bold">Upcoming Events in {region.name}</h2>
             <Link
-              href="/events"
+              href={`/events?region=${region.slug}`}
               className="text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]"
             >
               View All Events &rarr;

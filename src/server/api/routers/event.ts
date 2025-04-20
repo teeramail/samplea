@@ -93,7 +93,7 @@ export const eventRouter = createTRPCRouter({
           where: and(
             gte(events.date, new Date()), // Events from today onwards
           ),
-          orderBy: [desc(events.date)],
+          orderBy: [asc(events.date)], // Sort by nearest upcoming events first
           limit: limit,
           with: {
             // Ensure full related objects are fetched
@@ -324,7 +324,9 @@ export const eventRouter = createTRPCRouter({
     }),
 
   // Generate events from templates
-  generateEventsFromTemplates: protectedProcedure
+  // TEMPORARY: Changed from protectedProcedure to publicProcedure for development
+  // TODO: Change back to protectedProcedure before deploying to production
+  generateEventsFromTemplates: publicProcedure
     .input(
       z.object({
         startDate: z.date(),
