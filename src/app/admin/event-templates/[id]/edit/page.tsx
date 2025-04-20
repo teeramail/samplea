@@ -29,9 +29,16 @@ const eventTemplateSchema = z.object({
   venueId: z.string().min(1, "Venue is required"),
   defaultTitleFormat: z.string().min(1, "Title format is required"),
   defaultDescription: z.string().optional(),
+  // Recurrence fields
+  recurrenceType: z.enum(["none", "weekly", "monthly"], {
+    required_error: "Please select a recurrence type",
+  }),
   recurringDaysOfWeek: z
     .array(z.coerce.number().min(0).max(6))
-    .min(1, "Select at least one day"),
+    .optional(),
+  dayOfMonth: z
+    .array(z.coerce.number().min(1).max(31))
+    .optional(),
   defaultStartTime: z
     .string()
     .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid time format (HH:MM)"),
@@ -47,9 +54,23 @@ const eventTemplateSchema = z.object({
   templateTickets: z
     .array(eventTemplateTicketSchema)
     .min(1, "Add at least one ticket type"),
-  recurrenceType: z.string().optional(),
-  dayOfMonth: z.array(z.coerce.number().int().min(1).max(31)).optional(),
-});
+}).refine(
+  (data) => {
+    // If recurrence type is weekly, require at least one day of week
+    if (data.recurrenceType === "weekly") {
+      return data.recurringDaysOfWeek && data.recurringDaysOfWeek.length > 0;
+    }
+    // If recurrence type is monthly, require at least one day of month
+    if (data.recurrenceType === "monthly") {
+      return data.dayOfMonth && data.dayOfMonth.length > 0;
+    }
+    return true;
+  },
+  {
+    message: "Please select at least one day based on the recurrence type",
+    path: ["recurrenceType"],
+  }
+);
 
 // Type definition
 type EventTemplateFormData = z.infer<typeof eventTemplateSchema>;
@@ -208,16 +229,19 @@ export default function EditEventTemplatePage({ params }: PageProps) {
   // Update mutation
   const updateTemplate = api.eventTemplate.update.useMutation({
     onSuccess: () => {
-      setSuccessMessage("Event template updated successfully");
+      setSuccessMessage("Event template updated successfully!");
       setIsSaving(false);
-      // Navigate back to the list after a short delay
+      
+      // Reset the thumbnailFile state
+      setThumbnailFile(null);
+      
+      // Wait a moment and then redirect
       setTimeout(() => {
         router.push("/admin/event-templates");
-      }, 1500);
+      }, 2000);
     },
     onError: (error) => {
-      console.error("API error updating template:", error);
-      setSubmitError(error.message || "Failed to update event template");
+      setSubmitError(error.message);
       setIsSaving(false);
     },
   });
@@ -441,12 +465,6 @@ export default function EditEventTemplatePage({ params }: PageProps) {
         return;
       }
       
-      if (!data.recurringDaysOfWeek || data.recurringDaysOfWeek.length === 0) {
-        setSubmitError("Select at least one day of week");
-        setIsSaving(false);
-        return;
-      }
-      
       if (!data.defaultStartTime) {
         setSubmitError("Start time is required");
         setIsSaving(false);
@@ -529,10 +547,11 @@ export default function EditEventTemplatePage({ params }: PageProps) {
           ? data.recurringDaysOfWeek.map(Number) 
           : [],
         dayOfMonth: data.recurrenceType === 'monthly' && data.dayOfMonth && data.dayOfMonth.length > 0
-          ? Number(data.dayOfMonth[0])  // API expects a single number
-          : null,
+          ? data.dayOfMonth.map(Number) 
+          : [],
         defaultStartTime: formattedStartTime,
         defaultEndTime: formattedEndTime,
+        thumbnailUrl,
         // Format ticket data
         templateTickets: data.templateTickets.map(ticket => ({
           ...ticket,
@@ -843,7 +862,7 @@ export default function EditEventTemplatePage({ params }: PageProps) {
                         {...register("dayOfMonth")}
                         defaultChecked={Array.isArray(templateData?.dayOfMonth) 
                           ? templateData?.dayOfMonth.includes(day)
-                          : templateData?.dayOfMonth === day}
+                          : false}
                         className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                       />
                       <label
@@ -945,15 +964,11 @@ export default function EditEventTemplatePage({ params }: PageProps) {
                       htmlFor={`templateTickets.${index}.defaultPrice`}
                       className="mb-1 block text-sm font-medium text-gray-700"
                     >
-                      Price
+                      Price*
                     </label>
                     <input
                       id={`templateTickets.${index}.defaultPrice`}
-                      type="number"
-                      step="0.01"
-                      {...register(`templateTickets.${index}.defaultPrice`, {
-                        valueAsNumber: true,
-                      })}
+                      {...register(`templateTickets.${index}.defaultPrice`)}
                       className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm"
                     />
                     {errors.templateTickets?.[index]?.defaultPrice && (
@@ -967,22 +982,16 @@ export default function EditEventTemplatePage({ params }: PageProps) {
                       htmlFor={`templateTickets.${index}.defaultCapacity`}
                       className="mb-1 block text-sm font-medium text-gray-700"
                     >
-                      Capacity
+                      Capacity*
                     </label>
                     <input
                       id={`templateTickets.${index}.defaultCapacity`}
-                      type="number"
-                      {...register(`templateTickets.${index}.defaultCapacity`, {
-                        valueAsNumber: true,
-                      })}
+                      {...register(`templateTickets.${index}.defaultCapacity`)}
                       className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm"
                     />
                     {errors.templateTickets?.[index]?.defaultCapacity && (
                       <p className="mt-1 text-sm text-red-600">
-                        {
-                          errors.templateTickets?.[index]?.defaultCapacity
-                            ?.message
-                        }
+                        {errors.templateTickets?.[index]?.defaultCapacity?.message}
                       </p>
                     )}
                   </div>
@@ -993,50 +1002,25 @@ export default function EditEventTemplatePage({ params }: PageProps) {
                     >
                       Description (Optional)
                     </label>
-                    <input
+                    <textarea
                       id={`templateTickets.${index}.defaultDescription`}
                       {...register(`templateTickets.${index}.defaultDescription`)}
                       className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm"
                     />
                   </div>
                 </div>
-                <div className="absolute right-2 top-2">
-                  <button
-                    type="button"
-                    onClick={() => remove(index)}
-                    className="font-medium text-red-500 hover:text-red-700"
-                    disabled={fields.length <= 1}
-                  >
-                    &times;
-                  </button>
-                </div>
-                
-                {/* Hidden field for ticket ID */}
-                <input
-                  type="hidden"
-                  {...register(`templateTickets.${index}.id`)}
-                />
               </div>
             ))}
           </div>
         </div>
 
-        <div className="border-t pt-6">
-          <div className="flex justify-end space-x-3">
-            <Link
-              href="/admin/event-templates"
-              className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
-            >
-              Cancel
-            </Link>
-            <button
-              type="submit"
-              disabled={isSubmitting || isSaving}
-              className="rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
-            >
-              {isSaving ? "Saving..." : "Save Changes"}
-            </button>
-          </div>
+        <div className="mt-6 flex justify-end">
+          <button
+            type="submit"
+            className="rounded-md bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-100"
+          >
+            Save
+          </button>
         </div>
       </form>
     </div>
