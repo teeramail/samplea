@@ -37,7 +37,8 @@ async function verifyEventTemplateSchema(): Promise<void> {
       });
       // Explicitly check for new columns
       const expectedColumns = ['recurrenceType', 'recurringDaysOfWeek', 'dayOfMonth', 'startDate', 'endDate'];
-      const foundColumns = columns.map(c => c.column_name);
+      // Add explicit typing to avoid 'any' return type
+      const foundColumns: string[] = columns.map(c => c.column_name as string);
       expectedColumns.forEach(ec => {
          if (!foundColumns.includes(ec)) {
             console.warn(`WARNING: Expected column '${ec}' NOT FOUND in EventTemplate table!`);
