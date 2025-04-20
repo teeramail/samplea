@@ -170,7 +170,7 @@ export default function ViewEventTemplatePage({ params }: PageProps) {
                   <div>
                     <h4 className="text-sm font-medium text-gray-500">Recurring Days</h4>
                     <p className="mt-1 text-sm text-gray-900">
-                      {formatDaysOfWeek(template.recurringDaysOfWeek)}
+                      {formatDaysOfWeek(template.recurringDaysOfWeek === null ? undefined : template.recurringDaysOfWeek)}
                     </p>
                   </div>
                   <div>
