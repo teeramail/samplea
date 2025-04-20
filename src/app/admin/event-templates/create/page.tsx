@@ -44,7 +44,7 @@ const eventTemplateSchema = z.object({
       }
     }),
   dayOfMonth: z
-    .array(z.number().min(1).max(31))
+    .array(z.coerce.number().min(1).max(31))
     .optional()
     .superRefine((val, ctx) => {
       // Only required if recurrence type is monthly
@@ -56,9 +56,12 @@ const eventTemplateSchema = z.object({
       }
     }),
     
-  defaultStartTime: z
-    .string()
-    .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid time format (HH:MM)"),
+  defaultStartTime: z.preprocess(
+    (val) => (val === "" ? undefined : val),
+    z
+      .string()
+      .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid time format (HH:MM)")
+  ),
   defaultEndTime: z.preprocess(
     (val) => (val === "" ? undefined : val),
     z
@@ -149,6 +152,7 @@ export default function CreateEventTemplatePage() {
     watch,
   } = useForm<EventTemplateFormData>({
     resolver: zodResolver(eventTemplateSchema),
+    mode: "onSubmit",
     defaultValues: {
       isActive: true,
       recurrenceType: "none",
@@ -270,74 +274,37 @@ export default function CreateEventTemplatePage() {
   };
 
   const onSubmit: SubmitHandler<EventTemplateFormData> = async (data) => {
+    console.log("Form data:", data); // Add logging to see what data is being submitted
     // Clear any previous errors
     setSubmitError(null);
     
     try {
-      // Validate required fields explicitly to avoid validation errors
-      if (!data.templateName) {
-        setSubmitError("Template name is required");
-        return;
-      }
-      
-      if (!data.regionId) {
-        setSubmitError("Region is required");
-        return;
-      }
-      
-      if (!data.venueId) {
-        setSubmitError("Venue is required");
-        return;
-      }
-      
-      if (!data.defaultTitleFormat) {
-        setSubmitError("Title format is required");
-        return;
-      }
-      
-      if (!data.defaultStartTime) {
-        setSubmitError("Start time is required");
-        return;
-      }
-      
-      if (!data.templateTickets || data.templateTickets.length === 0) {
-        setSubmitError("Add at least one ticket type");
-        return;
-      }
-      
-      // Recurrence type validation
-      if (data.recurrenceType === "weekly" && (!data.recurringDaysOfWeek || data.recurringDaysOfWeek.length === 0)) {
-        setSubmitError("Select at least one day of week for weekly recurrence");
-        return;
-      }
-      
-      if (data.recurrenceType === "monthly" && (!data.dayOfMonth || data.dayOfMonth.length === 0)) {
-        setSubmitError("Select at least one day of month for monthly recurrence");
-        return;
-      }
-      
-      // Handle thumbnail upload if there's a file
-      let thumbnailUrl = undefined;
-      if (thumbnailFile) {
-        const uploadedUrl = await uploadFile(thumbnailFile, "eventTemplate");
-        if (uploadedUrl) {
-          thumbnailUrl = uploadedUrl;
-        }
-      }
-      
       // Format the data for API submission
       const payload = {
         ...data,
-        thumbnailUrl,
-        // For non-weekly recurrence, ensure recurringDaysOfWeek is empty array not undefined
-        recurringDaysOfWeek: data.recurrenceType === "weekly" ? data.recurringDaysOfWeek || [] : [],
-        // For non-monthly recurrence, ensure dayOfMonth is empty array not undefined
-        dayOfMonth: data.recurrenceType === "monthly" ? data.dayOfMonth || [] : [],
-        // Ensure defaultEndTime is properly handled
+        // Handle uploads
+        thumbnailUrl: thumbnailFile ? await uploadFile(thumbnailFile, "eventTemplate") : undefined,
+        
+        // Handle recurrence types
+        recurringDaysOfWeek: data.recurrenceType === "weekly" 
+          ? data.recurringDaysOfWeek?.map(d => Number(d)) || [] 
+          : [],
+          
+        dayOfMonth: data.recurrenceType === "monthly" 
+          ? data.dayOfMonth?.map(d => Number(d)) || [] 
+          : [],
+          
+        // Handle optional values
         defaultEndTime: data.defaultEndTime || undefined,
-        // Ensure start/end dates are properly handled
         startDate: data.startDate || undefined,
-        endDate: data.endDate || undefined
+        endDate: data.endDate || undefined,
+        
+        // Ensure ticket types have proper numeric values
+        templateTickets: data.templateTickets.map(ticket => ({
+          ...ticket,
+          defaultPrice: Number(ticket.defaultPrice),
+          defaultCapacity: Number(ticket.defaultCapacity),
+        })),
       };
 
       // Submit using tRPC mutation
@@ -363,7 +330,13 @@ export default function CreateEventTemplatePage() {
       <form
         onSubmit={handleSubmit(onSubmit, (errors) => {
           console.error("Form validation errors:", errors);
-          alert("Please check form for errors");
+          // If errors object is empty but we still got an error callback, there's likely another issue
+          if (Object.keys(errors).length === 0) {
+            setSubmitError("Form validation failed. Please check all fields and try again.");
+          } else {
+            // We have specific errors, let the form display them
+            alert("Please check form for errors");
+          }
         })}
         className="space-y-8 rounded-lg bg-white p-8 shadow-md"
       >
