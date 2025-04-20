@@ -149,6 +149,9 @@ export const events = createTable("Event", {
   regionId: text("regionId").references(() => regions.id, {
     onDelete: "set null",
   }), // Allow null if region deleted
+  templateId: text("templateId").references(() => eventTemplates.id, {
+    onDelete: "set null",
+  }), // Reference to the template that created this event
   status: text("status").default("SCHEDULED").notNull(), // Consider pgEnum
   // SEO Fields
   metaTitle: text("metaTitle"),
@@ -420,7 +423,13 @@ export const eventTemplates = createTable("EventTemplate", {
     .notNull(),
   defaultTitleFormat: text("defaultTitleFormat").notNull(),
   defaultDescription: text("defaultDescription"),
+  // Recurrence fields
+  recurrenceType: text("recurrenceType").default("weekly").notNull(), // 'weekly', 'monthly', 'none'
   recurringDaysOfWeek: integer("recurringDaysOfWeek").array().notNull(),
+  dayOfMonth: integer("dayOfMonth"), // For monthly recurrence (1-31)
+  recurrenceStartDate: timestamp("recurrenceStartDate", { withTimezone: false }), // When this template should start generating events
+  recurrenceEndDate: timestamp("recurrenceEndDate", { withTimezone: false }), // When this template should stop generating events
+  // Template details
   defaultStartTime: time("defaultStartTime").notNull(),
   defaultEndTime: time("defaultEndTime"),
   isActive: boolean("isActive").default(true).notNull(),
@@ -586,9 +595,19 @@ export const venueToVenueTypesRelations = relations(
 );
 
 export const eventsRelations = relations(events, ({ one, many }) => ({
-  venue: one(venues, { fields: [events.venueId], references: [venues.id] }),
-  region: one(regions, { fields: [events.regionId], references: [regions.id] }),
-  eventTickets: many(eventTickets), // Changed from tickets to eventTickets
+  venue: one(venues, {
+    fields: [events.venueId],
+    references: [venues.id],
+  }),
+  region: one(regions, {
+    fields: [events.regionId],
+    references: [regions.id],
+  }),
+  eventTickets: many(eventTickets),
+  template: one(eventTemplates, {
+    fields: [events.templateId],
+    references: [eventTemplates.id],
+  }),
   bookings: many(bookings),
 }));
 
