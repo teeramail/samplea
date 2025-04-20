@@ -204,6 +204,22 @@ export const eventTemplateRouter = createTRPCRouter({
       // Create the event template
       const templateId = createId();
 
+      // Helper function to ensure we have proper arrays
+      const ensureNumberArray = (value: unknown): number[] => {
+        if (Array.isArray(value)) {
+          return value.map(Number);
+        }
+        if (typeof value === 'string') {
+          try {
+            const parsed = JSON.parse(value);
+            return Array.isArray(parsed) ? parsed.map(Number) : [];
+          } catch {
+            return [];
+          }
+        }
+        return [];
+      };
+
       // Convert date strings to Date objects and prepare data for insertion
       const dataToInsert = {
         id: templateId,
@@ -213,8 +229,12 @@ export const eventTemplateRouter = createTRPCRouter({
         defaultTitleFormat: templateData.defaultTitleFormat,
         defaultDescription: templateData.defaultDescription,
         recurrenceType: templateData.recurrenceType,
-        recurringDaysOfWeek: templateData.recurringDaysOfWeek ? JSON.stringify(templateData.recurringDaysOfWeek) : null,
-        dayOfMonth: templateData.dayOfMonth ? templateData.dayOfMonth[0] : null,
+        // Store recurringDaysOfWeek as an actual array, not a JSON string
+        recurringDaysOfWeek: ensureNumberArray(templateData.recurringDaysOfWeek),
+        // Only store a single day of month value for now
+        dayOfMonth: Array.isArray(templateData.dayOfMonth) && templateData.dayOfMonth.length > 0 
+          ? Number(templateData.dayOfMonth[0]) 
+          : null,
         defaultStartTime: templateData.defaultStartTime,
         defaultEndTime: templateData.defaultEndTime,
         isActive: templateData.isActive,
@@ -277,6 +297,22 @@ export const eventTemplateRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const { id, templateTickets, ...templateData } = input;
 
+      // Helper function to ensure we have proper arrays
+      const ensureNumberArray = (value: unknown): number[] => {
+        if (Array.isArray(value)) {
+          return value.map(Number);
+        }
+        if (typeof value === 'string') {
+          try {
+            const parsed = JSON.parse(value);
+            return Array.isArray(parsed) ? parsed.map(Number) : [];
+          } catch {
+            return [];
+          }
+        }
+        return [];
+      };
+
       // Convert date strings to Date objects and prepare data for update
       const dataToUpdate = {
         templateName: templateData.templateName,
@@ -285,8 +321,12 @@ export const eventTemplateRouter = createTRPCRouter({
         defaultTitleFormat: templateData.defaultTitleFormat,
         defaultDescription: templateData.defaultDescription,
         recurrenceType: templateData.recurrenceType,
-        recurringDaysOfWeek: templateData.recurringDaysOfWeek ? JSON.stringify(templateData.recurringDaysOfWeek) : null,
-        dayOfMonth: templateData.dayOfMonth ? templateData.dayOfMonth[0] : null,
+        // Store recurringDaysOfWeek as an actual array, using the helper function
+        recurringDaysOfWeek: ensureNumberArray(templateData.recurringDaysOfWeek),
+        // Only store a single day of month value for now
+        dayOfMonth: Array.isArray(templateData.dayOfMonth) && templateData.dayOfMonth.length > 0 
+          ? Number(templateData.dayOfMonth[0]) 
+          : null,
         defaultStartTime: templateData.defaultStartTime,
         defaultEndTime: templateData.defaultEndTime,
         isActive: templateData.isActive,

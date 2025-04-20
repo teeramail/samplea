@@ -290,9 +290,11 @@ export default function CreateEventTemplatePage() {
           ? data.recurringDaysOfWeek?.map(d => Number(d)) || [] 
           : [],
           
-        dayOfMonth: data.recurrenceType === "monthly" 
-          ? data.dayOfMonth?.map(d => Number(d)) || [] 
-          : [],
+        // For monthly recurrence, ensure dayOfMonth is a single value, not an array
+        // The server only supports a single day of month currently
+        dayOfMonth: data.recurrenceType === "monthly" && data.dayOfMonth && data.dayOfMonth.length > 0
+          ? [Number(data.dayOfMonth[0])] 
+          : undefined,
           
         // Handle optional values
         defaultEndTime: data.defaultEndTime || undefined,
@@ -307,6 +309,7 @@ export default function CreateEventTemplatePage() {
         })),
       };
 
+      console.log("Sending payload:", payload); // Add this for debugging
       // Submit using tRPC mutation
       createTemplate.mutate(payload);
     } catch (error) {
