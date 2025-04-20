@@ -126,7 +126,7 @@ export const courseEnrollmentRouter = createTRPCRouter({
               eq(courseEnrollments.status, "CONFIRMED"), // Only count confirmed enrollments towards capacity
             ),
           );
-        const enrollmentCount: number = enrollmentCountResult[0]?.count ?? 0;
+        const enrollmentCount = enrollmentCountResult[0]?.count ?? 0;
         if (enrollmentCount >= course.capacity) {
           throw new TRPCError({
             code: "BAD_REQUEST",
@@ -171,7 +171,7 @@ export const courseEnrollmentRouter = createTRPCRouter({
     console.warn(
       "listMyEnrollments called without authentication. Returning empty array.",
     );
-    return [];
+    return [] as Array<never>;
     // --- END TEMPORARY HANDLING ---
 
     /* // Original logic (requires protectedProcedure and ctx.session)

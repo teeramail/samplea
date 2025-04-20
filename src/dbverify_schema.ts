@@ -1,13 +1,13 @@
 import postgres from "postgres";
 
 // Database connection string from .env
-const DATABASE_URL = process.env.DATABASE_URL || "postgresql://muaythai_owner:npg_uo1cbjDyXRx0@ep-hidden-morning-a134x57e-pooler.ap-southeast-1.aws.neon.tech/muaythai?sslmode=require";
+const DATABASE_URL = process.env.DATABASE_URL ?? "postgresql://muaythai_owner:npg_uo1cbjDyXRx0@ep-hidden-morning-a134x57e-pooler.ap-southeast-1.aws.neon.tech/muaythai?sslmode=require";
 
 console.log(`Attempting to connect to database: ${DATABASE_URL.replace(/:.*@/, ":*****@")}...`);
 
-let sql: postgres.Sql | null = null;
+let sql: postgres.Sql | undefined = undefined;
 
-async function verifyEventTemplateSchema() {
+async function verifyEventTemplateSchema(): Promise<void> {
   try {
     sql = postgres(DATABASE_URL, { 
       max: 1, // Use a single connection
@@ -50,7 +50,7 @@ async function verifyEventTemplateSchema() {
     const enumCheck = await sql`
       SELECT typname FROM pg_type WHERE typname = 'recurrence_type';
     `;
-    if (enumCheck.length > 0 && enumCheck[0].typname === 'recurrence_type') {
+    if (enumCheck.length > 0 && enumCheck[0]?.typname === 'recurrence_type') {
       console.log("Enum 'recurrence_type' found.");
     } else {
       console.warn("WARNING: Enum 'recurrence_type' NOT found.");
@@ -85,4 +85,13 @@ async function verifyEventTemplateSchema() {
 }
 
 // Run the verification
-verifyEventTemplateSchema(); 
+void verifyEventTemplateSchema();
+
+setTimeout(() => {
+  console.log('Closing db connection...');
+  if (sql) {
+    sql.end().catch((e: Error) => {
+      console.error('Error during timeout cleanup:', e.message);
+    });
+  }
+}, 5000); 
