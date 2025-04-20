@@ -454,11 +454,16 @@ export const eventRouter = createTRPCRouter({
           let dates = [];
           
           if (template.recurrenceType === 'monthly' && template.dayOfMonth) {
-            // For monthly recurrence, use the dayOfMonth field (convert from single integer to array)
+            // For monthly recurrence, use the dayOfMonth field as array
+            // Make sure dayOfMonth is an array (for backward compatibility)
+            const daysArray = Array.isArray(template.dayOfMonth) 
+              ? template.dayOfMonth 
+              : template.dayOfMonth ? [template.dayOfMonth] : [];
+              
             dates = generateDatesFromMonthlyPattern(
               startDate,
               endDate,
-              [template.dayOfMonth], // Convert single integer to array
+              daysArray,
               template.defaultStartTime ?? "00:00", // Provide default time if null
               template.defaultEndTime,
             );

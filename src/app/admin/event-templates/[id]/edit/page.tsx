@@ -242,7 +242,11 @@ export default function EditEventTemplatePage({ params }: PageProps) {
       
       // Set dayOfMonth (for monthly recurrence)
       if (templateData.dayOfMonth) {
-        setValue("dayOfMonth", [templateData.dayOfMonth]); // Convert single value to array for form
+        // Ensure dayOfMonth is treated as an array
+        const dayOfMonthArray = Array.isArray(templateData.dayOfMonth) 
+          ? templateData.dayOfMonth 
+          : [templateData.dayOfMonth];
+        setValue("dayOfMonth", dayOfMonthArray);
       } else {
         setValue("dayOfMonth", []);
       }
@@ -837,7 +841,9 @@ export default function EditEventTemplatePage({ params }: PageProps) {
                         type="checkbox"
                         value={day}
                         {...register("dayOfMonth")}
-                        defaultChecked={templateData?.dayOfMonth === day}
+                        defaultChecked={Array.isArray(templateData?.dayOfMonth) 
+                          ? templateData?.dayOfMonth.includes(day)
+                          : templateData?.dayOfMonth === day}
                         className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                       />
                       <label

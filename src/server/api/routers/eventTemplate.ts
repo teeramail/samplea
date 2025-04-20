@@ -231,9 +231,9 @@ export const eventTemplateRouter = createTRPCRouter({
         recurrenceType: templateData.recurrenceType,
         // Store recurringDaysOfWeek as an actual array, not a JSON string
         recurringDaysOfWeek: ensureNumberArray(templateData.recurringDaysOfWeek),
-        // Only store a single day of month value for now
-        dayOfMonth: Array.isArray(templateData.dayOfMonth) && templateData.dayOfMonth.length > 0 
-          ? Number(templateData.dayOfMonth[0]) 
+        // Store the full array of days of month
+        dayOfMonth: templateData.recurrenceType === 'monthly' && Array.isArray(templateData.dayOfMonth)
+          ? ensureNumberArray(templateData.dayOfMonth)
           : null,
         defaultStartTime: templateData.defaultStartTime,
         defaultEndTime: templateData.defaultEndTime,
@@ -323,9 +323,9 @@ export const eventTemplateRouter = createTRPCRouter({
         recurrenceType: templateData.recurrenceType,
         // Store recurringDaysOfWeek as an actual array, using the helper function
         recurringDaysOfWeek: ensureNumberArray(templateData.recurringDaysOfWeek),
-        // Only store a single day of month value for now
-        dayOfMonth: Array.isArray(templateData.dayOfMonth) && templateData.dayOfMonth.length > 0 
-          ? Number(templateData.dayOfMonth[0]) 
+        // Store the full array of days of month
+        dayOfMonth: templateData.recurrenceType === 'monthly' && Array.isArray(templateData.dayOfMonth)
+          ? ensureNumberArray(templateData.dayOfMonth)
           : null,
         defaultStartTime: templateData.defaultStartTime,
         defaultEndTime: templateData.defaultEndTime,

@@ -426,7 +426,7 @@ export const eventTemplates = createTable("EventTemplate", {
   // --- Recurrence Fields ---
   recurrenceType: recurrenceTypeEnum("recurrenceType").default('none').notNull(),
   recurringDaysOfWeek: integer("recurringDaysOfWeek").array(),
-  dayOfMonth: integer("dayOfMonth"),
+  dayOfMonth: integer("dayOfMonth").array(),
   // --- End Recurrence Fields ---
 
   defaultStartTime: time("defaultStartTime", { withTimezone: false }),
