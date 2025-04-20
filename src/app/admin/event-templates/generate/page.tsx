@@ -20,12 +20,12 @@ export default function GenerateEventsPage() {
   interface EventTemplate {
     id: string;
     templateName: string;
-    venueId: string;
-    regionId: string;
+    venueId: string | null;
+    regionId: string | null;
     venue?: { name: string };
     region?: { name: string };
-    recurringDaysOfWeek: number[];
-    defaultStartTime: string;
+    recurringDaysOfWeek: number[] | null;
+    defaultStartTime: string | null;
     defaultEndTime?: string | null;
     defaultDescription?: string | null;
     defaultTitleFormat: string;
@@ -181,7 +181,7 @@ export default function GenerateEventsPage() {
           <div className="py-4 text-center">Loading templates...</div>
         ) : templates?.items && templates.items.length > 0 ? (
           <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {templates?.items.map((template: EventTemplate) => (
+            {templates?.items.map((template) => (
               <div
                 key={template.id}
                 className="rounded-md border p-4 hover:bg-gray-50"
@@ -206,14 +206,14 @@ export default function GenerateEventsPage() {
                     </div>
                     <div className="mt-1 text-xs text-gray-500">
                       {template.recurringDaysOfWeek
-                        .map(
+                        ?.map(
                           (day: number) =>
                             ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][
                               day
                             ],
                         )
                         .join(", ")}{" "}
-                      at {template.defaultStartTime.slice(0, 5)}
+                      at {template.defaultStartTime?.slice(0, 5) ?? 'N/A'}
                     </div>
                   </div>
                 </div>
