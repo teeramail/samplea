@@ -223,15 +223,25 @@ export default function EditEventTemplatePage({ params }: PageProps) {
   // Set form data when template data is loaded
   useEffect(() => {
     if (templateData) {
-      // Format time strings for form inputs
-      // Map API data to form values
-      setValue("id", templateData.id);
-      setValue("templateName", templateData.templateName);
-      setValue("regionId", templateData.regionId ?? "");
-      setValue("venueId", templateData.venueId ?? "");
-      setValue("defaultTitleFormat", templateData.defaultTitleFormat);
-      setValue("defaultDescription", templateData.defaultDescription ?? "");
-      setValue("recurringDaysOfWeek", templateData.recurringDaysOfWeek);
+      // Helper function to safely set values with proper type handling
+      const safeSetValue = <T,>(field: keyof EventTemplateFormData, value: T | null | undefined, defaultValue: T) => {
+        setValue(field, value !== null && value !== undefined ? value : defaultValue);
+      };
+
+      // Map API data to form values with safe handling for null values
+      safeSetValue("id", templateData.id, "");
+      safeSetValue("templateName", templateData.templateName, "");
+      safeSetValue("regionId", templateData.regionId, "");
+      safeSetValue("venueId", templateData.venueId, "");
+      safeSetValue("defaultTitleFormat", templateData.defaultTitleFormat, "");
+      safeSetValue("defaultDescription", templateData.defaultDescription, "");
+      
+      // Special handling for arrays
+      if (templateData.recurringDaysOfWeek && Array.isArray(templateData.recurringDaysOfWeek)) {
+        setValue("recurringDaysOfWeek", templateData.recurringDaysOfWeek);
+      } else {
+        setValue("recurringDaysOfWeek", []);
+      }
       
       // Format time to ensure consistent format (HH:MM)
       if (templateData.defaultStartTime) {
