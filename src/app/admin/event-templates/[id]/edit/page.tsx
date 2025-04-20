@@ -223,25 +223,17 @@ export default function EditEventTemplatePage({ params }: PageProps) {
   // Set form data when template data is loaded
   useEffect(() => {
     if (templateData) {
-      // Helper function to safely set values with proper type handling
-      const safeSetValue = <T,>(field: keyof EventTemplateFormData, value: T | null | undefined, defaultValue: T) => {
-        setValue(field, value !== null && value !== undefined ? value : defaultValue);
-      };
-
-      // Map API data to form values with safe handling for null values
-      safeSetValue("id", templateData.id, "");
-      safeSetValue("templateName", templateData.templateName, "");
-      safeSetValue("regionId", templateData.regionId, "");
-      safeSetValue("venueId", templateData.venueId, "");
-      safeSetValue("defaultTitleFormat", templateData.defaultTitleFormat, "");
-      safeSetValue("defaultDescription", templateData.defaultDescription, "");
+      // Map API data to form values with explicit null checks
+      setValue("id", templateData.id ?? "");
+      setValue("templateName", templateData.templateName ?? "");
+      setValue("regionId", templateData.regionId ?? "");
+      setValue("venueId", templateData.venueId ?? "");
+      setValue("defaultTitleFormat", templateData.defaultTitleFormat ?? "");
+      setValue("defaultDescription", templateData.defaultDescription ?? "");
+      setValue("isActive", templateData.isActive ?? false);
       
       // Special handling for arrays
-      if (templateData.recurringDaysOfWeek && Array.isArray(templateData.recurringDaysOfWeek)) {
-        setValue("recurringDaysOfWeek", templateData.recurringDaysOfWeek);
-      } else {
-        setValue("recurringDaysOfWeek", []);
-      }
+      setValue("recurringDaysOfWeek", Array.isArray(templateData.recurringDaysOfWeek) ? templateData.recurringDaysOfWeek : []);
       
       // Format time to ensure consistent format (HH:MM)
       if (templateData.defaultStartTime) {
@@ -256,6 +248,9 @@ export default function EditEventTemplatePage({ params }: PageProps) {
         } else {
           setValue("defaultStartTime", templateData.defaultStartTime);
         }
+      } else {
+        // Default to noon if not provided
+        setValue("defaultStartTime", "12:00");
       }
       
       if (templateData.defaultEndTime) {
@@ -273,8 +268,6 @@ export default function EditEventTemplatePage({ params }: PageProps) {
       } else {
         setValue("defaultEndTime", "");
       }
-      
-      setValue("isActive", templateData.isActive);
       
       // Handle thumbnailUrl safely with type checking
       if ('thumbnailUrl' in templateData && templateData.thumbnailUrl !== undefined) {
