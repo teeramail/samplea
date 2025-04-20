@@ -18,7 +18,13 @@ async function checkDayOfMonth() {
     `;
     
     if (result.length > 0) {
-      console.log(`✅ Column found: ${result[0].column_name} (${result[0].data_type})`);
+      const firstResult = result[0];
+      if (firstResult) {
+        console.log(`✅ Column found: ${firstResult.column_name} (${firstResult.data_type})`);
+      } else {
+        // This case should technically not be reachable if result.length > 0, but satisfies TS
+        console.log("🔍 Found the column entry but it was unexpectedly empty.");
+      }
     } else {
       console.log("❌ dayOfMonth column NOT found in the EventTemplate table!");
     }
