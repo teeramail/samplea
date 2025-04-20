@@ -16,6 +16,71 @@ import {
 } from "~/server/db/schema";
 import { eq, desc, and, gte, like, asc, count, inArray } from "drizzle-orm";
 
+// Helper function to generate dates from a monthly recurring pattern
+function generateDatesFromMonthlyPattern(
+  startDate: Date,
+  endDate: Date,
+  daysOfMonth: number[],
+  defaultStartTime: string,
+  defaultEndTime?: string | null,
+) {
+  const dates = [];
+  const currentDate = new Date(startDate);
+  
+  // Set to the beginning of the start month to ensure we catch all possible days
+  currentDate.setDate(1);
+  
+  // Loop through each month in the range
+  while (currentDate <= endDate) {
+    for (const dayOfMonth of daysOfMonth) {
+      // Create a new date for this day of month
+      const eventDate = new Date(currentDate);
+      eventDate.setDate(dayOfMonth);
+      
+      // Skip if this date is before the start date or after the end date
+      if (eventDate < startDate || eventDate > endDate) {
+        continue;
+      }
+      
+      // Skip if the day doesn't exist in the current month (e.g., February 30)
+      if (eventDate.getMonth() !== currentDate.getMonth()) {
+        continue;
+      }
+      
+      // Parse time strings
+      const startTimeParts = defaultStartTime.split(":").map(Number);
+      const startHours = startTimeParts[0] ?? 0;
+      const startMinutes = startTimeParts[1] ?? 0;
+      
+      // Create start time
+      const startTime = new Date(eventDate);
+      startTime.setHours(startHours, startMinutes, 0, 0);
+      
+      // Create end time if provided
+      let endTime;
+      if (defaultEndTime) {
+        const endTimeParts = defaultEndTime.split(":").map(Number);
+        const endHours = endTimeParts[0] ?? 0;
+        const endMinutes = endTimeParts[1] ?? 0;
+        endTime = new Date(eventDate);
+        endTime.setHours(endHours, endMinutes, 0, 0);
+      }
+      
+      dates.push({
+        date: new Date(eventDate),
+        startTime,
+        endTime,
+      });
+    }
+    
+    // Move to the next month
+    currentDate.setMonth(currentDate.getMonth() + 1);
+  }
+  
+  // Sort the dates chronologically
+  return dates.sort((a, b) => a.date.getTime() - b.date.getTime());
+}
+
 // Helper function to generate dates from a recurring pattern
 function generateDatesFromRecurringPattern(
   startDate: Date,
@@ -349,6 +414,25 @@ export const eventRouter = createTRPCRouter({
             venue: true,
             region: true,
           },
+          // Ensure we select all needed fields
+          columns: {
+            id: true,
+            templateName: true,
+            venueId: true,
+            regionId: true,
+            defaultTitleFormat: true,
+            defaultDescription: true,
+            recurringDaysOfWeek: true,
+            dayOfMonth: true, // Important for monthly recurrence
+            recurrenceType: true, // Important to determine recurrence pattern
+            defaultStartTime: true,
+            defaultEndTime: true,
+            isActive: true,
+            startDate: true,
+            endDate: true,
+            createdAt: true,
+            updatedAt: true,
+          },
         });
 
         // For each template, get its ticket types
@@ -362,18 +446,32 @@ export const eventRouter = createTRPCRouter({
           }),
         );
 
-        // 2. Generate event dates based on recurring pattern
+        // 2. Generate event dates based on recurrence type and pattern
         const eventsToCreate = [];
 
         for (const template of templatesWithTickets) {
-          // Generate dates from recurring pattern
-          const dates = generateDatesFromRecurringPattern(
-            startDate,
-            endDate,
-            template.recurringDaysOfWeek ?? [], // Provide empty array as fallback if null
-            template.defaultStartTime ?? "00:00", // Provide default time if null
-            template.defaultEndTime,
-          );
+          // Generate dates based on recurrence type and pattern
+          let dates = [];
+          
+          if (template.recurrenceType === 'monthly' && template.dayOfMonth) {
+            // For monthly recurrence, use the dayOfMonth field (convert from single integer to array)
+            dates = generateDatesFromMonthlyPattern(
+              startDate,
+              endDate,
+              [template.dayOfMonth], // Convert single integer to array
+              template.defaultStartTime ?? "00:00", // Provide default time if null
+              template.defaultEndTime,
+            );
+          } else {
+            // For weekly recurrence (default), use recurringDaysOfWeek
+            dates = generateDatesFromRecurringPattern(
+              startDate,
+              endDate,
+              template.recurringDaysOfWeek ?? [], // Provide empty array as fallback if null
+              template.defaultStartTime ?? "00:00", // Provide default time if null
+              template.defaultEndTime,
+            );
+          }
 
           // 3. For each date, create event data
           for (const date of dates) {
