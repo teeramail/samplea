@@ -371,14 +371,14 @@ export const eventRouter = createTRPCRouter({
             startDate,
             endDate,
             template.recurringDaysOfWeek ?? [], // Provide empty array as fallback if null
-            template.defaultStartTime,
+            template.defaultStartTime ?? "00:00", // Provide default time if null
             template.defaultEndTime,
           );
 
           // 3. For each date, create event data
           for (const date of dates) {
             // Format title using template
-            const title = formatEventTitle(template.defaultTitleFormat, {
+            const title = formatEventTitle(template.defaultTitleFormat ?? "{venue} Event", {
               venue: template.venue?.name ?? "Venue",
               date: format(date.date, "MMMM d, yyyy"),
               time: format(date.startTime, "h:mm a"),
