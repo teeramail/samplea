@@ -116,127 +116,7 @@ export default function ViewEventTemplatePage({ params }: PageProps) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-800">
-          Event Template Details
-        </h1>
-        <div className="flex space-x-3">
-          <Link
-            href={`/admin/event-templates/${id}/edit`}
-            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-          >
-            Edit Template
-          </Link>
-          <Link
-            href="/admin/event-templates"
-            className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            Back to List
-          </Link>
-        </div>
-      </div>
-
-      <div className="overflow-hidden rounded-lg bg-white shadow">
-        <div className="p-6">
-          {/* Thumbnail section - show prominently at the top if available */}
-          {template && typeof template === 'object' && 'thumbnailUrl' in template && template.thumbnailUrl ? (
-            <div className="mb-6">
-              <h3 className="mb-3 text-lg font-medium leading-6 text-gray-900">
-                Event Thumbnail
-              </h3>
-              <div className="relative h-64 w-full overflow-hidden rounded-lg border border-gray-200">
-                <Image
-                  src={template.thumbnailUrl as string}
-                  alt={(typeof template.templateName === 'string' ? template.templateName : 'Event template')}
-                  fill
-                  className="object-contain"
-                  unoptimized
-                />
-              </div>
-            </div>
-          ) : null}
-          
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            {/* Left column */}
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-medium leading-6 text-gray-900">
-                  Basic Information
-                </h3>
-                <div className="mt-4 space-y-4">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500">Template Name</h4>
-                    <p className="mt-1 text-sm text-gray-900">{template.templateName}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500">Venue</h4>
-                    <p className="mt-1 text-sm text-gray-900">{template.venue?.name || "N/A"}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500">Region</h4>
-                    <p className="mt-1 text-sm text-gray-900">{template.region?.name || "N/A"}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500">Status</h4>
-                    <p className="mt-1">
-                      <span
-                        className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                          template.isActive
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        {template.isActive ? "Active" : "Inactive"}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-medium leading-6 text-gray-900">
-                  Event Details
-                </h3>
-                <div className="mt-4 space-y-4">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500">Default Title Format</h4>
-                    <p className="mt-1 text-sm text-gray-900">{template.defaultTitleFormat}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500">Description</h4>
-                    <p className="mt-1 text-sm text-gray-900">
-                      {template.defaultDescription ?? "No description"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-if (isLoading) {
-  return (
-    <div className="flex h-64 items-center justify-center">
-      <div className="text-lg font-medium text-gray-500">Loading...</div>
-    </div>
-  );
-}
-
-if (error || !template) {
-  return (
-    <div className="rounded-lg bg-red-50 p-4 text-red-800">
-      <h3 className="text-lg font-medium">Error</h3>
-      <p>{error?.message || "Event template not found"}</p>
-      <div className="mt-4">
-        <Link
-          href="/admin/event-templates"
-          className="rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700"
-        >
-          Back to Templates
-        </Link>
-      </div>
-    </div>
-  );
-}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">{template.name}</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{template.templateName}</h1>
         <div className="flex space-x-3">
           <Link
             href={`/admin/event-templates/${id}/edit`}
@@ -256,29 +136,25 @@ if (error || !template) {
       <div className="overflow-hidden rounded-lg bg-white shadow">
         <div className="px-4 py-5 sm:p-6">
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            {/* Thumbnail Image */}
-            <div className="md:col-span-2">
-              <h3 className="text-lg font-medium leading-6 text-gray-900">
-                Template Thumbnail
-              </h3>
-              <div className="mt-4">
-                {template.thumbnailUrl ? (
+            {/* Thumbnail Image - if venue has one, show it */}
+            {template.venue?.thumbnailUrl && (
+              <div className="md:col-span-2">
+                <h3 className="text-lg font-medium leading-6 text-gray-900">
+                  Venue Thumbnail
+                </h3>
+                <div className="mt-4">
                   <div className="relative h-64 w-full overflow-hidden rounded-lg">
                     <Image
-                      src={template.thumbnailUrl}
-                      alt={template.name}
+                      src={template.venue.thumbnailUrl}
+                      alt={template.venue.name}
                       fill
                       style={{ objectFit: 'cover' }}
                       className="rounded-lg"
                     />
                   </div>
-                ) : (
-                  <div className="flex h-64 w-full items-center justify-center rounded-lg bg-gray-100">
-                    <p className="text-gray-500">No thumbnail image</p>
-                  </div>
-                )}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Basic Information */}
             <div>
@@ -288,7 +164,7 @@ if (error || !template) {
               <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <h4 className="text-sm font-medium text-gray-500">Template Name</h4>
-                  <p className="mt-1 text-sm text-gray-900">{template.name}</p>
+                  <p className="mt-1 text-sm text-gray-900">{template.templateName}</p>
                 </div>
                 <div>
                   <h4 className="text-sm font-medium text-gray-500">Region</h4>
