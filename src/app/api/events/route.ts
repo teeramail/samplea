@@ -18,7 +18,15 @@ const eventSchema = z.object({
   description: z
     .string()
     .min(5, "Description must be at least 5 characters long"),
-  date: z.string().datetime(),
+  date: z.string().datetime().refine(
+    (dateStr) => {
+      const date = new Date(dateStr);
+      const year = date.getFullYear();
+      // Validate year is reasonable (not in Buddhist calendar - BE years are typically > 2500)
+      return year > 1900 && year < 2500;
+    },
+    { message: "Date appears to be in Buddhist Era. Please use Christian Era (CE) dates." }
+  ),
   startTime: z.string().datetime(),
   endTime: z.string().datetime().nullable().optional(),
   thumbnailUrl: z.string().url().nullable().optional(),
@@ -119,13 +127,26 @@ export async function POST(req: Request) {
       console.error("Event validation failed:", validation.error.errors);
       return NextResponse.json(
         {
-          /* ... error response ... */
+          error: "Validation error",
+          details: validation.error.errors,
         },
         { status: 400 },
       );
     }
 
     const validatedData = validation.data;
+    
+    // Extra validation for Buddhist Era dates
+    const convertToChristianEra = (dateString: string) => {
+      const date = new Date(dateString);
+      const year = date.getFullYear();
+      // If it's likely a Buddhist Era date (BE is 543 years ahead of CE)
+      if (year > 2500) {
+        date.setFullYear(year - 543);
+        return date;
+      }
+      return new Date(dateString);
+    };
 
     const result = await db.transaction(async (tx) => {
       const eventId = uuidv4();
@@ -135,9 +156,9 @@ export async function POST(req: Request) {
         id: eventId,
         title: validatedData.title,
         description: validatedData.description,
-        date: new Date(validatedData.date),
-        startTime: new Date(validatedData.startTime),
-        endTime: validatedData.endTime ? new Date(validatedData.endTime) : null,
+        date: convertToChristianEra(validatedData.date),
+        startTime: convertToChristianEra(validatedData.startTime),
+        endTime: validatedData.endTime ? convertToChristianEra(validatedData.endTime) : null,
         thumbnailUrl: validatedData.thumbnailUrl,
         imageUrls: validatedData.imageUrls,
         venueId: validatedData.venueId,

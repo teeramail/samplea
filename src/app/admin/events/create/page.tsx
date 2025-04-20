@@ -451,6 +451,9 @@ export default function CreateEventPage() {
                   {errors.date.message}
                 </p>
               )}
+              <p className="mt-1 text-xs text-amber-600">
+                Important: Use Christian Era (CE) calendar dates only. Do not use Buddhist Era (BE) dates.
+              </p>
             </div>
 
             <div>

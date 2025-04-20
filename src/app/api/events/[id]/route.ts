@@ -20,7 +20,15 @@ const updateEventSchema = z.object({
   description: z
     .string()
     .min(5, "Description must be at least 5 characters long"),
-  date: z.string().datetime(),
+  date: z.string().datetime().refine(
+    (dateStr) => {
+      const date = new Date(dateStr);
+      const year = date.getFullYear();
+      // Validate year is reasonable (not in Buddhist calendar - BE years are typically > 2500)
+      return year > 1900 && year < 2500;
+    },
+    { message: "Date appears to be in Buddhist Era. Please use Christian Era (CE) dates." }
+  ),
   startTime: z.string().datetime(),
   endTime: z.string().datetime(),
   imageUrl: z.string().optional().nullable(),
@@ -73,26 +81,27 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    // Using the asynchronous param pattern required by Next.js 15
-    const { id } = await params;
+    // Parse event ID
+    const resolvedParams = await params;
+    const eventId = resolvedParams.id;
 
-    console.log(`Updating event with ID: ${id}`);
+    console.log(`Updating event with ID: ${eventId}`);
 
     // Check if event exists
     const existingEvent = await db.query.events.findFirst({
-      where: eq(events.id, id),
+      where: eq(events.id, eventId),
       with: {
-        eventTickets: true, // Corrected relation name
+        eventTickets: true,
       },
     });
 
     if (!existingEvent) {
-      console.log(`Event with ID ${id} not found`);
+      console.log(`Event with ID ${eventId} not found`);
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
     // Get the request body and validate it
-    const body = (await request.json()) as z.infer<typeof updateEventSchema>;
+    const body = await request.json();
 
     // Validate the request body
     const validation = updateEventSchema.safeParse(body);
@@ -103,6 +112,20 @@ export async function PATCH(
       );
     }
 
+    const validatedData = validation.data;
+    
+    // Extra validation for Buddhist Era dates
+    const convertToChristianEra = (dateString: string) => {
+      const date = new Date(dateString);
+      const year = date.getFullYear();
+      // If it's likely a Buddhist Era date (BE is 543 years ahead of CE)
+      if (year > 2500) {
+        date.setFullYear(year - 543);
+        return date;
+      }
+      return new Date(dateString);
+    };
+
     // Begin a transaction
     await db.transaction(async (tx) => {
       // Update the event
@@ -111,91 +134,88 @@ export async function PATCH(
       await tx
         .update(events)
         .set({
-          title: body.title,
-          description: body.description,
-          date: new Date(body.date),
-          startTime: new Date(body.startTime),
-          endTime: new Date(body.endTime),
-          imageUrl: body.imageUrl,
-          venueId: body.venueId,
-          regionId: body.regionId,
-          usesDefaultPoster: !body.imageUrl, // Set to true if no image URL is provided
+          title: validatedData.title,
+          description: validatedData.description,
+          date: convertToChristianEra(validatedData.date),
+          startTime: convertToChristianEra(validatedData.startTime),
+          endTime: convertToChristianEra(validatedData.endTime),
+          imageUrl: validatedData.imageUrl,
+          venueId: validatedData.venueId,
+          regionId: validatedData.regionId,
+          usesDefaultPoster: !validatedData.imageUrl, // Set to true if no image URL is provided
           updatedAt: now,
         })
-        .where(eq(events.id, id));
+        .where(eq(events.id, eventId));
 
-      // Process ticket types - convert from event.eventTickets to existing ticket IDs
-      const existingTicketIds = new Set(
-        existingEvent.eventTickets.map((t) => t.id),
-      );
-      const updatedTicketIds = new Set(
-        body.ticketTypes.filter((t) => t.id).map((t) => t.id!),
-      );
+      // Process ticket types
+      if (existingEvent.eventTickets) {
+        const existingTicketIds = new Set(
+          existingEvent.eventTickets.map((ticket) => ticket.id)
+        );
+        const updatedTicketIds = new Set(
+          validatedData.ticketTypes
+            .filter((t) => t.id)
+            .map((t) => t.id as string)
+        );
 
-      console.log(`Processing ${body.ticketTypes.length} ticket types`);
+        console.log(`Processing ${validatedData.ticketTypes.length} ticket types`);
 
-      // Delete tickets that are no longer present
-      for (const ticketId of existingTicketIds) {
-        if (!updatedTicketIds.has(ticketId)) {
-          console.log(`Deleting ticket: ${ticketId}`);
-          await tx.delete(eventTickets).where(eq(eventTickets.id, ticketId));
+        // Delete tickets that are no longer present
+        for (const ticketId of existingTicketIds) {
+          if (!updatedTicketIds.has(ticketId)) {
+            console.log(`Deleting ticket: ${ticketId}`);
+            await tx.delete(eventTickets).where(eq(eventTickets.id, ticketId));
+          }
         }
-      }
 
-      // Update or create ticket types
-      for (const ticketType of body.ticketTypes) {
-        if (ticketType.id && existingTicketIds.has(ticketType.id)) {
-          // Update existing ticket type
-          console.log(`Updating ticket: ${ticketType.id}`);
-          await tx
-            .update(eventTickets)
-            .set({
+        // Update or create ticket types
+        for (const ticketType of validatedData.ticketTypes) {
+          if (ticketType.id && existingTicketIds.has(ticketType.id)) {
+            // Update existing ticket type
+            console.log(`Updating ticket: ${ticketType.id}`);
+            await tx
+              .update(eventTickets)
+              .set({
+                seatType: ticketType.seatType,
+                price: ticketType.price,
+                capacity: ticketType.capacity,
+                description: ticketType.description,
+                updatedAt: now,
+              })
+              .where(eq(eventTickets.id, ticketType.id));
+          } else {
+            // Create new ticket type
+            const newTicketId = uuidv4();
+            console.log(`Creating new ticket: ${newTicketId}`);
+            await tx.insert(eventTickets).values({
+              id: newTicketId,
+              eventId: eventId,
               seatType: ticketType.seatType,
               price: ticketType.price,
               capacity: ticketType.capacity,
               description: ticketType.description,
+              soldCount: 0, // Initialize with zero sold tickets
+              createdAt: now,
               updatedAt: now,
-            })
-            .where(eq(eventTickets.id, ticketType.id));
-        } else {
-          // Create new ticket type
-          const newTicketId = uuidv4();
-          console.log(`Creating new ticket: ${newTicketId}`);
-          await tx.insert(eventTickets).values({
-            id: newTicketId,
-            eventId: id,
-            seatType: ticketType.seatType,
-            price: ticketType.price,
-            capacity: ticketType.capacity,
-            description: ticketType.description,
-            soldCount: 0, // Initialize with zero sold tickets
-            createdAt: now,
-            updatedAt: now,
-          });
+            });
+          }
         }
       }
     });
 
-    console.log(`Event ${id} updated successfully`);
+    console.log(`Event ${eventId} updated successfully`);
 
     // Get the updated event with related data
     const updatedEvent = await db.query.events.findFirst({
-      where: eq(events.id, id),
+      where: eq(events.id, eventId),
       with: {
         venue: true,
         region: true,
-        eventTickets: true, // Corrected relation name
+        eventTickets: true,
       },
     });
 
-    if (!updatedEvent) {
-      return NextResponse.json(
-        { error: "Failed to retrieve updated event" },
-        { status: 500 },
-      );
-    }
-
-    return NextResponse.json(updatedEvent); // Return the updated event directly
+    return NextResponse.json({ success: true, data: updatedEvent });
   } catch (error) {
     console.error("Error updating event:", error);
 

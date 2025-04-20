@@ -8,6 +8,7 @@ import { notFound } from "next/navigation";
 import { format, startOfDay, parseISO, isAfter } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { unstable_cache } from 'next/cache';
+import { convertToChristianEra, parseAndConvertDate } from "~/lib/dateUtils";
 
 // Define types for the event data
 type UpcomingEvent = {
@@ -84,8 +85,17 @@ async function getRegionEvents(regionId: string) {
     // Extra validation layer - filter out any past events that might have slipped through
     // and ensure they're sorted by date ascending (nearest first)
     const validEvents = regionEvents
-      .filter(event => new Date(event.date) >= now)
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      .filter(event => {
+        // Handle potential Buddhist Era dates
+        const eventDate = new Date(event.date);
+        const convertedDate = convertToChristianEra(eventDate);
+        return convertedDate >= now;
+      })
+      .sort((a, b) => {
+        const dateA = convertToChristianEra(new Date(a.date)).getTime();
+        const dateB = convertToChristianEra(new Date(b.date)).getTime();
+        return dateA - dateB;
+      });
     
     console.log(`After filtering: ${validEvents.length} valid upcoming events`);
     
@@ -151,8 +161,11 @@ export default async function RegionPage({ params }: RegionPageProps) {
 
   // Format date function with Thai time zone
   const formatDate = (date: Date) => {
+    // Handle potential Buddhist Era dates
+    const convertedDate = convertToChristianEra(date);
+    
     const thaiTimeZone = "Asia/Bangkok";
-    const thaiDate = toZonedTime(new Date(date), thaiTimeZone);
+    const thaiDate = toZonedTime(convertedDate, thaiTimeZone);
 
     return format(thaiDate, "MMMM d, yyyy");
   };
