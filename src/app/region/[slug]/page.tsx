@@ -47,19 +47,18 @@ function getRevalidateSeconds(): number {
 // Function to get events for a specific region - only today and upcoming events in Thai time
 async function getRegionEvents(regionId: string) {
   try {
-    // Get current date and time in Thai time zone (UTC+7)
-    const thaiTimeZone = "Asia/Bangkok";
+    // Get current date time
     const now = new Date();
-    const thaiNow = toZonedTime(now, thaiTimeZone);
     
     // For debugging
-    console.log(`Current Thai time: ${thaiNow.toISOString()}`);
-
-    // Get upcoming events directly from the database
-    // Convert current Thai time to UTC for database comparison
-    const currentTimeUTC = new Date(thaiNow.getTime() - (7 * 60 * 60 * 1000)); // Subtract 7 hours to get UTC
+    console.log(`Current JS Date: ${now.toISOString()}`);
     
-    console.log(`Current UTC time for DB query: ${currentTimeUTC.toISOString()}`);
+    // Create a date object at midnight today in UTC
+    // This ensures we only filter by the date portion, not time
+    const todayAtMidnightUTC = new Date(now);
+    todayAtMidnightUTC.setUTCHours(0, 0, 0, 0);
+    
+    console.log(`Today at midnight UTC for DB query: ${todayAtMidnightUTC.toISOString()}`);
     
     const regionEvents = await db.query.events.findMany({
       columns: {
@@ -74,16 +73,23 @@ async function getRegionEvents(regionId: string) {
       },
       where: and(
         eq(events.regionId, regionId),
-        gte(events.date, currentTimeUTC) // Filter by current time in UTC
+        gte(events.date, todayAtMidnightUTC) // Filter by today and future dates
       ),
       orderBy: [asc(events.date)], // Sort by nearest upcoming events first
       limit: 8, // Limit to 8 events
     });
     
     console.log(`Found ${regionEvents.length} upcoming events in region`);
-
-    console.log(`Found ${regionEvents.length} upcoming events in region`);
-    return regionEvents;
+    
+    // Extra validation layer - filter out any past events that might have slipped through
+    // and ensure they're sorted by date ascending (nearest first)
+    const validEvents = regionEvents
+      .filter(event => new Date(event.date) >= now)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    
+    console.log(`After filtering: ${validEvents.length} valid upcoming events`);
+    
+    return validEvents;
   } catch (error) {
     console.error("Error fetching region events:", error);
     return [];
