@@ -41,8 +41,8 @@ export default function GenerateEventsPage() {
       startTime: string | Date;
       endTime?: string | Date | null;
       description?: string | null;
-      venueId: string;
-      regionId: string;
+      venueId: string | null;
+      regionId: string | null;
       status: string;
       usesDefaultPoster?: boolean;
     };
