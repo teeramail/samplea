@@ -13,8 +13,8 @@ export default function EventTemplatesListPage() {
   const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [sortField, setSortField] = useState<string>("templateName");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [sortField, setSortField] = useState<string>("updatedAt");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [searchInputValue, setSearchInputValue] = useState<string>("");
 
