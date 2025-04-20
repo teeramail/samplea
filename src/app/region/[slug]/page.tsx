@@ -119,7 +119,7 @@ const getRegionPageData = unstable_cache(
 );
 
 // Set page-level revalidation
-export const revalidate = getRevalidateSeconds();
+export const revalidate = 3600; // Revalidate every hour (3600 seconds)
 
 // Generate static params for all regions
 export async function generateStaticParams() {
