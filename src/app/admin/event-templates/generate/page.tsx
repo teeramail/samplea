@@ -285,7 +285,7 @@ export default function GenerateEventsPage() {
                 {generatedEvents.map((item: GeneratedEvent, index) => (
                   <tr key={index} className="hover:bg-gray-50">
                     <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
-                      {format(new Date(item.event.date), "MMM d, yyyy")}
+                      {format(new Date(item.event.date), "EEE MMM d, yyyy")}
                     </td>
                     <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
                       {format(new Date(item.event.startTime), "h:mm a")}
