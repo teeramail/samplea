@@ -227,8 +227,8 @@ export default function EditEventTemplatePage({ params }: PageProps) {
       // Map API data to form values
       setValue("id", templateData.id);
       setValue("templateName", templateData.templateName);
-      setValue("regionId", templateData.regionId);
-      setValue("venueId", templateData.venueId);
+      setValue("regionId", templateData.regionId ?? "");
+      setValue("venueId", templateData.venueId ?? "");
       setValue("defaultTitleFormat", templateData.defaultTitleFormat);
       setValue("defaultDescription", templateData.defaultDescription ?? "");
       setValue("recurringDaysOfWeek", templateData.recurringDaysOfWeek);
