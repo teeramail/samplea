@@ -370,7 +370,7 @@ export const eventRouter = createTRPCRouter({
           const dates = generateDatesFromRecurringPattern(
             startDate,
             endDate,
-            template.recurringDaysOfWeek,
+            template.recurringDaysOfWeek ?? [], // Provide empty array as fallback if null
             template.defaultStartTime,
             template.defaultEndTime,
           );
