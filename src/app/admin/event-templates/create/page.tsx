@@ -26,9 +26,36 @@ const eventTemplateSchema = z.object({
   venueId: z.string().min(1, "Venue is required"),
   defaultTitleFormat: z.string().min(1, "Title format is required"),
   defaultDescription: z.string().optional(),
+  
+  // Recurrence fields
+  recurrenceType: z.enum(["none", "weekly", "monthly"], {
+    required_error: "Please select a recurrence type",
+  }),
   recurringDaysOfWeek: z
     .array(z.coerce.number().min(0).max(6))
-    .min(1, "Select at least one day"),
+    .optional()
+    .superRefine((val, ctx) => {
+      // Only required if recurrence type is weekly
+      if (ctx.path[0] === "recurrenceType" && ctx.path[1] === "weekly" && (!val || val.length === 0)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Select at least one day for weekly recurrence",
+        });
+      }
+    }),
+  dayOfMonth: z
+    .array(z.number().min(1).max(31))
+    .optional()
+    .superRefine((val, ctx) => {
+      // Only required if recurrence type is monthly
+      if (ctx.path[0] === "recurrenceType" && ctx.path[1] === "monthly" && (!val || val.length === 0)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Select at least one day for monthly recurrence",
+        });
+      }
+    }),
+    
   defaultStartTime: z
     .string()
     .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid time format (HH:MM)"),
@@ -40,6 +67,8 @@ const eventTemplateSchema = z.object({
       .optional(),
   ),
   isActive: z.boolean().default(true),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
   thumbnailUrl: z.string().optional(),
   templateTickets: z
     .array(eventTemplateTicketSchema)
@@ -122,6 +151,7 @@ export default function CreateEventTemplatePage() {
     resolver: zodResolver(eventTemplateSchema),
     defaultValues: {
       isActive: true,
+      recurrenceType: "none",
       templateTickets: [
         {
           seatType: "",
@@ -131,6 +161,7 @@ export default function CreateEventTemplatePage() {
         },
       ],
       recurringDaysOfWeek: [],
+      dayOfMonth: [],
     },
   });
 
@@ -140,6 +171,7 @@ export default function CreateEventTemplatePage() {
   });
 
   const selectedRegionId = watch("regionId");
+  const recurrenceType = watch("recurrenceType");
 
   // Fetch venues and regions using tRPC
   const { data: venuesData, isLoading: isLoadingVenues } =
@@ -263,11 +295,6 @@ export default function CreateEventTemplatePage() {
         return;
       }
       
-      if (!data.recurringDaysOfWeek || data.recurringDaysOfWeek.length === 0) {
-        setSubmitError("Select at least one day of week");
-        return;
-      }
-      
       if (!data.defaultStartTime) {
         setSubmitError("Start time is required");
         return;
@@ -275,6 +302,17 @@ export default function CreateEventTemplatePage() {
       
       if (!data.templateTickets || data.templateTickets.length === 0) {
         setSubmitError("Add at least one ticket type");
+        return;
+      }
+      
+      // Recurrence type validation
+      if (data.recurrenceType === "weekly" && (!data.recurringDaysOfWeek || data.recurringDaysOfWeek.length === 0)) {
+        setSubmitError("Select at least one day of week for weekly recurrence");
+        return;
+      }
+      
+      if (data.recurrenceType === "monthly" && (!data.dayOfMonth || data.dayOfMonth.length === 0)) {
+        setSubmitError("Select at least one day of month for monthly recurrence");
         return;
       }
       
@@ -291,8 +329,15 @@ export default function CreateEventTemplatePage() {
       const payload = {
         ...data,
         thumbnailUrl,
+        // For non-weekly recurrence, ensure recurringDaysOfWeek is empty array not undefined
+        recurringDaysOfWeek: data.recurrenceType === "weekly" ? data.recurringDaysOfWeek || [] : [],
+        // For non-monthly recurrence, ensure dayOfMonth is empty array not undefined
+        dayOfMonth: data.recurrenceType === "monthly" ? data.dayOfMonth || [] : [],
         // Ensure defaultEndTime is properly handled
         defaultEndTime: data.defaultEndTime || undefined,
+        // Ensure start/end dates are properly handled
+        startDate: data.startDate || undefined,
+        endDate: data.endDate || undefined
       };
 
       // Submit using tRPC mutation
@@ -446,38 +491,171 @@ export default function CreateEventTemplatePage() {
               </div>
             </div>
           </div>
-          <div>
-            <label
-              htmlFor="recurringDaysOfWeek"
-              className="mb-2 block text-sm font-medium text-gray-700"
-            >
-              Recurring Days of Week
+          <div className="md:col-span-2">
+            <label className="mb-2 block text-sm font-medium text-gray-700">
+              Recurrence Pattern
             </label>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {daysOfWeek.map((day) => (
-                <div key={day.id} className="flex items-center">
-                  <input
-                    id={`day-${day.id}`}
-                    type="checkbox"
-                    value={day.id}
-                    {...register("recurringDaysOfWeek")}
-                    className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                  />
-                  <label
-                    htmlFor={`day-${day.id}`}
-                    className="ml-2 block text-sm text-gray-900"
-                  >
-                    {day.name}
-                  </label>
-                </div>
-              ))}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="flex items-center">
+                <input
+                  id="recurrence-none"
+                  type="radio"
+                  value="none"
+                  {...register("recurrenceType")}
+                  className="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <label htmlFor="recurrence-none" className="ml-2 block text-sm text-gray-700">
+                  No recurrence
+                </label>
+              </div>
+              <div className="flex items-center">
+                <input
+                  id="recurrence-weekly"
+                  type="radio"
+                  value="weekly"
+                  {...register("recurrenceType")}
+                  className="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <label htmlFor="recurrence-weekly" className="ml-2 block text-sm text-gray-700">
+                  Weekly
+                </label>
+              </div>
+              <div className="flex items-center">
+                <input
+                  id="recurrence-monthly"
+                  type="radio"
+                  value="monthly"
+                  {...register("recurrenceType")}
+                  className="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <label htmlFor="recurrence-monthly" className="ml-2 block text-sm text-gray-700">
+                  Monthly
+                </label>
+              </div>
             </div>
-            {errors.recurringDaysOfWeek && (
+            {errors.recurrenceType && (
               <p className="mt-1 text-sm text-red-600">
-                {errors.recurringDaysOfWeek.message}
+                {errors.recurrenceType.message}
               </p>
             )}
           </div>
+          {recurrenceType === "weekly" && (
+            <div className="md:col-span-2">
+              <label
+                htmlFor="recurringDaysOfWeek"
+                className="mb-2 block text-sm font-medium text-gray-700"
+              >
+                Days of Week
+              </label>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {daysOfWeek.map((day) => (
+                  <div key={day.id} className="flex items-center">
+                    <input
+                      id={`day-${day.id}`}
+                      type="checkbox"
+                      value={day.id}
+                      {...register("recurringDaysOfWeek")}
+                      className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <label
+                      htmlFor={`day-${day.id}`}
+                      className="ml-2 block text-sm text-gray-900"
+                    >
+                      {day.name}
+                    </label>
+                  </div>
+                ))}
+              </div>
+              {errors.recurringDaysOfWeek && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.recurringDaysOfWeek.message}
+                </p>
+              )}
+            </div>
+          )}
+          {recurrenceType === "monthly" && (
+            <div className="md:col-span-2">
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Days of Month
+              </label>
+              <p className="text-xs text-gray-500 mb-2">
+                Select the days of the month when events should occur (e.g., 1st, 11th, and 21st of each month)
+              </p>
+              <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2 mb-2">
+                {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+                  <div key={day} className="flex items-center">
+                    <input
+                      id={`month-day-${day}`}
+                      type="checkbox"
+                      value={day}
+                      {...register("dayOfMonth")}
+                      className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <label
+                      htmlFor={`month-day-${day}`}
+                      className="ml-1 block text-sm text-gray-900"
+                    >
+                      {day}
+                    </label>
+                  </div>
+                ))}
+              </div>
+              {errors.dayOfMonth && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.dayOfMonth.message}
+                </p>
+              )}
+            </div>
+          )}
+          {recurrenceType !== "none" && (
+            <>
+              <div>
+                <label
+                  htmlFor="startDate"
+                  className="mb-1 block text-sm font-medium text-gray-700"
+                >
+                  Start Date (Optional)
+                </label>
+                <input
+                  id="startDate"
+                  type="date"
+                  {...register("startDate")}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  From when the template should start generating events
+                </p>
+                {errors.startDate && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.startDate.message}
+                  </p>
+                )}
+              </div>
+              
+              <div>
+                <label
+                  htmlFor="endDate"
+                  className="mb-1 block text-sm font-medium text-gray-700"
+                >
+                  End Date (Optional)
+                </label>
+                <input
+                  id="endDate"
+                  type="date"
+                  {...register("endDate")}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Until when the template should generate events (leave blank for no end date)
+                </p>
+                {errors.endDate && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.endDate.message}
+                  </p>
+                )}
+              </div>
+            </>
+          )}
           <div>
             <label
               htmlFor="defaultStartTime"

@@ -173,7 +173,13 @@ export const eventTemplateRouter = createTRPCRouter({
         regionId: z.string().min(1),
         defaultTitleFormat: z.string().min(1),
         defaultDescription: z.string().optional(),
-        recurringDaysOfWeek: z.array(z.number().min(0).max(6)),
+        // Recurrence fields
+        recurrenceType: z.enum(["none", "weekly", "monthly"]).default("none"),
+        recurringDaysOfWeek: z.array(z.number().min(0).max(6)).optional(),
+        dayOfMonth: z.array(z.number().min(1).max(31)).optional(),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+        // Time fields
         defaultStartTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
         defaultEndTime: z
           .string()
@@ -198,10 +204,25 @@ export const eventTemplateRouter = createTRPCRouter({
       // Create the event template
       const templateId = createId();
 
-      await ctx.db.insert(eventTemplates).values({
+      // Convert date strings to Date objects and prepare data for insertion
+      const dataToInsert = {
         id: templateId,
-        ...templateData,
-      });
+        templateName: templateData.templateName,
+        venueId: templateData.venueId,
+        regionId: templateData.regionId,
+        defaultTitleFormat: templateData.defaultTitleFormat,
+        defaultDescription: templateData.defaultDescription,
+        recurrenceType: templateData.recurrenceType,
+        recurringDaysOfWeek: templateData.recurringDaysOfWeek ? JSON.stringify(templateData.recurringDaysOfWeek) : null,
+        dayOfMonth: templateData.dayOfMonth ? templateData.dayOfMonth[0] : null,
+        defaultStartTime: templateData.defaultStartTime,
+        defaultEndTime: templateData.defaultEndTime,
+        isActive: templateData.isActive,
+        startDate: templateData.startDate ? new Date(templateData.startDate) : null,
+        endDate: templateData.endDate ? new Date(templateData.endDate) : null,
+      };
+
+      await ctx.db.insert(eventTemplates).values(dataToInsert);
 
       // Create the ticket types
       for (const ticket of templateTickets) {
@@ -227,7 +248,13 @@ export const eventTemplateRouter = createTRPCRouter({
         regionId: z.string().min(1),
         defaultTitleFormat: z.string().min(1),
         defaultDescription: z.string().optional(),
-        recurringDaysOfWeek: z.array(z.number().min(0).max(6)),
+        // Recurrence fields
+        recurrenceType: z.enum(["none", "weekly", "monthly"]).default("none"),
+        recurringDaysOfWeek: z.array(z.number().min(0).max(6)).optional(),
+        dayOfMonth: z.array(z.number().min(1).max(31)).optional(),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+        // Time fields
         defaultStartTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
         defaultEndTime: z
           .string()
@@ -250,10 +277,27 @@ export const eventTemplateRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const { id, templateTickets, ...templateData } = input;
 
+      // Convert date strings to Date objects and prepare data for update
+      const dataToUpdate = {
+        templateName: templateData.templateName,
+        venueId: templateData.venueId, 
+        regionId: templateData.regionId,
+        defaultTitleFormat: templateData.defaultTitleFormat,
+        defaultDescription: templateData.defaultDescription,
+        recurrenceType: templateData.recurrenceType,
+        recurringDaysOfWeek: templateData.recurringDaysOfWeek ? JSON.stringify(templateData.recurringDaysOfWeek) : null,
+        dayOfMonth: templateData.dayOfMonth ? templateData.dayOfMonth[0] : null,
+        defaultStartTime: templateData.defaultStartTime,
+        defaultEndTime: templateData.defaultEndTime,
+        isActive: templateData.isActive,
+        startDate: templateData.startDate ? new Date(templateData.startDate) : null,
+        endDate: templateData.endDate ? new Date(templateData.endDate) : null,
+      };
+
       // Update the event template
       await ctx.db
         .update(eventTemplates)
-        .set(templateData)
+        .set(dataToUpdate)
         .where(eq(eventTemplates.id, id));
 
       // Get existing ticket types

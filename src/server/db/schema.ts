@@ -12,6 +12,7 @@ import {
   jsonb,
   time,
   uniqueIndex,
+  pgEnum,
   // Add other imports as needed
 } from "drizzle-orm/pg-core";
 import { type AdapterAccount } from "next-auth/adapters";
@@ -24,6 +25,9 @@ import { createId } from "@paralleldrive/cuid2"; // Using CUID2 for IDs, adjust 
  * @see https://orm.drizzle.team/docs/goodies#multi-project-schema
  */
 export const createTable = pgTableCreator((name) => `${name}`);
+
+// Define the recurrence type enum
+export const recurrenceTypeEnum = pgEnum('recurrence_type', ['none', 'weekly', 'monthly']);
 
 // Define Enums if desired (Example for post status)
 // export const postStatusEnum = pgEnum('post_status', ['DRAFT', 'PUBLISHED', 'ARCHIVED']);
@@ -149,9 +153,6 @@ export const events = createTable("Event", {
   regionId: text("regionId").references(() => regions.id, {
     onDelete: "set null",
   }), // Allow null if region deleted
-  templateId: text("templateId").references(() => eventTemplates.id, {
-    onDelete: "set null",
-  }), // Reference to the template that created this event
   status: text("status").default("SCHEDULED").notNull(), // Consider pgEnum
   // SEO Fields
   metaTitle: text("metaTitle"),
@@ -416,23 +417,27 @@ export const eventTemplates = createTable("EventTemplate", {
     .$defaultFn(() => createId()),
   templateName: text("templateName").notNull(),
   venueId: text("venueId")
-    .references(() => venues.id, { onDelete: "restrict" })
-    .notNull(),
+    .references(() => venues.id, { onDelete: "restrict" }),
   regionId: text("regionId")
-    .references(() => regions.id, { onDelete: "restrict" })
-    .notNull(),
-  defaultTitleFormat: text("defaultTitleFormat").notNull(),
+    .references(() => regions.id, { onDelete: "restrict" }),
+  defaultTitleFormat: text("defaultTitleFormat"),
   defaultDescription: text("defaultDescription"),
-  // Recurrence fields
-  recurrenceType: text("recurrenceType").default("weekly").notNull(), // 'weekly', 'monthly', 'none'
-  recurringDaysOfWeek: integer("recurringDaysOfWeek").array().notNull(),
-  dayOfMonth: integer("dayOfMonth"), // For monthly recurrence (1-31)
-  recurrenceStartDate: timestamp("recurrenceStartDate", { withTimezone: false }), // When this template should start generating events
-  recurrenceEndDate: timestamp("recurrenceEndDate", { withTimezone: false }), // When this template should stop generating events
-  // Template details
-  defaultStartTime: time("defaultStartTime").notNull(),
-  defaultEndTime: time("defaultEndTime"),
+
+  // --- Recurrence Fields ---
+  recurrenceType: recurrenceTypeEnum("recurrenceType").default('none').notNull(),
+  recurringDaysOfWeek: integer("recurringDaysOfWeek").array(),
+  dayOfMonth: integer("dayOfMonth"),
+  // --- End Recurrence Fields ---
+
+  defaultStartTime: time("defaultStartTime", { withTimezone: false }),
+  defaultEndTime: time("defaultEndTime", { withTimezone: false }),
+
+  // --- Activation Fields ---
   isActive: boolean("isActive").default(true).notNull(),
+  startDate: timestamp("startDate", { withTimezone: false }),
+  endDate: timestamp("endDate", { withTimezone: false }),
+  // --- End Activation Fields ---
+
   createdAt: timestamp("createdAt", { withTimezone: false })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
@@ -595,19 +600,9 @@ export const venueToVenueTypesRelations = relations(
 );
 
 export const eventsRelations = relations(events, ({ one, many }) => ({
-  venue: one(venues, {
-    fields: [events.venueId],
-    references: [venues.id],
-  }),
-  region: one(regions, {
-    fields: [events.regionId],
-    references: [regions.id],
-  }),
-  eventTickets: many(eventTickets),
-  template: one(eventTemplates, {
-    fields: [events.templateId],
-    references: [eventTemplates.id],
-  }),
+  venue: one(venues, { fields: [events.venueId], references: [venues.id] }),
+  region: one(regions, { fields: [events.regionId], references: [regions.id] }),
+  eventTickets: many(eventTickets), // Changed from tickets to eventTickets
   bookings: many(bookings),
 }));
 
