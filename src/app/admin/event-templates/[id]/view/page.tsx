@@ -79,10 +79,20 @@ export default function ViewEventTemplatePage({ params }: PageProps) {
     
     if (recurrenceType === 'none') {
       return "No recurrence pattern (one-time event)";
-    } else if (recurrenceType === 'weekly' && Array.isArray(template.recurringDaysOfWeek)) {
-      return `Weekly on ${formatDaysOfWeek(template.recurringDaysOfWeek)}`;
-    } else if (recurrenceType === 'monthly' && Array.isArray(template.dayOfMonth)) {
-      return `Monthly on the ${formatDaysOfMonth(template.dayOfMonth)} of each month`;
+    } else if (recurrenceType === 'weekly') {
+      // Check if recurringDaysOfWeek exists and is not empty
+      if (template.recurringDaysOfWeek && Array.isArray(template.recurringDaysOfWeek) && template.recurringDaysOfWeek.length > 0) {
+        return `Weekly on ${formatDaysOfWeek(template.recurringDaysOfWeek)}`;
+      } else {
+        return "Weekly recurrence (days not specified)";
+      }
+    } else if (recurrenceType === 'monthly') {
+      // Check if dayOfMonth exists and is not empty
+      if (template.dayOfMonth && Array.isArray(template.dayOfMonth) && template.dayOfMonth.length > 0) {
+        return `Monthly on the ${formatDaysOfMonth(template.dayOfMonth)} of each month`;
+      } else {
+        return "Monthly recurrence (days not specified)";
+      }
     } else {
       return "Recurrence pattern not properly configured";
     }
