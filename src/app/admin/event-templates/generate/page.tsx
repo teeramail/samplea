@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "~/trpc/react";
-import { format, addDays } from "date-fns";
+import { format, addDays, parseISO } from "date-fns";
 
 export default function GenerateEventsPage() {
   const router = useRouter();
@@ -14,6 +14,8 @@ export default function GenerateEventsPage() {
     format(addDays(new Date(), 30), "yyyy-MM-dd"),
   );
   const [selectedTemplates, setSelectedTemplates] = useState<string[]>([]);
+  const [selectedDates, setSelectedDates] = useState<string[]>([]);
+  const [currentDate, setCurrentDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   const [previewMode, setPreviewMode] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -30,6 +32,7 @@ export default function GenerateEventsPage() {
     defaultDescription?: string | null;
     defaultTitleFormat: string;
     isActive: boolean;
+    recurrenceType: 'none' | 'weekly' | 'monthly';
     createdAt: Date;
     updatedAt: Date;
   }
@@ -99,6 +102,18 @@ export default function GenerateEventsPage() {
     }
   };
 
+  const handleAddDate = () => {
+    if (currentDate && !selectedDates.includes(currentDate)) {
+      setSelectedDates([...selectedDates, currentDate]);
+      // Reset current date input to today
+      setCurrentDate(format(new Date(), "yyyy-MM-dd"));
+    }
+  };
+
+  const handleRemoveDate = (dateToRemove: string) => {
+    setSelectedDates(selectedDates.filter(date => date !== dateToRemove));
+  };
+
   const handleGeneratePreview = () => {
     setError(null);
     setIsGenerating(true);
@@ -109,6 +124,7 @@ export default function GenerateEventsPage() {
       endDate: new Date(endDate),
       templateIds: selectedTemplates.length > 0 ? selectedTemplates : undefined,
       previewOnly: true,
+      customDates: selectedDates.length > 0 ? selectedDates.map(date => new Date(date)) : undefined,
     });
   };
 
@@ -130,6 +146,7 @@ export default function GenerateEventsPage() {
       endDate: new Date(endDate),
       templateIds: selectedTemplates.length > 0 ? selectedTemplates : undefined,
       previewOnly: false,
+      customDates: selectedDates.length > 0 ? selectedDates.map(date => new Date(date)) : undefined,
     });
   };
 
@@ -151,29 +168,66 @@ export default function GenerateEventsPage() {
         <h2 className="mb-4 text-lg font-semibold">Select Date Range</h2>
         <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              Start Date
+            <label className="mb-2 block text-sm font-medium text-gray-700">
+              Start Date (for recurring templates)
             </label>
             <input
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="w-full rounded-md border p-2"
-              min={format(new Date(), "yyyy-MM-dd")}
+              className="w-full rounded-md border border-gray-300 p-2"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              End Date
+            <label className="mb-2 block text-sm font-medium text-gray-700">
+              End Date (for recurring templates)
             </label>
             <input
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="w-full rounded-md border p-2"
-              min={startDate}
+              className="w-full rounded-md border border-gray-300 p-2"
             />
           </div>
+        </div>
+
+        <div className="mb-6">
+          <h3 className="mb-2 text-md font-semibold">Custom Dates (for templates with No recurrence)</h3>
+          <div className="flex gap-2 mb-2">
+            <input
+              type="date"
+              value={currentDate}
+              onChange={(e) => setCurrentDate(e.target.value)}
+              className="flex-grow rounded-md border border-gray-300 p-2"
+            />
+            <button
+              onClick={handleAddDate}
+              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              Add Date
+            </button>
+          </div>
+
+          {selectedDates.length > 0 && (
+            <div className="mt-2">
+              <p className="text-sm font-medium text-gray-700 mb-1">Selected Dates:</p>
+              <div className="flex flex-wrap gap-2">
+                {selectedDates.map((date) => (
+                  <div key={date} className="flex items-center rounded-md bg-blue-100 px-3 py-1">
+                    <span className="text-sm text-blue-800">
+                      {format(parseISO(date), "MMM d, yyyy")}
+                    </span>
+                    <button
+                      onClick={() => handleRemoveDate(date)}
+                      className="ml-2 text-blue-600 hover:text-blue-800"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <h2 className="mb-4 text-lg font-semibold">Select Templates</h2>
@@ -215,6 +269,11 @@ export default function GenerateEventsPage() {
                         .join(", ")}{" "}
                       at {template.defaultStartTime?.slice(0, 5) ?? 'N/A'}
                     </div>
+                    {template.recurrenceType === 'none' && (
+                      <span className="ml-2 inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">
+                        No recurrence (select custom dates above)
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

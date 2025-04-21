@@ -131,6 +131,45 @@ function generateDatesFromRecurringPattern(
   return dates;
 }
 
+// Helper function to generate dates from custom dates provided by the user
+function generateDatesFromCustomDates(
+  customDates: Date[],
+  defaultStartTime: string,
+  defaultEndTime?: string | null,
+) {
+  const dates = [];
+
+  for (const customDate of customDates) {
+    // Parse time strings
+    const startTimeParts = defaultStartTime.split(":").map(Number);
+    const startHours = startTimeParts[0] ?? 0;
+    const startMinutes = startTimeParts[1] ?? 0;
+
+    // Create start time
+    const startTime = new Date(customDate);
+    startTime.setHours(startHours, startMinutes, 0, 0);
+
+    // Create end time if provided
+    let endTime;
+    if (defaultEndTime) {
+      const endTimeParts = defaultEndTime.split(":").map(Number);
+      const endHours = endTimeParts[0] ?? 0;
+      const endMinutes = endTimeParts[1] ?? 0;
+      endTime = new Date(customDate);
+      endTime.setHours(endHours, endMinutes, 0, 0);
+    }
+
+    dates.push({
+      date: new Date(customDate),
+      startTime,
+      endTime,
+    });
+  }
+
+  // Sort the dates chronologically
+  return dates.sort((a, b) => a.date.getTime() - b.date.getTime());
+}
+
 // Helper function to format event title using template
 function formatEventTitle(
   template: string,
@@ -398,11 +437,12 @@ export const eventRouter = createTRPCRouter({
         endDate: z.date(),
         templateIds: z.array(z.string()).optional(),
         previewOnly: z.boolean().default(false),
+        customDates: z.array(z.date()).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       try {
-        const { startDate, endDate, templateIds, previewOnly } = input;
+        const { startDate, endDate, templateIds, previewOnly, customDates } = input;
 
         // 1. Get active templates (filter by templateIds if provided)
         const templates = await ctx.db.query.eventTemplates.findMany({
@@ -453,7 +493,14 @@ export const eventRouter = createTRPCRouter({
           // Generate dates based on recurrence type and pattern
           let dates = [];
           
-          if (template.recurrenceType === 'monthly' && template.dayOfMonth) {
+          if (template.recurrenceType === 'none' && customDates && customDates.length > 0) {
+            // For templates with no recurrence, use the custom dates provided by the user
+            dates = generateDatesFromCustomDates(
+              customDates,
+              template.defaultStartTime ?? "00:00", // Provide default time if null
+              template.defaultEndTime,
+            );
+          } else if (template.recurrenceType === 'monthly' && template.dayOfMonth) {
             // For monthly recurrence, use the dayOfMonth field as array
             // Make sure dayOfMonth is an array (for backward compatibility)
             const daysArray = Array.isArray(template.dayOfMonth) 
