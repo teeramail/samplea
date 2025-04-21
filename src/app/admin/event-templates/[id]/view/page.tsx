@@ -75,20 +75,32 @@ export default function ViewEventTemplatePage({ params }: PageProps) {
   const getRecurrenceDescription = (template: any) => {
     if (!template) return "No recurrence pattern set";
     
+    // Log the template data to help debug
+    console.log("Template recurrence data:", {
+      recurrenceType: template.recurrenceType,
+      recurringDaysOfWeek: template.recurringDaysOfWeek,
+      dayOfMonth: template.dayOfMonth
+    });
+    
+    // Ensure we're using the correct recurrence type
     const recurrenceType = template.recurrenceType || 'weekly'; // Default to weekly for backward compatibility
     
     if (recurrenceType === 'none') {
       return "No recurrence pattern (one-time event)";
     } else if (recurrenceType === 'weekly') {
       // Check if recurringDaysOfWeek exists and is not empty
-      if (template.recurringDaysOfWeek && Array.isArray(template.recurringDaysOfWeek) && template.recurringDaysOfWeek.length > 0) {
+      if (template.recurringDaysOfWeek && 
+          (Array.isArray(template.recurringDaysOfWeek) || typeof template.recurringDaysOfWeek === 'object') && 
+          (Array.isArray(template.recurringDaysOfWeek) ? template.recurringDaysOfWeek.length > 0 : Object.keys(template.recurringDaysOfWeek).length > 0)) {
         return `Weekly on ${formatDaysOfWeek(template.recurringDaysOfWeek)}`;
       } else {
         return "Weekly recurrence (days not specified)";
       }
     } else if (recurrenceType === 'monthly') {
       // Check if dayOfMonth exists and is not empty
-      if (template.dayOfMonth && Array.isArray(template.dayOfMonth) && template.dayOfMonth.length > 0) {
+      if (template.dayOfMonth && 
+          (Array.isArray(template.dayOfMonth) || typeof template.dayOfMonth === 'object') && 
+          (Array.isArray(template.dayOfMonth) ? template.dayOfMonth.length > 0 : Object.keys(template.dayOfMonth).length > 0)) {
         return `Monthly on the ${formatDaysOfMonth(template.dayOfMonth)} of each month`;
       } else {
         return "Monthly recurrence (days not specified)";

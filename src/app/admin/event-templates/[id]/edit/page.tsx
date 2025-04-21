@@ -246,9 +246,11 @@ export default function EditEventTemplatePage({ params }: PageProps) {
     },
   });
 
-  // Set form data when template data is loaded
+  // Set form values when template data is loaded
   useEffect(() => {
     if (templateData) {
+      console.log("Loading template data:", templateData);
+      
       // Map API data to form values with explicit null checks
       setValue("id", templateData.id ?? "");
       setValue("templateName", templateData.templateName ?? "");
@@ -258,18 +260,31 @@ export default function EditEventTemplatePage({ params }: PageProps) {
       setValue("defaultDescription", templateData.defaultDescription ?? "");
       setValue("isActive", templateData.isActive ?? false);
       
-      // Set recurrence type (defaulting to 'weekly' for backward compatibility)
-      setValue("recurrenceType", templateData.recurrenceType ?? "weekly");
+      // Set recurrence type with explicit logging
+      const recurrenceType = templateData.recurrenceType ?? "weekly";
+      console.log("Setting recurrence type to:", recurrenceType);
+      setValue("recurrenceType", recurrenceType);
       
       // Special handling for arrays
-      setValue("recurringDaysOfWeek", Array.isArray(templateData.recurringDaysOfWeek) ? templateData.recurringDaysOfWeek : []);
+      const recurringDays = Array.isArray(templateData.recurringDaysOfWeek) 
+        ? templateData.recurringDaysOfWeek 
+        : (typeof templateData.recurringDaysOfWeek === 'object' && templateData.recurringDaysOfWeek 
+            ? Object.keys(templateData.recurringDaysOfWeek).map(k => parseInt(k, 10)) 
+            : []);
+      
+      console.log("Setting recurring days of week:", recurringDays);
+      setValue("recurringDaysOfWeek", recurringDays);
       
       // Set dayOfMonth (for monthly recurrence)
       if (templateData.dayOfMonth) {
         // Ensure dayOfMonth is treated as an array
         const dayOfMonthArray = Array.isArray(templateData.dayOfMonth) 
           ? templateData.dayOfMonth 
-          : [templateData.dayOfMonth];
+          : (typeof templateData.dayOfMonth === 'object' 
+              ? Object.keys(templateData.dayOfMonth).map(k => parseInt(k, 10)) 
+              : [templateData.dayOfMonth]);
+        
+        console.log("Setting days of month:", dayOfMonthArray);
         setValue("dayOfMonth", dayOfMonthArray);
       } else {
         setValue("dayOfMonth", []);
