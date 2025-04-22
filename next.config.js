@@ -21,7 +21,22 @@ const nextConfig = {
   },
   images: {
     domains: ['upload.wikimedia.org', 'www.paypalobjects.com', 'sgp1.digitaloceanspaces.com']
-  }
+  },
+  // Handle Node.js specific modules during client-side rendering
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      // Don't attempt to import these packages on the client-side
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        child_process: false,
+        'detect-libc': false,
+      };
+    }
+    return config;
+  },
 };
 
 export default nextConfig;

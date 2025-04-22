@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "~/trpc/react";
 import { z } from "zod";
-import { uploadImages } from "~/lib/s3-upload";
 
 // Define the schema for product validation
 const productSchema = z.object({
@@ -31,7 +30,7 @@ export default function CreateProductPage() {
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [uploadStatus, setUploadStatus] = useState<string>("");
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string | null>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Create product mutation
@@ -66,11 +65,11 @@ export default function CreateProductPage() {
       const file = e.target.files[0];
       // Check file size (30KB max)
       if (file.size > 30 * 1024) {
-        setErrors({ thumbnail: "Thumbnail must be less than 30KB" });
+        setErrors({ ...errors, thumbnail: "Thumbnail must be less than 30KB" });
         return;
       }
       setThumbnailFile(file);
-      setErrors((prev) => ({ ...prev, thumbnail: undefined }));
+      setErrors({ ...errors, thumbnail: null });
     }
   };
 
@@ -79,17 +78,17 @@ export default function CreateProductPage() {
       const files = Array.from(e.target.files);
       // Check file count (max 8)
       if (files.length > 8) {
-        setErrors({ images: "Maximum 8 images allowed" });
+        setErrors({ ...errors, images: "Maximum 8 images allowed" });
         return;
       }
       // Check each file size (120KB max)
       const oversizedFiles = files.filter(file => file.size > 120 * 1024);
       if (oversizedFiles.length > 0) {
-        setErrors({ images: `${oversizedFiles.length} image(s) exceed the 120KB limit` });
+        setErrors({ ...errors, images: `${oversizedFiles.length} image(s) exceed the 120KB limit` });
         return;
       }
       setImageFiles(files);
-      setErrors((prev) => ({ ...prev, images: undefined }));
+      setErrors({ ...errors, images: null });
     }
   };
 
@@ -105,22 +104,38 @@ export default function CreateProductPage() {
       let thumbnailUrl = "";
       let productImageUrls: string[] = [];
       
-      // 1. Upload thumbnail if provided
-      if (thumbnailFile) {
-        const thumbRes = await uploadImages([thumbnailFile], "product", tempId);
-        if (!thumbRes.success) {
-          throw new Error(thumbRes.error || "Failed to upload thumbnail");
+      // Upload images via the server API route
+      if (thumbnailFile || imageFiles.length > 0) {
+        setUploadStatus("Uploading files to server...");
+        
+        const formData = new FormData();
+        formData.append("entityType", "product");
+        formData.append("entityId", tempId);
+        
+        // Add thumbnail if exists
+        if (thumbnailFile) {
+          formData.append("thumbnail", thumbnailFile);
         }
-        thumbnailUrl = thumbRes.urls?.[0] || "";
-      }
-      
-      // 2. Upload product images if provided
-      if (imageFiles.length > 0) {
-        const imagesRes = await uploadImages(imageFiles, "product", tempId);
-        if (!imagesRes.success) {
-          throw new Error(imagesRes.error || "Failed to upload product images");
+        
+        // Add all product images
+        imageFiles.forEach(file => {
+          formData.append("images", file);
+        });
+        
+        // Send to our server API route
+        const uploadResponse = await fetch("/api/product-images", {
+          method: "POST",
+          body: formData,
+        });
+        
+        if (!uploadResponse.ok) {
+          const errorData = await uploadResponse.json();
+          throw new Error(errorData.error || "Failed to upload images");
         }
-        productImageUrls = imagesRes.urls || [];
+        
+        const uploadResult = await uploadResponse.json();
+        thumbnailUrl = uploadResult.thumbnailUrl || "";
+        productImageUrls = uploadResult.imageUrls || [];
       }
       
       setUploadStatus("Creating product...");
@@ -233,7 +248,7 @@ export default function CreateProductPage() {
               className="flex-1 rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
             />
           </div>
-          {errors.thumbnail && (
+          {errors.thumbnail && typeof errors.thumbnail === 'string' && (
             <p className="mt-1 text-sm text-red-600">{errors.thumbnail}</p>
           )}
           {thumbnailFile && (
@@ -256,7 +271,7 @@ export default function CreateProductPage() {
               className="flex-1 rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
             />
           </div>
-          {errors.images && (
+          {errors.images && typeof errors.images === 'string' && (
             <p className="mt-1 text-sm text-red-600">{errors.images}</p>
           )}
           {imageFiles.length > 0 && (
