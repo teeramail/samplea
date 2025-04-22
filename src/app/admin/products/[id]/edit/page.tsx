@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { api } from "~/trpc/react";
 import { z } from "zod";
 import Image from "next/image";
+import { useParams } from "next/navigation";
 
 // Define the schema for product validation
 const productSchema = z.object({
@@ -18,9 +19,10 @@ const productSchema = z.object({
 
 type ProductFormData = z.infer<typeof productSchema>;
 
-export default function EditProductPage({ params }: { params: { id: string } }) {
+export default function EditProductPage() {
   const router = useRouter();
-  const { id } = params;
+  const params = useParams();
+  const id = params.id as string;
   
   const [formData, setFormData] = useState<ProductFormData>({
     name: "",
@@ -105,7 +107,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   };
 
   const handleImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
+    if (e.target.files && e.target.files.length > 0) {
       const files = Array.from(e.target.files);
       // Check file count (max 8)
       if (files.length > 8) {
@@ -176,7 +178,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           thumbnailUrl = uploadResult.thumbnailUrl;
         }
         
-        if (uploadResult.imageUrls && uploadResult.imageUrls.length > 0) {
+        if (uploadResult.imageUrls && Array.isArray(uploadResult.imageUrls) && uploadResult.imageUrls.length > 0) {
           // Append new images to existing ones
           productImageUrls = [...productImageUrls, ...uploadResult.imageUrls];
         }
