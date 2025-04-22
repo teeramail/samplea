@@ -27,7 +27,7 @@ export const createQueryClient = () =>
           query.state.status === "pending",
       },
       hydrate: {
-        deserializeData: SuperJSON.deserialize,
+        deserializeData: superjson.deserialize,
       },
     },
   });
