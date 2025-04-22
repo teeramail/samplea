@@ -8,7 +8,7 @@ import { MapPinIcon, BuildingLibraryIcon } from "@heroicons/react/24/outline";
 import { api } from "~/trpc/server";
 import { db } from "~/server/db";
 import { desc, eq, and, sql } from "drizzle-orm";
-import { venues, events, fighters, trainingCourses, posts, products } from "~/server/db/schema";
+import { venues, events, fighters, trainingCourses, posts } from "~/server/db/schema";
 // Import the type helper from the correct location
 import type { RouterOutputs } from "~/trpc/react";
 // Import Next.js config
@@ -59,7 +59,7 @@ export default async function Home() {
 
   // Fetch all data directly from the database in parallel
   // This ensures we get fresh data during development
-  const [upcomingEventsData, featuredFightersData, featuredCoursesData, featuredPostsData, recommendedVenues, featuredProductsData] =
+  const [upcomingEventsData, featuredFightersData, featuredCoursesData, featuredPostsData, recommendedVenues] =
     await Promise.all([
       // Upcoming events - direct DB query
       db.query.events.findMany({
@@ -121,12 +121,6 @@ export default async function Home() {
             },
           },
         },
-      }),
-      // Featured merchandise
-      db.query.products.findMany({
-        where: eq(products.isFeatured, true),
-        orderBy: [desc(products.updatedAt)],
-        limit: 4,
       }),
     ]);
 
@@ -421,27 +415,40 @@ export default async function Home() {
           )}
         </section>
 
-        {/* Featured Merchandise Section */}
+        {/* Featured Merchandise Section - STATIC MOCK DATA */}
         <section className="mt-16 w-full max-w-5xl">
           <div className="mb-6 flex items-center justify-between">
             <h2 className="text-3xl font-bold">Featured Merchandise</h2>
-            <Link href="/products" className="text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]">
+            <Link href="#" className="text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]">
               View All Products &rarr;
             </Link>
           </div>
-          {featuredProductsData.length > 0 ? (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-4">
-              {featuredProductsData.map((product) => (
-                <Link key={product.id} href={`/products/${product.id}`} className="block rounded-lg bg-white/10 p-5 transition-colors hover:bg-white/20">
-                  <img src={product.imageUrls[0] ?? '/placeholder.png'} alt={product.name} className="mb-3 h-48 w-full object-cover rounded-md" />
-                  <h3 className="text-xl font-bold">{product.name}</h3>
-                  <p className="mt-1 text-lg">${product.price.toFixed(2)}</p>
-                </Link>
-              ))}
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-4">
+            {/* Mock Product 1 */}
+            <div className="block rounded-lg bg-white/10 p-5 transition-colors hover:bg-white/20">
+              <div className="mb-3 h-48 w-full rounded-md bg-gray-700"></div>
+              <h3 className="text-xl font-bold">Muay Thai Gloves - Red</h3>
+              <p className="mt-1 text-lg">$49.99</p>
             </div>
-          ) : (
-            <div className="text-gray-300">No merchandise available currently.</div>
-          )}
+            {/* Mock Product 2 */}
+            <div className="block rounded-lg bg-white/10 p-5 transition-colors hover:bg-white/20">
+              <div className="mb-3 h-48 w-full rounded-md bg-gray-700"></div>
+              <h3 className="text-xl font-bold">Muay Thai Shorts - Black/Gold</h3>
+              <p className="mt-1 text-lg">$29.99</p>
+            </div>
+            {/* Mock Product 3 */}
+            <div className="block rounded-lg bg-white/10 p-5 transition-colors hover:bg-white/20">
+              <div className="mb-3 h-48 w-full rounded-md bg-gray-700"></div>
+              <h3 className="text-xl font-bold">Hand Wraps - 180"</h3>
+              <p className="mt-1 text-lg">$12.99</p>
+            </div>
+            {/* Mock Product 4 */}
+            <div className="block rounded-lg bg-white/10 p-5 transition-colors hover:bg-white/20">
+              <div className="mb-3 h-48 w-full rounded-md bg-gray-700"></div>
+              <h3 className="text-xl font-bold">Muay Thai T-Shirt</h3>
+              <p className="mt-1 text-lg">$24.99</p>
+            </div>
+          </div>
         </section>
 
         {/* Latest Muay Thai News Section - DYNAMIC */}
