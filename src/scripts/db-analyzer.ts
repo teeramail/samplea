@@ -106,7 +106,9 @@ async function analyzeDatabase() {
 
     for (const tableName of Object.keys(relationshipsByTable).sort()) {
       console.log(`\n- Table ${tableName} relationships:`);
-      for (const rel of relationshipsByTable[tableName]) {
+      // Use non-null assertion or provide a default empty array to handle possible undefined
+      const relationships = relationshipsByTable[tableName] ?? [];
+      for (const rel of relationships) {
         console.log(`  * ${rel.column} -> ${rel.referencedTable}.${rel.referencedColumn} (onDelete: ${rel.deleteRule})`);
       }
     }
