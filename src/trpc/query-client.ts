@@ -2,7 +2,6 @@ import {
   defaultShouldDehydrateQuery,
 } from "@tanstack/react-query";
 import { QueryClient } from "@tanstack/react-query";
-import { loggerLink, unstable_httpBatchStreamLink } from "@trpc/client";
 import { createTRPCReact } from "@trpc/react-query";
 import superjson from "superjson";
 

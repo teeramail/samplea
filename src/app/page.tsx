@@ -11,8 +11,8 @@ import { desc, eq, and, sql } from "drizzle-orm";
 import { venues, events, fighters, trainingCourses, posts } from "~/server/db/schema";
 // Import the type helper from the correct location
 import type { RouterOutputs } from "~/trpc/react";
-// Import cache configuration
-import { rscCacheConfig, logCacheStatus } from "~/utils/cache-config";
+// Import Next.js config
+import { logCacheConfig } from "./config";
 
 // Helper function (consider moving to a utils file)
 const formatDate = (date: Date | string | null | undefined) => {
@@ -50,14 +50,12 @@ interface VenuesByTypeResponse {
   groupedVenues: Record<string, VenueWithTypes[]>;
 }
 
-// Apply cache configuration based on environment
-// This ensures data refreshes immediately in development
-export const dynamic = rscCacheConfig.dynamic as 'auto' | 'force-dynamic';
-export const revalidate = rscCacheConfig.revalidate;
+// Next.js configuration is now in a separate file: src/app/config.ts
+// This ensures proper handling of dynamic configuration
 
 export default async function Home() {
-  // Log cache status on server
-  logCacheStatus();
+  // Log cache configuration on server
+  logCacheConfig();
 
   // Fetch all data directly from the database in parallel
   // This ensures we get fresh data during development
