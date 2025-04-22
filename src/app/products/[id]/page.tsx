@@ -28,16 +28,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
+  // Get the thumbnail URL (safely handle if it doesn't exist in the type yet)
+  const thumbnailUrl = (product as any).thumbnailUrl || null;
+  
   return {
     title: `${product.name} | Teera Muay Thai`,
     description: product.description?.slice(0, 160) || `Buy ${product.name} from Teera Muay Thai.`,
     openGraph: {
       title: product.name,
       description: product.description || `Buy ${product.name} from Teera Muay Thai.`,
-      images: product.thumbnailUrl 
-        ? [{ url: product.thumbnailUrl, width: 800, height: 600, alt: product.name }]
+      images: thumbnailUrl 
+        ? [{ url: thumbnailUrl, width: 800, height: 600, alt: product.name }]
         : [],
-      type: "product",
+      type: "website", // Changed from "product" to "website" which is a valid OpenGraph type
+      siteName: "Teera Muay Thai",
+      locale: "en_US",
     },
   };
 }
@@ -56,13 +61,16 @@ export default async function ProductPage({ params }: Props) {
   // Format price with 2 decimal places
   const formattedPrice = product.price.toFixed(2);
   
+  // Get the thumbnail URL (safely handle if it doesn't exist in the type yet)
+  const thumbnailUrl = (product as any).thumbnailUrl || null;
+  
   // Prepare JSON-LD structured data for product
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
     name: product.name,
     description: product.description,
-    image: [product.thumbnailUrl, ...(product.imageUrls || [])].filter(Boolean),
+    image: [thumbnailUrl, ...(product.imageUrls || [])].filter(Boolean),
     sku: product.id,
     offers: {
       "@type": "Offer",
@@ -84,9 +92,9 @@ export default async function ProductPage({ params }: Props) {
         <div className="space-y-4">
           {/* Main thumbnail image */}
           <div className="relative h-96 w-full rounded-lg overflow-hidden">
-            {product.thumbnailUrl ? (
+            {thumbnailUrl ? (
               <Image
-                src={product.thumbnailUrl}
+                src={thumbnailUrl}
                 alt={product.name}
                 fill
                 priority
