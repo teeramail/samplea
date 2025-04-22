@@ -41,7 +41,8 @@ export const productRouter = createTRPCRouter({
         name: z.string().min(1),
         description: z.string().optional(),
         price: z.number().min(0),
-        imageUrls: z.array(z.string()).optional(),
+        thumbnailUrl: z.string().url().optional(),
+        imageUrls: z.array(z.string().url()).max(8).optional(),
         isFeatured: z.boolean().default(false),
       })
     )
@@ -52,6 +53,7 @@ export const productRouter = createTRPCRouter({
         name: input.name,
         description: input.description || null,
         price: input.price,
+        thumbnailUrl: input.thumbnailUrl || null,
         imageUrls: input.imageUrls || [],
         isFeatured: input.isFeatured,
       });

@@ -4,13 +4,15 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "~/trpc/react";
 import { z } from "zod";
+import { uploadImages } from "~/lib/s3-upload";
 
 // Define the schema for product validation
 const productSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   price: z.number().min(0, "Price must be a positive number"),
-  imageUrls: z.array(z.string()).optional(),
+  thumbnailUrl: z.string().url().optional(),
+  imageUrls: z.array(z.string().url()).max(8).optional(),
   isFeatured: z.boolean().default(false),
 });
 
@@ -22,9 +24,13 @@ export default function CreateProductPage() {
     name: "",
     description: "",
     price: 0,
-    imageUrls: [""],
+    thumbnailUrl: "",
+    imageUrls: [],
     isFeatured: false,
   });
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [uploadStatus, setUploadStatus] = useState<string>("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -55,46 +61,89 @@ export default function CreateProductPage() {
     }
   };
 
-  const handleImageUrlChange = (index: number, value: string) => {
-    // Make sure imageUrls is defined before spreading
-    const newImageUrls = [...(formData.imageUrls || [])];
-    newImageUrls[index] = value;
-    setFormData((prev) => ({ ...prev, imageUrls: newImageUrls }));
+  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      // Check file size (30KB max)
+      if (file.size > 30 * 1024) {
+        setErrors({ thumbnail: "Thumbnail must be less than 30KB" });
+        return;
+      }
+      setThumbnailFile(file);
+      setErrors((prev) => ({ ...prev, thumbnail: undefined }));
+    }
   };
 
-  const addImageUrl = () => {
-    setFormData((prev) => ({
-      ...prev,
-      imageUrls: [...(prev.imageUrls || []), ""],
-    }));
-  };
-
-  const removeImageUrl = (index: number) => {
-    // Make sure imageUrls is defined before spreading
-    const newImageUrls = [...(formData.imageUrls || [])];
-    newImageUrls.splice(index, 1);
-    setFormData((prev) => ({ ...prev, imageUrls: newImageUrls }));
+  const handleImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      // Check file count (max 8)
+      if (files.length > 8) {
+        setErrors({ images: "Maximum 8 images allowed" });
+        return;
+      }
+      // Check each file size (120KB max)
+      const oversizedFiles = files.filter(file => file.size > 120 * 1024);
+      if (oversizedFiles.length > 0) {
+        setErrors({ images: `${oversizedFiles.length} image(s) exceed the 120KB limit` });
+        return;
+      }
+      setImageFiles(files);
+      setErrors((prev) => ({ ...prev, images: undefined }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setErrors({});
+    setUploadStatus("Uploading files...");
 
     try {
-      // Validate form data
-      const validatedData = productSchema.parse(formData);
+      // Generate a temporary ID for grouping uploads
+      const tempId = `product-${Date.now()}`;
+      let thumbnailUrl = "";
+      let productImageUrls: string[] = [];
       
-      // Filter out empty image URLs
-      const filteredImageUrls = validatedData.imageUrls?.filter(url => url.trim() !== "") || [];
+      // 1. Upload thumbnail if provided
+      if (thumbnailFile) {
+        const thumbRes = await uploadImages([thumbnailFile], "product", tempId);
+        if (!thumbRes.success) {
+          throw new Error(thumbRes.error || "Failed to upload thumbnail");
+        }
+        thumbnailUrl = thumbRes.urls?.[0] || "";
+      }
       
-      // Submit the data
-      createProduct.mutate({
-        ...validatedData,
-        imageUrls: filteredImageUrls,
-      });
+      // 2. Upload product images if provided
+      if (imageFiles.length > 0) {
+        const imagesRes = await uploadImages(imageFiles, "product", tempId);
+        if (!imagesRes.success) {
+          throw new Error(imagesRes.error || "Failed to upload product images");
+        }
+        productImageUrls = imagesRes.urls || [];
+      }
+      
+      setUploadStatus("Creating product...");
+      
+      // 3. Create the product with the uploaded image URLs
+      const productData = {
+        name: formData.name,
+        description: formData.description,
+        price: formData.price,
+        thumbnailUrl,
+        imageUrls: productImageUrls,
+        isFeatured: formData.isFeatured,
+      };
+      
+      // Validate the data
+      const validatedData = productSchema.parse(productData);
+      
+      // Submit to API
+      createProduct.mutate(validatedData);
     } catch (error) {
       setIsSubmitting(false);
+      setUploadStatus("");
+      
       if (error instanceof z.ZodError) {
         const fieldErrors: Record<string, string> = {};
         error.errors.forEach((err) => {
@@ -104,7 +153,7 @@ export default function CreateProductPage() {
         });
         setErrors(fieldErrors);
       } else {
-        setErrors({ form: "An unexpected error occurred" });
+        setErrors({ form: error instanceof Error ? error.message : "An unexpected error occurred" });
       }
     }
   };
@@ -174,35 +223,56 @@ export default function CreateProductPage() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700">
-            Image URLs
+            Thumbnail Image (max 30KB)
           </label>
-          <div className="space-y-2">
-            {formData.imageUrls?.map((url, index) => (
-              <div key={index} className="flex items-center space-x-2">
-                <input
-                  type="text"
-                  value={url}
-                  onChange={(e) => handleImageUrlChange(index, e.target.value)}
-                  placeholder="https://example.com/image.jpg"
-                  className="flex-1 rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
-                />
-                <button
-                  type="button"
-                  onClick={() => removeImageUrl(index)}
-                  className="rounded-md bg-red-100 p-2 text-red-600 hover:bg-red-200"
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={addImageUrl}
-              className="rounded-md bg-gray-100 px-3 py-2 text-gray-700 hover:bg-gray-200"
-            >
-              + Add Image URL
-            </button>
+          <div className="mt-1 flex items-center space-x-2">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleThumbnailChange}
+              className="flex-1 rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+            />
           </div>
+          {errors.thumbnail && (
+            <p className="mt-1 text-sm text-red-600">{errors.thumbnail}</p>
+          )}
+          {thumbnailFile && (
+            <p className="mt-1 text-sm text-green-600">
+              Selected: {thumbnailFile.name} ({Math.round(thumbnailFile.size / 1024)}KB)
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Product Images (max 8 images, each max 120KB)
+          </label>
+          <div className="mt-1">
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleImagesChange}
+              className="flex-1 rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+            />
+          </div>
+          {errors.images && (
+            <p className="mt-1 text-sm text-red-600">{errors.images}</p>
+          )}
+          {imageFiles.length > 0 && (
+            <div className="mt-2">
+              <p className="text-sm text-green-600">
+                Selected {imageFiles.length} image(s):
+              </p>
+              <ul className="mt-1 text-xs text-gray-500">
+                {imageFiles.map((file, index) => (
+                  <li key={index}>
+                    {file.name} ({Math.round(file.size / 1024)}KB)
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center">
@@ -235,7 +305,7 @@ export default function CreateProductPage() {
             disabled={isSubmitting}
             className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
           >
-            {isSubmitting ? "Creating..." : "Create Product"}
+            {isSubmitting ? uploadStatus || "Creating..." : "Create Product"}
           </button>
         </div>
       </form>
