@@ -291,6 +291,22 @@ export const trainingCourses = createTable("TrainingCourse", {
     .$onUpdate(() => new Date()),
 });
 
+export const products = createTable("Product", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  name: text("name").notNull(),
+  description: text("description"),
+  price: doublePrecision("price").notNull(),
+  imageUrls: text("imageUrls").array(),
+  isFeatured: boolean("isFeatured").notNull().default(false),
+  createdAt: timestamp("createdAt", { withTimezone: false })
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: false })
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
 // New Customer table to handle both registered users and guests
 export const customers = createTable(
   "Customer",
