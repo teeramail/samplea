@@ -85,9 +85,9 @@ export async function GET(request: Request) {
 
       // Add payment result parameters to the external URL
       externalUrl.searchParams.set("status", isSuccess ? "success" : "failed");
-      externalUrl.searchParams.set("bookingId", bookingId || "");
-      externalUrl.searchParams.set("transactionId", transactionId || "");
-      externalUrl.searchParams.set("amount", amount || "");
+      externalUrl.searchParams.set("bookingId", bookingId ?? "");
+      externalUrl.searchParams.set("transactionId", transactionId ?? "");
+      externalUrl.searchParams.set("amount", amount ?? "");
       if (!isSuccess && message) {
         externalUrl.searchParams.set("message", message);
       }

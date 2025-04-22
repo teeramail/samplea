@@ -16,7 +16,7 @@ export async function POST(req: Request) {
         if (value.size > 120 * 1024) {
           return NextResponse.json(
             {
-              error: `Venue image ${value.name || ""} must be less than 120KB`,
+              error: `Venue image ${value.name ?? ""} must be less than 120KB`,
             },
             { status: 400 },
           );

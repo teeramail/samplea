@@ -51,7 +51,7 @@ export async function POST(request: Request) {
         .set({
           paymentStatus: isSuccess ? "COMPLETED" : "FAILED",
           paymentTransactionId: transactionId,
-          paymentMethod: paymentMethod || "modernpay",
+          paymentMethod: paymentMethod ?? "modernpay",
           paymentBankCode: bankCode,
           paymentBankRefCode: bankRefCode,
           paymentDate: paymentDate,

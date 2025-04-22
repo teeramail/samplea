@@ -74,7 +74,7 @@ export function RegionsNav() {
               regions.map(region => {
                 // For each region, determine if we should use slug or query param
                 const hasSlug = !!region.slug;
-                const isActive = currentRegionSlug === region.slug || currentRegionId === region.id;
+                const isActive = (currentRegionSlug === region.slug) || (currentRegionId === region.id);
                 const href = hasSlug 
                   ? `/region/${region.slug}` 
                   : `/?${createQueryString(region.id)}`;

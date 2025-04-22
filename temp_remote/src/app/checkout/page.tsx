@@ -87,14 +87,14 @@ export default function CheckoutPage() {
 
   // --- Validation ---
   useEffect(() => {
-    if (!eventId || !eventTitle || ticketInfo.totalQuantity === 0) {
+    if (!eventId || !eventTitle ?? ticketInfo.totalQuantity === 0) {
       console.warn("Checkout page missing essential data, redirecting.");
       router.push('/'); 
     }
   }, [eventId, eventTitle, ticketInfo.totalQuantity, router]);
 
   // Render null while redirecting
-  if (!eventId || !eventTitle || ticketInfo.totalQuantity === 0) {
+  if (!eventId || !eventTitle ?? ticketInfo.totalQuantity === 0) {
     return null;
   }
 
@@ -147,9 +147,9 @@ export default function CheckoutPage() {
       }
       
       if (paymentMethod === 'paypal') {
-        router.push(`/checkout/paypal?bookingId=${data.bookingId}&amount=${totalCost}&customerName=${encodeURIComponent(contactInfo.fullName)}&email=${encodeURIComponent(contactInfo.email)}&phone=${encodeURIComponent(contactInfo.phone || '')}&eventTitle=${encodeURIComponent(eventTitle || '')}`);
+        router.push(`/checkout/paypal?bookingId=${data.bookingId}&amount=${totalCost}&customerName=${encodeURIComponent(contactInfo.fullName)}&email=${encodeURIComponent(contactInfo.email)}&phone=${encodeURIComponent(contactInfo.phone ?? '')}&eventTitle=${encodeURIComponent(eventTitle ?? '')}`);
       } else {
-        router.push(`/checkout/credit-card?bookingId=${data.bookingId}&amount=${totalCost}&customerName=${encodeURIComponent(contactInfo.fullName)}&email=${encodeURIComponent(contactInfo.email)}&phone=${encodeURIComponent(contactInfo.phone || '')}&eventTitle=${encodeURIComponent(eventTitle || '')}`);
+        router.push(`/checkout/credit-card?bookingId=${data.bookingId}&amount=${totalCost}&customerName=${encodeURIComponent(contactInfo.fullName)}&email=${encodeURIComponent(contactInfo.email)}&phone=${encodeURIComponent(contactInfo.phone ?? '')}&eventTitle=${encodeURIComponent(eventTitle ?? '')}`);
       }
     } catch (error) {
       console.error('Error creating booking:', error);

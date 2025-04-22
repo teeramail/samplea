@@ -60,7 +60,7 @@ export default function EventsListPage() {
     limit: itemsPerPage,
     sortField,
     sortDirection,
-    query: searchQuery || undefined,
+    query: searchQuery ?? undefined,
   });
 
   // Handle page change

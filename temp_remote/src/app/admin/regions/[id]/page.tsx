@@ -26,7 +26,7 @@ export default async function RegionDetailPage({
 
   // Helper to get primary image URL
   const getPrimaryImageUrl = (): string | null => {
-    if (!region.imageUrls || region.imageUrls.length === 0) {
+    if (!region.imageUrls || (region.imageUrls && region.imageUrls.length === 0)) {
       return null;
     }
     
@@ -77,7 +77,7 @@ export default async function RegionDetailPage({
                   <div key={index} className="relative">
                     <div className={`border-2 rounded-lg overflow-hidden ${isPrimaryImage(index) ? 'border-blue-500' : 'border-gray-200'}`}>
                       <ImageWithFallback
-                        src={imageUrl || null}
+                        src={imageUrl ?? null}
                         alt={`${region.name} - Image ${index + 1}`}
                         fallbackSrc="https://via.placeholder.com/800x480?text=Image+Not+Found"
                         className="w-full h-48 object-cover"

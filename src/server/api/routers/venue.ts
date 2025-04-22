@@ -222,7 +222,7 @@ export const venueRouter = createTRPCRouter({
       try {
         // First, get venue types if not provided
         let typeIds = input.venueTypeIds;
-        if (!typeIds || typeIds.length === 0) {
+        if (!typeIds || (typeIds && typeIds.length === 0)) {
           // Get all venue types related to Muay Thai and Kickboxing
           const allVenueTypes = await ctx.db.query.venueTypes.findMany({
             where: or(
@@ -302,7 +302,7 @@ export const venueRouter = createTRPCRouter({
         // First pass: add venues to their primary type groups
         venuesWithTypes.forEach((venue) => {
           if (venue.primaryType) {
-            const typeName = venue.primaryType.name || "Unknown";
+            const typeName = venue.primaryType.name ?? "Unknown";
             if (!groupedVenues[typeName]) {
               groupedVenues[typeName] = [];
             }
@@ -318,7 +318,7 @@ export const venueRouter = createTRPCRouter({
               return;
             }
 
-            const typeName = type.name || "Unknown";
+            const typeName = type.name ?? "Unknown";
             if (!groupedVenues[typeName]) {
               groupedVenues[typeName] = [];
             }

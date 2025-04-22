@@ -14,7 +14,7 @@ async function CourseList() {
   // We'll add infinite loading/pagination later if needed
   const initialCourses = await api.trainingCourse.list({ limit: 20 });
 
-  if (!initialCourses || initialCourses.items.length === 0) {
+  if (!initialCourses || (initialCourses && initialCourses.items.length === 0)) {
     return (
       <p className="mt-8 text-center text-gray-500 dark:text-gray-400">
         No courses available at the moment. Please check back later.

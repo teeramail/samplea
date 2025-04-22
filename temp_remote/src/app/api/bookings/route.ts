@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     const data = await request.json() as BookingRequestData;
     
     // Validate required fields (already typed)
-    if (!data.eventId || !data.contactInfo || !data.tickets || data.totalCost === undefined) { // Check totalCost for undefined explicitly if needed
+    if (!data.eventId || !data.contactInfo || !data.tickets ?? data.totalCost === undefined) { // Check totalCost for undefined explicitly if needed
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }

@@ -236,8 +236,7 @@ async function validateSchema() {
       } else {
         // Compare column properties
         if (
-          dbCol.data_type !== jsonCol.data_type ||
-          dbCol.is_nullable !== jsonCol.is_nullable ||
+          dbCol.data_type !== jsonCol.data_type || dbCol.is_nullable !== jsonCol.is_nullable ||
           (dbCol.column_default !== jsonCol.column_default && 
            !(dbCol.column_default === null && jsonCol.column_default === null))
         ) {

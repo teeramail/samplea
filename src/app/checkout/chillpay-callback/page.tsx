@@ -148,7 +148,7 @@ export default function ChillPayCallbackPage() {
                               <div className="mb-1 flex justify-between">
                                 <span className="text-gray-600">Type:</span>
                                 <span className="font-semibold">
-                                  {ticket.seatType || "Standard"}
+                                  {ticket.seatType ?? "Standard"}
                                 </span>
                               </div>
                               <div className="flex justify-between">
@@ -182,7 +182,7 @@ export default function ChillPayCallbackPage() {
                     <div className="mt-2 flex justify-between">
                       <span className="text-gray-600">Transaction ID:</span>
                       <span className="font-mono text-xs">
-                        {transactionId || "N/A"}
+                        {transactionId ?? "N/A"}
                       </span>
                     </div>
                   </div>
@@ -241,8 +241,7 @@ export default function ChillPayCallbackPage() {
                   Payment Failed
                 </h1>
                 <p className="mb-6 text-gray-600">
-                  {message ||
-                    "We couldn't process your payment. You can try again or use a different payment method."}
+                  {message ?? "We couldn't process your payment. You can try again or use a different payment method."}
                 </p>
 
                 <Link

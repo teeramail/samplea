@@ -315,7 +315,7 @@ export default function CreateEventPage() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({})); // Try to get error details
-        throw new Error(errorData.error || "Failed to create event");
+        throw new Error(errorData.error ?? "Failed to create event");
       }
 
       router.push("/admin/events");

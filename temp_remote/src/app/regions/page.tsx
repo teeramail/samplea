@@ -10,7 +10,7 @@ export default async function RegionsPage() {
 
   // Helper function to get primary image URL
   const getPrimaryImageUrl = (region: typeof allRegions[number]): string | null => {
-    if (!region.imageUrls || region.imageUrls.length === 0) {
+    if (!region.imageUrls ?? region.imageUrls.length === 0) {
       return null;
     }
     

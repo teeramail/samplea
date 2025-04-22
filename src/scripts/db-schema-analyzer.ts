@@ -212,7 +212,7 @@ function generateMarkdownDoc(
     markdown += `|-------------|-----------|----------|----------|\n`;
     
     tableColumns.forEach(col => {
-      markdown += `| ${col.column_name} | ${col.data_type} | ${col.is_nullable} | ${col.column_default || 'NULL'} |\n`;
+      markdown += `| ${col.column_name} | ${col.data_type} | ${col.is_nullable} | ${col.column_default ?? 'NULL'} |\n`;
     });
     
     // Table relationships

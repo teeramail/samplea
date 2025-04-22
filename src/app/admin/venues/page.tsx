@@ -81,7 +81,7 @@ export default function AdminVenuesPage() {
     limit: itemsPerPage,
     sortField,
     sortDirection,
-    query: searchQuery || undefined,
+    query: searchQuery ?? undefined,
   });
 
   // Mutation for toggling the featured status

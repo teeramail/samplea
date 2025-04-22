@@ -42,7 +42,7 @@ export default function ViewEventTemplatePage({ params }: PageProps) {
     const minutes = timeMatch[2];
     const hour = parseInt(hours, 10);
     const ampm = hour >= 12 ? "PM" : "AM";
-    const formattedHour = hour % 12 || 12;
+    const formattedHour = (hour % 12) || 12;
     
     return `${formattedHour}:${minutes} ${ampm}`;
   };
@@ -64,9 +64,9 @@ export default function ViewEventTemplatePage({ params }: PageProps) {
     
     // Format with proper ordinal suffixes (1st, 2nd, 3rd, etc.)
     return sortedDays.map(day => {
-      const suffix = day === 1 || day === 21 || day === 31 ? 'st' : 
-                   day === 2 || day === 22 ? 'nd' : 
-                   day === 3 || day === 23 ? 'rd' : 'th';
+      const suffix = (day === 1 || day === 21 || day === 31) ? 'st' : 
+                   (day === 2 || day === 22) ? 'nd' : 
+                   (day === 3 || day === 23) ? 'rd' : 'th';
       return `${day}${suffix}`;
     }).join(", ");
   };
@@ -83,7 +83,7 @@ export default function ViewEventTemplatePage({ params }: PageProps) {
     });
     
     // Ensure we're using the correct recurrence type
-    const recurrenceType = template.recurrenceType || 'weekly'; // Default to weekly for backward compatibility
+    const recurrenceType = template.recurrenceType ?? 'weekly'; // Default to weekly for backward compatibility
     
     if (recurrenceType === 'none') {
       return "No recurrence pattern (one-time event)";
@@ -122,7 +122,7 @@ export default function ViewEventTemplatePage({ params }: PageProps) {
     return (
       <div className="rounded-lg bg-red-50 p-4 text-red-800">
         <h3 className="text-lg font-medium">Error</h3>
-        <p>{error?.message || "Event template not found"}</p>
+        <p>{error?.message ?? "Event template not found"}</p>
         <div className="mt-4">
           <Link
             href="/admin/event-templates"
@@ -190,11 +190,11 @@ export default function ViewEventTemplatePage({ params }: PageProps) {
                 </div>
                 <div>
                   <h4 className="text-sm font-medium text-gray-500">Region</h4>
-                  <p className="mt-1 text-sm text-gray-900">{template.region?.name || "—"}</p>
+                  <p className="mt-1 text-sm text-gray-900">{template.region?.name ?? "—"}</p>
                 </div>
                 <div>
                   <h4 className="text-sm font-medium text-gray-500">Venue</h4>
-                  <p className="mt-1 text-sm text-gray-900">{template.venue?.name || "—"}</p>
+                  <p className="mt-1 text-sm text-gray-900">{template.venue?.name ?? "—"}</p>
                 </div>
                 <div>
                   <h4 className="text-sm font-medium text-gray-500">Default Title Format</h4>
@@ -265,7 +265,7 @@ export default function ViewEventTemplatePage({ params }: PageProps) {
                 </div>
                 <div>
                   <h4 className="text-sm font-medium text-gray-500">Recurrence Type</h4>
-                  <p className="mt-1 text-sm text-gray-900 capitalize">{template.recurrenceType || "weekly"}</p>
+                  <p className="mt-1 text-sm text-gray-900 capitalize">{template.recurrenceType ?? "weekly"}</p>
                 </div>
               </div>
             </div>

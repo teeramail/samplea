@@ -160,12 +160,11 @@ export default async function RegionPage({ params }: RegionPageProps) {
   const { region, regionEvents } = data;
 
   // Format date function with Thai time zone
-  const formatDate = (date: Date) => {
-    // Handle potential Buddhist Era dates
-    const convertedDate = convertToChristianEra(date);
-    
+  const formatDate = (date: string | Date) => {
+    // Convert string inputs to Date and handle Buddhist Era
+    const dateObj = typeof date === 'string' ? parseAndConvertDate(date) : convertToChristianEra(date);
     const thaiTimeZone = "Asia/Bangkok";
-    const thaiDate = toZonedTime(convertedDate, thaiTimeZone);
+    const thaiDate = toZonedTime(dateObj, thaiTimeZone);
 
     return format(thaiDate, "MMMM d, yyyy");
   };

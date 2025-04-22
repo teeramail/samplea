@@ -12,7 +12,7 @@ export default async function RegionsPage() {
   const getPrimaryImageUrl = (
     region: (typeof allRegions)[number],
   ): string | null => {
-    if (!region.imageUrls || region.imageUrls.length === 0) {
+    if (!region.imageUrls || (region.imageUrls && region.imageUrls.length === 0)) {
       return null;
     }
 

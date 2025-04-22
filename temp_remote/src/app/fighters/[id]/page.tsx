@@ -115,7 +115,7 @@ export default async function FighterDetailPage({
               <h2 className="text-2xl font-semibold text-gray-800">Upcoming Fights</h2>
               {fighterEvents.length > 0 && fighterEvents[0] && (
                 <Link
-                  href={`/checkout?fighterName=${encodeURIComponent(fighter.name)}&fighterId=${id}&eventId=${fighterEvents[0]?.id || ''}&eventTitle=${encodeURIComponent(fighterEvents[0]?.title || '')}`}
+                  href={`/checkout?fighterName=${encodeURIComponent(fighter.name)}&fighterId=${id}&eventId=${fighterEvents[0]?.id ?? ''}&eventTitle=${encodeURIComponent(fighterEvents[0]?.title ?? '')}`}
                   className="inline-flex py-2 px-4 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 focus:ring-4 focus:ring-red-300"
                 >
                   Buy Tickets
@@ -144,7 +144,7 @@ export default async function FighterDetailPage({
                       </Link>
                       
                       <Link
-                        href={`/checkout?fighterName=${encodeURIComponent(fighter.name)}&fighterId=${id}&eventId=${event?.id || ''}&eventTitle=${encodeURIComponent(event?.title || '')}`}
+                        href={`/checkout?fighterName=${encodeURIComponent(fighter.name)}&fighterId=${id}&eventId=${event?.id ?? ''}&eventTitle=${encodeURIComponent(event?.title ?? '')}`}
                         className="inline-flex py-1 px-3 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700"
                       >
                         Get Tickets

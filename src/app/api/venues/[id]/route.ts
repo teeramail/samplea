@@ -60,7 +60,7 @@ export async function GET(
 
     return NextResponse.json(venue);
   } catch (error) {
-    const venueIdForError = (await params)?.id || "unknown";
+    const venueIdForError = (await params)?.id ?? "unknown";
     console.error(`Error fetching venue ${venueIdForError}:`, error);
     return NextResponse.json(
       { error: "Failed to fetch venue" },
@@ -239,7 +239,7 @@ export async function PUT(
 
     return NextResponse.json(updatedVenue);
   } catch (error) {
-    const venueIdForError = (await params)?.id || "unknown";
+    const venueIdForError = (await params)?.id ?? "unknown";
     console.error(`Error updating venue ${venueIdForError}:`, error);
     return NextResponse.json(
       { error: "Failed to update venue" },

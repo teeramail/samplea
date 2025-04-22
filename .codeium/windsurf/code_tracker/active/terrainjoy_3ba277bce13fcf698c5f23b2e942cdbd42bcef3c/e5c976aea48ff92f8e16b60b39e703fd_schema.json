@@ -1,0 +1,1779 @@
+им{
+  "tables": [
+    "Booking",
+    "CourseEnrollment",
+    "Customer",
+    "Event",
+    "EventTemplate",
+    "EventTemplateTicket",
+    "EventTicket",
+    "Fighter",
+    "Instructor",
+    "Post",
+    "Region",
+    "Ticket",
+    "TrainingCourse",
+    "User",
+    "Venue",
+    "VenueToVenueType",
+    "VenueType",
+    "account",
+    "session",
+    "verification_token"
+  ],
+  "columns": [
+    {
+      "table_name": "Booking",
+      "column_name": "id",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "Booking",
+      "column_name": "eventId",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "Booking",
+      "column_name": "totalAmount",
+      "data_type": "double precision",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "Booking",
+      "column_name": "paymentStatus",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": "'PENDING'::text"
+    },
+    {
+      "table_name": "Booking",
+      "column_name": "createdAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "Booking",
+      "column_name": "updatedAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "Booking",
+      "column_name": "customerId",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "Booking",
+      "column_name": "customerNameSnapshot",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Booking",
+      "column_name": "customerEmailSnapshot",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Booking",
+      "column_name": "customerPhoneSnapshot",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Booking",
+      "column_name": "eventTitleSnapshot",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Booking",
+      "column_name": "eventDateSnapshot",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Booking",
+      "column_name": "venueNameSnapshot",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Booking",
+      "column_name": "regionNameSnapshot",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Booking",
+      "column_name": "bookingItemsJson",
+      "data_type": "jsonb",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Booking",
+      "column_name": "paymentOrderNo",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Booking",
+      "column_name": "paymentTransactionId",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Booking",
+      "column_name": "paymentBankCode",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Booking",
+      "column_name": "paymentBankRefCode",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Booking",
+      "column_name": "paymentDate",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Booking",
+      "column_name": "paymentMethod",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "CourseEnrollment",
+      "column_name": "id",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "CourseEnrollment",
+      "column_name": "customerId",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "CourseEnrollment",
+      "column_name": "courseId",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "CourseEnrollment",
+      "column_name": "pricePaid",
+      "data_type": "double precision",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "CourseEnrollment",
+      "column_name": "status",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": "'PENDING_PAYMENT'::text"
+    },
+    {
+      "table_name": "CourseEnrollment",
+      "column_name": "enrollmentDate",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "CourseEnrollment",
+      "column_name": "startDate",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "CourseEnrollment",
+      "column_name": "courseTitleSnapshot",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "CourseEnrollment",
+      "column_name": "customerNameSnapshot",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "CourseEnrollment",
+      "column_name": "customerEmailSnapshot",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "CourseEnrollment",
+      "column_name": "createdAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "CourseEnrollment",
+      "column_name": "updatedAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "Customer",
+      "column_name": "id",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "Customer",
+      "column_name": "userId",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Customer",
+      "column_name": "name",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "Customer",
+      "column_name": "email",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "Customer",
+      "column_name": "phone",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Customer",
+      "column_name": "createdAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "Customer",
+      "column_name": "updatedAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "Event",
+      "column_name": "id",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "Event",
+      "column_name": "title",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "Event",
+      "column_name": "description",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Event",
+      "column_name": "date",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "Event",
+      "column_name": "startTime",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "Event",
+      "column_name": "endTime",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Event",
+      "column_name": "imageUrl",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Event",
+      "column_name": "usesDefaultPoster",
+      "data_type": "boolean",
+      "is_nullable": "NO",
+      "column_default": "true"
+    },
+    {
+      "table_name": "Event",
+      "column_name": "venueId",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Event",
+      "column_name": "regionId",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Event",
+      "column_name": "createdAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "Event",
+      "column_name": "updatedAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "Event",
+      "column_name": "status",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": "'SCHEDULED'::text"
+    },
+    {
+      "table_name": "Event",
+      "column_name": "thumbnailUrl",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Event",
+      "column_name": "imageUrls",
+      "data_type": "ARRAY",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Event",
+      "column_name": "metaTitle",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Event",
+      "column_name": "metaDescription",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Event",
+      "column_name": "keywords",
+      "data_type": "ARRAY",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "EventTemplate",
+      "column_name": "id",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "EventTemplate",
+      "column_name": "templateName",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "EventTemplate",
+      "column_name": "venueId",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "EventTemplate",
+      "column_name": "regionId",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "EventTemplate",
+      "column_name": "defaultTitleFormat",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "EventTemplate",
+      "column_name": "defaultDescription",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "EventTemplate",
+      "column_name": "recurringDaysOfWeek",
+      "data_type": "ARRAY",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "EventTemplate",
+      "column_name": "defaultStartTime",
+      "data_type": "time without time zone",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "EventTemplate",
+      "column_name": "defaultEndTime",
+      "data_type": "time without time zone",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "EventTemplate",
+      "column_name": "isActive",
+      "data_type": "boolean",
+      "is_nullable": "NO",
+      "column_default": "true"
+    },
+    {
+      "table_name": "EventTemplate",
+      "column_name": "createdAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "EventTemplate",
+      "column_name": "updatedAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "EventTemplate",
+      "column_name": "recurrenceType",
+      "data_type": "USER-DEFINED",
+      "is_nullable": "NO",
+      "column_default": "'none'::recurrence_type"
+    },
+    {
+      "table_name": "EventTemplate",
+      "column_name": "startDate",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "EventTemplate",
+      "column_name": "endDate",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "EventTemplate",
+      "column_name": "dayOfMonth",
+      "data_type": "ARRAY",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "EventTemplateTicket",
+      "column_name": "id",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "EventTemplateTicket",
+      "column_name": "eventTemplateId",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "EventTemplateTicket",
+      "column_name": "seatType",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "EventTemplateTicket",
+      "column_name": "defaultPrice",
+      "data_type": "double precision",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "EventTemplateTicket",
+      "column_name": "defaultCapacity",
+      "data_type": "integer",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "EventTemplateTicket",
+      "column_name": "defaultDescription",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "EventTemplateTicket",
+      "column_name": "createdAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "EventTemplateTicket",
+      "column_name": "updatedAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "EventTicket",
+      "column_name": "id",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "EventTicket",
+      "column_name": "eventId",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "EventTicket",
+      "column_name": "seatType",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "EventTicket",
+      "column_name": "price",
+      "data_type": "double precision",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "EventTicket",
+      "column_name": "capacity",
+      "data_type": "integer",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "EventTicket",
+      "column_name": "description",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "EventTicket",
+      "column_name": "soldCount",
+      "data_type": "integer",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "EventTicket",
+      "column_name": "createdAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "EventTicket",
+      "column_name": "updatedAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "EventTicket",
+      "column_name": "discountedPrice",
+      "data_type": "double precision",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "EventTicket",
+      "column_name": "cost",
+      "data_type": "double precision",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Fighter",
+      "column_name": "id",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "Fighter",
+      "column_name": "name",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "Fighter",
+      "column_name": "nickname",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Fighter",
+      "column_name": "weightClass",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Fighter",
+      "column_name": "record",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Fighter",
+      "column_name": "imageUrl",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Fighter",
+      "column_name": "country",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Fighter",
+      "column_name": "createdAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "Fighter",
+      "column_name": "updatedAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "Fighter",
+      "column_name": "isFeatured",
+      "data_type": "boolean",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_name": "Instructor",
+      "column_name": "id",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "Instructor",
+      "column_name": "name",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "Instructor",
+      "column_name": "bio",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Instructor",
+      "column_name": "imageUrl",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Instructor",
+      "column_name": "expertise",
+      "data_type": "ARRAY",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Instructor",
+      "column_name": "userId",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Instructor",
+      "column_name": "createdAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "Instructor",
+      "column_name": "updatedAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "Post",
+      "column_name": "id",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "Post",
+      "column_name": "slug",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "Post",
+      "column_name": "title",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "Post",
+      "column_name": "content",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "Post",
+      "column_name": "excerpt",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Post",
+      "column_name": "featuredImageUrl",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Post",
+      "column_name": "isFeatured",
+      "data_type": "boolean",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_name": "Post",
+      "column_name": "publishedAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Post",
+      "column_name": "status",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": "'DRAFT'::text"
+    },
+    {
+      "table_name": "Post",
+      "column_name": "regionId",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Post",
+      "column_name": "authorId",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Post",
+      "column_name": "metaTitle",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Post",
+      "column_name": "metaDescription",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Post",
+      "column_name": "keywords",
+      "data_type": "ARRAY",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Post",
+      "column_name": "createdAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "Post",
+      "column_name": "updatedAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "Region",
+      "column_name": "id",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "Region",
+      "column_name": "name",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "Region",
+      "column_name": "description",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Region",
+      "column_name": "createdAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "Region",
+      "column_name": "updatedAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "Region",
+      "column_name": "imageUrls",
+      "data_type": "ARRAY",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Region",
+      "column_name": "primaryImageIndex",
+      "data_type": "integer",
+      "is_nullable": "YES",
+      "column_default": "0"
+    },
+    {
+      "table_name": "Region",
+      "column_name": "slug",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "Region",
+      "column_name": "metaTitle",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Region",
+      "column_name": "metaDescription",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Region",
+      "column_name": "keywords",
+      "data_type": "ARRAY",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Ticket",
+      "column_name": "id",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "Ticket",
+      "column_name": "eventId",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "Ticket",
+      "column_name": "eventDetailId",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "Ticket",
+      "column_name": "bookingId",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "Ticket",
+      "column_name": "status",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": "'ACTIVE'::text"
+    },
+    {
+      "table_name": "Ticket",
+      "column_name": "createdAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "Ticket",
+      "column_name": "updatedAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "TrainingCourse",
+      "column_name": "id",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "TrainingCourse",
+      "column_name": "title",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "TrainingCourse",
+      "column_name": "slug",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "TrainingCourse",
+      "column_name": "description",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "TrainingCourse",
+      "column_name": "skillLevel",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "TrainingCourse",
+      "column_name": "duration",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "TrainingCourse",
+      "column_name": "scheduleDetails",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "TrainingCourse",
+      "column_name": "price",
+      "data_type": "double precision",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "TrainingCourse",
+      "column_name": "capacity",
+      "data_type": "integer",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "TrainingCourse",
+      "column_name": "venueId",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "TrainingCourse",
+      "column_name": "regionId",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "TrainingCourse",
+      "column_name": "instructorId",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "TrainingCourse",
+      "column_name": "imageUrls",
+      "data_type": "ARRAY",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "TrainingCourse",
+      "column_name": "primaryImageIndex",
+      "data_type": "integer",
+      "is_nullable": "YES",
+      "column_default": "0"
+    },
+    {
+      "table_name": "TrainingCourse",
+      "column_name": "isActive",
+      "data_type": "boolean",
+      "is_nullable": "NO",
+      "column_default": "true"
+    },
+    {
+      "table_name": "TrainingCourse",
+      "column_name": "createdAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "TrainingCourse",
+      "column_name": "updatedAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "TrainingCourse",
+      "column_name": "isFeatured",
+      "data_type": "boolean",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_name": "TrainingCourse",
+      "column_name": "metaTitle",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "TrainingCourse",
+      "column_name": "metaDescription",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "TrainingCourse",
+      "column_name": "keywords",
+      "data_type": "ARRAY",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "User",
+      "column_name": "id",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "User",
+      "column_name": "email",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "User",
+      "column_name": "name",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "User",
+      "column_name": "emailVerified",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "User",
+      "column_name": "image",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "User",
+      "column_name": "role",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": "'user'::text"
+    },
+    {
+      "table_name": "User",
+      "column_name": "createdAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "User",
+      "column_name": "updatedAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "Venue",
+      "column_name": "id",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "Venue",
+      "column_name": "name",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "Venue",
+      "column_name": "address",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "Venue",
+      "column_name": "capacity",
+      "data_type": "integer",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Venue",
+      "column_name": "regionId",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "Venue",
+      "column_name": "createdAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "Venue",
+      "column_name": "updatedAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "Venue",
+      "column_name": "latitude",
+      "data_type": "double precision",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Venue",
+      "column_name": "longitude",
+      "data_type": "double precision",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Venue",
+      "column_name": "thumbnailUrl",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Venue",
+      "column_name": "imageUrls",
+      "data_type": "ARRAY",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Venue",
+      "column_name": "isFeatured",
+      "data_type": "boolean",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_name": "Venue",
+      "column_name": "metaTitle",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Venue",
+      "column_name": "metaDescription",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Venue",
+      "column_name": "keywords",
+      "data_type": "ARRAY",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Venue",
+      "column_name": "googleMapsUrl",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Venue",
+      "column_name": "remarks",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "Venue",
+      "column_name": "socialMediaLinks",
+      "data_type": "jsonb",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "VenueToVenueType",
+      "column_name": "id",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "VenueToVenueType",
+      "column_name": "venueId",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "VenueToVenueType",
+      "column_name": "venueTypeId",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "VenueToVenueType",
+      "column_name": "isPrimary",
+      "data_type": "boolean",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_name": "VenueToVenueType",
+      "column_name": "createdAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "VenueToVenueType",
+      "column_name": "updatedAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "VenueType",
+      "column_name": "id",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "VenueType",
+      "column_name": "name",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "VenueType",
+      "column_name": "description",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "VenueType",
+      "column_name": "createdAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "VenueType",
+      "column_name": "updatedAt",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "account",
+      "column_name": "user_id",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "account",
+      "column_name": "type",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "account",
+      "column_name": "provider",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "account",
+      "column_name": "provider_account_id",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "account",
+      "column_name": "refresh_token",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "account",
+      "column_name": "access_token",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "account",
+      "column_name": "expires_at",
+      "data_type": "integer",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "account",
+      "column_name": "token_type",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "account",
+      "column_name": "scope",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "account",
+      "column_name": "id_token",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "account",
+      "column_name": "session_state",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "session",
+      "column_name": "session_token",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "session",
+      "column_name": "user_id",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "session",
+      "column_name": "expires",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "verification_token",
+      "column_name": "identifier",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "verification_token",
+      "column_name": "token",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "verification_token",
+      "column_name": "expires",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": null
+    }
+  ],
+  "relationships": [
+    {
+      "constraint_name": "Booking_customerId_Customer_id_fk",
+      "table_name": "Booking",
+      "column_name": "customerId",
+      "referenced_table": "Customer",
+      "referenced_column": "id",
+      "delete_rule": "RESTRICT"
+    },
+    {
+      "constraint_name": "Booking_eventId_Event_id_fk",
+      "table_name": "Booking",
+      "column_name": "eventId",
+      "referenced_table": "Event",
+      "referenced_column": "id",
+      "delete_rule": "CASCADE"
+    },
+    {
+      "constraint_name": "CourseEnrollment_courseId_TrainingCourse_id_fk",
+      "table_name": "CourseEnrollment",
+      "column_name": "courseId",
+      "referenced_table": "TrainingCourse",
+      "referenced_column": "id",
+      "delete_rule": "CASCADE"
+    },
+    {
+      "constraint_name": "CourseEnrollment_customerId_Customer_id_fk",
+      "table_name": "CourseEnrollment",
+      "column_name": "customerId",
+      "referenced_table": "Customer",
+      "referenced_column": "id",
+      "delete_rule": "RESTRICT"
+    },
+    {
+      "constraint_name": "Customer_userId_User_id_fk",
+      "table_name": "Customer",
+      "column_name": "userId",
+      "referenced_table": "User",
+      "referenced_column": "id",
+      "delete_rule": "SET NULL"
+    },
+    {
+      "constraint_name": "Event_regionId_Region_id_fk",
+      "table_name": "Event",
+      "column_name": "regionId",
+      "referenced_table": "Region",
+      "referenced_column": "id",
+      "delete_rule": "SET NULL"
+    },
+    {
+      "constraint_name": "Event_venueId_Venue_id_fk",
+      "table_name": "Event",
+      "column_name": "venueId",
+      "referenced_table": "Venue",
+      "referenced_column": "id",
+      "delete_rule": "SET NULL"
+    },
+    {
+      "constraint_name": "EventTemplate_regionId_Region_id_fk",
+      "table_name": "EventTemplate",
+      "column_name": "regionId",
+      "referenced_table": "Region",
+      "referenced_column": "id",
+      "delete_rule": "RESTRICT"
+    },
+    {
+      "constraint_name": "EventTemplate_venueId_Venue_id_fk",
+      "table_name": "EventTemplate",
+      "column_name": "venueId",
+      "referenced_table": "Venue",
+      "referenced_column": "id",
+      "delete_rule": "RESTRICT"
+    },
+    {
+      "constraint_name": "EventTemplateTicket_eventTemplateId_EventTemplate_id_fk",
+      "table_name": "EventTemplateTicket",
+      "column_name": "eventTemplateId",
+      "referenced_table": "EventTemplate",
+      "referenced_column": "id",
+      "delete_rule": "CASCADE"
+    },
+    {
+      "constraint_name": "EventTicket_eventId_Event_id_fk",
+      "table_name": "EventTicket",
+      "column_name": "eventId",
+      "referenced_table": "Event",
+      "referenced_column": "id",
+      "delete_rule": "CASCADE"
+    },
+    {
+      "constraint_name": "Instructor_userId_User_id_fk",
+      "table_name": "Instructor",
+      "column_name": "userId",
+      "referenced_table": "User",
+      "referenced_column": "id",
+      "delete_rule": "SET NULL"
+    },
+    {
+      "constraint_name": "Post_authorId_User_id_fk",
+      "table_name": "Post",
+      "column_name": "authorId",
+      "referenced_table": "User",
+      "referenced_column": "id",
+      "delete_rule": "SET NULL"
+    },
+    {
+      "constraint_name": "Post_regionId_Region_id_fk",
+      "table_name": "Post",
+      "column_name": "regionId",
+      "referenced_table": "Region",
+      "referenced_column": "id",
+      "delete_rule": "SET NULL"
+    },
+    {
+      "constraint_name": "Ticket_bookingId_Booking_id_fk",
+      "table_name": "Ticket",
+      "column_name": "bookingId",
+      "referenced_table": "Booking",
+      "referenced_column": "id",
+      "delete_rule": "CASCADE"
+    },
+    {
+      "constraint_name": "Ticket_eventDetailId_EventTicket_id_fk",
+      "table_name": "Ticket",
+      "column_name": "eventDetailId",
+      "referenced_table": "EventTicket",
+      "referenced_column": "id",
+      "delete_rule": "RESTRICT"
+    },
+    {
+      "constraint_name": "Ticket_eventId_Event_id_fk",
+      "table_name": "Ticket",
+      "column_name": "eventId",
+      "referenced_table": "Event",
+      "referenced_column": "id",
+      "delete_rule": "NO ACTION"
+    },
+    {
+      "constraint_name": "TrainingCourse_instructorId_Instructor_id_fk",
+      "table_name": "TrainingCourse",
+      "column_name": "instructorId",
+      "referenced_table": "Instructor",
+      "referenced_column": "id",
+      "delete_rule": "SET NULL"
+    },
+    {
+      "constraint_name": "TrainingCourse_regionId_Region_id_fk",
+      "table_name": "TrainingCourse",
+      "column_name": "regionId",
+      "referenced_table": "Region",
+      "referenced_column": "id",
+      "delete_rule": "RESTRICT"
+    },
+    {
+      "constraint_name": "TrainingCourse_venueId_Venue_id_fk",
+      "table_name": "TrainingCourse",
+      "column_name": "venueId",
+      "referenced_table": "Venue",
+      "referenced_column": "id",
+      "delete_rule": "SET NULL"
+    },
+    {
+      "constraint_name": "Venue_regionId_Region_id_fk",
+      "table_name": "Venue",
+      "column_name": "regionId",
+      "referenced_table": "Region",
+      "referenced_column": "id",
+      "delete_rule": "RESTRICT"
+    },
+    {
+      "constraint_name": "VenueToVenueType_venueId_fkey",
+      "table_name": "VenueToVenueType",
+      "column_name": "venueId",
+      "referenced_table": "Venue",
+      "referenced_column": "id",
+      "delete_rule": "CASCADE"
+    },
+    {
+      "constraint_name": "VenueToVenueType_venueTypeId_fkey",
+      "table_name": "VenueToVenueType",
+      "column_name": "venueTypeId",
+      "referenced_table": "VenueType",
+      "referenced_column": "id",
+      "delete_rule": "CASCADE"
+    },
+    {
+      "constraint_name": "account_user_id_User_id_fk",
+      "table_name": "account",
+      "column_name": "user_id",
+      "referenced_table": "User",
+      "referenced_column": "id",
+      "delete_rule": "CASCADE"
+    },
+    {
+      "constraint_name": "session_user_id_User_id_fk",
+      "table_name": "session",
+      "column_name": "user_id",
+      "referenced_table": "User",
+      "referenced_column": "id",
+      "delete_rule": "CASCADE"
+    }
+  ],
+  "enumTypes": [
+    {
+      "typname": "recurrence_type",
+      "enumlabels": [
+        "monthly",
+        "weekly",
+        "none"
+      ]
+    }
+  ],
+  "generatedAt": "2025-04-21T00:10:31.745Z"
+}им"(3ba277bce13fcf698c5f23b2e942cdbd42bcef3c2Sfile:///c:/work/projects/newpro/teeonedWinsurf/terrainjoy/docs/database/schema.json:9file:///c:/work/projects/newpro/teeonedWinsurf/terrainjoy

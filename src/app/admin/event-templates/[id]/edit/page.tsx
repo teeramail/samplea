@@ -360,8 +360,8 @@ export default function EditEventTemplatePage({ params }: PageProps) {
           for (const ticket of templateData.templateTickets) {
             if (ticket && typeof ticket === 'object') {
               append({
-                id: ticket.id || '',
-                seatType: ticket.seatType || '',
+                id: ticket.id ?? '',
+                seatType: ticket.seatType ?? '',
                 defaultPrice: typeof ticket.defaultPrice === 'number' ? ticket.defaultPrice : 0,
                 defaultCapacity: typeof ticket.defaultCapacity === 'number' ? ticket.defaultCapacity : 0,
                 defaultDescription: ticket.defaultDescription ?? "",

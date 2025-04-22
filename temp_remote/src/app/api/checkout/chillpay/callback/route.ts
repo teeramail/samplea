@@ -8,7 +8,7 @@ import { NextResponse } from "next/server";
 
 // Type-safe function to convert FormData values to strings
 const safeToString = (value: FormDataEntryValue | null): string | undefined => {
-  if (value === null || value === undefined) {
+  if (value === null ?? value === undefined) {
     return undefined;
   }
   if (typeof value === 'string') {

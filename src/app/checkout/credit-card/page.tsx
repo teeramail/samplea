@@ -195,7 +195,7 @@ export default function CreditCardPage() {
             </h1>
             <p className="text-gray-600">
               Please wait while we set up the payment gateway for{" "}
-              {eventTitle || "your booking"}.
+              {eventTitle ?? "your booking"}.
             </p>
             <div className="mt-6 flex items-center justify-center">
               <svg
@@ -229,7 +229,7 @@ export default function CreditCardPage() {
             </h1>
             <p className="mb-6 text-gray-600">
               Please complete the payment form below to finalize your booking
-              for {eventTitle || "your event"}.
+              for {eventTitle ?? "your event"}.
             </p>
 
             <form
@@ -249,7 +249,7 @@ export default function CreditCardPage() {
                 data-clientip="127.0.0.1"
                 data-routeno="1"
                 data-currency="764"
-                data-description={eventTitle || "Booking payment"}
+                data-description={eventTitle ?? "Booking payment"}
                 data-apikey="7ynsXqBl3e0vFPfI1fivU9VSAZ8UZTQmta7vz4b6heptCXrrEja8ub1Z8YW6VnDX"
               ></div>
             </form>

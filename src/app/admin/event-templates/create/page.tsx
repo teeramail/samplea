@@ -48,7 +48,7 @@ const eventTemplateSchema = z.object({
     .optional()
     .superRefine((val, ctx) => {
       // Only required if recurrence type is monthly
-      if (ctx.path[0] === "recurrenceType" && ctx.path[1] === "monthly" && (!val || val.length === 0)) {
+      if (ctx.path[0] === "recurrenceType" && ctx.path[1] === "monthly" && (!val || (val && val.length === 0))) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "Select at least one day for monthly recurrence",
@@ -229,7 +229,7 @@ export default function CreateEventTemplatePage() {
     },
     onError: (error) => {
       console.error("API error creating template:", error);
-      setSubmitError(error.message || "Failed to create event template");
+      setSubmitError(error.message ?? "Failed to create event template");
     },
   });
 
@@ -297,9 +297,9 @@ export default function CreateEventTemplatePage() {
           : undefined,
           
         // Handle optional values
-        defaultEndTime: data.defaultEndTime || undefined,
-        startDate: data.startDate || undefined,
-        endDate: data.endDate || undefined,
+        defaultEndTime: data.defaultEndTime ?? undefined,
+        startDate: data.startDate ?? undefined,
+        endDate: data.endDate ?? undefined,
         
         // Ensure ticket types have proper numeric values
         templateTickets: data.templateTickets.map(ticket => ({

@@ -65,8 +65,7 @@ export default function AdminCoursesPage() {
   // Filter courses based on search and featured filter
   const filterCourses = (courses: CourseType[]) => {
     return courses.filter(course => {
-      const matchesSearch = !searchQuery || 
-        course.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      const matchesSearch = !searchQuery || course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (course.region?.name && course.region.name.toLowerCase().includes(searchQuery.toLowerCase()));
       
       const matchesFeatured = !showFeaturedOnly || course.isFeatured;

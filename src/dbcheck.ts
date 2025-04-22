@@ -30,7 +30,7 @@ async function checkDatabase() {
     `;
     
     if (chiangMaiRegions.length > 0) {
-      console.log(`Found Chiang Mai region: ID = ${chiangMaiRegions[0]?.id || 'unknown'}`);
+      console.log(`Found Chiang Mai region: ID = ${chiangMaiRegions[0]?.id ?? 'unknown'}`);
     } else {
       console.log("Chiang Mai region NOT found in database!");
     }
@@ -70,7 +70,7 @@ async function checkDatabase() {
     console.log(`Found ${upcomingEvents.length} upcoming events:`);
     upcomingEvents.forEach(e => {
       const date = new Date(e.date).toLocaleDateString();
-      console.log(`- [${date}] ${e.title} in ${e.region_name} at ${e.venue_name || 'Unknown venue'}`);
+      console.log(`- [${date}] ${e.title} in ${e.region_name} at ${e.venue_name ?? 'Unknown venue'}`);
     });
     
     // 5. If specified region has events, show them
@@ -91,7 +91,7 @@ async function checkDatabase() {
           console.log(`Found ${regionEvents.length} events in Chiang Mai:`);
           regionEvents.forEach(e => {
             const date = new Date(e.date).toLocaleDateString();
-            console.log(`- [${date}] ${e.title} at ${e.venue_name || 'Unknown venue'}`);
+            console.log(`- [${date}] ${e.title} at ${e.venue_name ?? 'Unknown venue'}`);
           });
         } else {
           console.log("No events found for Chiang Mai.");

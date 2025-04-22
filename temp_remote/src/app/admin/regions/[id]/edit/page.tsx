@@ -346,7 +346,7 @@ export default function EditRegionPage() {
           <button
             type="submit"
             className="bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-md"
-            disabled={isLoading || isFetching}
+            disabled={isLoading ?? isFetching}
           >
             {isLoading ? "Saving..." : "Save Changes"}
           </button>

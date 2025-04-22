@@ -779,8 +779,7 @@ export default function CreateVenuePage() {
                   >
                     {selectedVenueTypes.map((typeId) => (
                       <option key={typeId} value={typeId}>
-                        {venueTypes.find((t) => t.id === typeId)?.name ||
-                          typeId}
+                        {venueTypes.find((t) => t.id === typeId)?.name ?? typeId}
                       </option>
                     ))}
                   </select>

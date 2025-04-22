@@ -133,7 +133,7 @@ export default async function FighterDetailPage({
               </h2>
               {fighterEvents.length > 0 && fighterEvents[0] && (
                 <Link
-                  href={`/checkout?fighterName=${encodeURIComponent(fighter.name)}&fighterId=${id}&eventId=${fighterEvents[0]?.id || ""}&eventTitle=${encodeURIComponent(fighterEvents[0]?.title || "")}`}
+                  href={`/checkout?fighterName=${encodeURIComponent(fighter.name)}&fighterId=${id}&eventId=${fighterEvents[0]?.id ?? ""}&eventTitle=${encodeURIComponent(fighterEvents[0]?.title ?? "")}`}
                   className="inline-flex rounded-lg bg-red-600 px-4 py-2 font-medium text-white hover:bg-red-700 focus:ring-4 focus:ring-red-300"
                 >
                   Buy Tickets
@@ -166,7 +166,7 @@ export default async function FighterDetailPage({
                       </Link>
 
                       <Link
-                        href={`/checkout?fighterName=${encodeURIComponent(fighter.name)}&fighterId=${id}&eventId=${event?.id || ""}&eventTitle=${encodeURIComponent(event?.title || "")}`}
+                        href={`/checkout?fighterName=${encodeURIComponent(fighter.name)}&fighterId=${id}&eventId=${event?.id ?? ""}&eventTitle=${encodeURIComponent(event?.title ?? "")}`}
                         className="inline-flex rounded-lg bg-red-600 px-3 py-1 text-sm font-medium text-white hover:bg-red-700"
                       >
                         Get Tickets

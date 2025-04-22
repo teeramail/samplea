@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     // Extract all parameters from the form data according to the ChillPay manual
     const getValue = (key: string): string => {
       const value = formData.get(key);
-      if (value === null || value === undefined) {
+      if (value === null ?? value === undefined) {
         return '';
       }
       // Handle different types of values properly

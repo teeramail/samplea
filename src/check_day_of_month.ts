@@ -1,7 +1,7 @@
 import postgres from "postgres";
 
 // Database connection string from .env
-const DATABASE_URL = process.env.DATABASE_URL || "postgresql://muaythai_owner:npg_uo1cbjDyXRx0@ep-hidden-morning-a134x57e-pooler.ap-southeast-1.aws.neon.tech/muaythai?sslmode=require";
+const DATABASE_URL = process.env.DATABASE_URL ?? "postgresql://muaythai_owner:npg_uo1cbjDyXRx0@ep-hidden-morning-a134x57e-pooler.ap-southeast-1.aws.neon.tech/muaythai?sslmode=require";
 
 async function checkDayOfMonth() {
   const sql = postgres(DATABASE_URL);

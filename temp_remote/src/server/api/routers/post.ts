@@ -43,13 +43,13 @@ export const postRouter = createTRPCRouter({
           title: input.title,
           slug: input.slug,
           content: input.content,
-          excerpt: input.excerpt || null,
+          excerpt: input.excerpt ?? null,
           isFeatured: input.isFeatured,
           status: input.status,
           publishedAt: input.status === 'PUBLISHED' ? new Date() : null,
           // Map SEO fields to the correct DB fields
-          metaTitle: input.seoTitle || null,
-          metaDescription: input.seoDescription || null,
+          metaTitle: input.seoTitle ?? null,
+          metaDescription: input.seoDescription ?? null,
           createdAt: new Date(),
           updatedAt: new Date(),
         });

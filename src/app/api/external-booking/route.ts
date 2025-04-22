@@ -32,8 +32,8 @@ export async function POST(request: Request) {
 
     // Normalize data
     const reservationId =
-      externalReservationId || preReservationId || createId();
-    const phoneNumber = mobile || phone || null;
+      externalReservationId ?? (preReservationId || createId());
+    const phoneNumber = mobile ?? (phone || null);
 
     // Validate required fields
     if (!eventId || !name || !email || !totalAmount) {
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
       name,
       email,
       totalAmount,
-      paymentMethod: paymentMethod || "not specified",
+      paymentMethod: paymentMethod ?? "not specified",
       ticketCount: Array.isArray(tickets) ? tickets.length : "unknown",
     });
 
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
         .update(customers)
         .set({
           name, // Update name in case it changed
-          phone: mobile || existingCustomer.phone, // Keep existing phone if not provided
+          phone: mobile ?? existingCustomer.phone, // Keep existing phone if not provided
           updatedAt: new Date(),
         })
         .where(eq(customers.id, customerId));
@@ -87,8 +87,8 @@ export async function POST(request: Request) {
     }
 
     // Extract venue and region info if available
-    const venueNameSnapshot = body.venueName || body.venue?.name || null;
-    const regionNameSnapshot = body.regionName || body.region?.name || null;
+    const venueNameSnapshot = body.venueName ?? body.venue?.name ?? null;
+    const regionNameSnapshot = body.regionName ?? body.region?.name ?? null;
 
     // Create booking in our system
     const bookingId = createId();
@@ -130,8 +130,8 @@ export async function POST(request: Request) {
             amount: totalAmount,
             customerName: name,
             customerEmail: email,
-            customerPhone: phoneNumber || "",
-            description: `Tickets for ${eventName || "Event"}`,
+            customerPhone: phoneNumber ?? "",
+            description: `Tickets for ${eventName ?? "Event"}`,
             // Callback URL for ModernPay to notify your system
             callbackUrl: `${baseUrl}/api/checkout/payment-callback?source=modernpay&bookingId=${bookingId}`,
           },
@@ -146,8 +146,8 @@ export async function POST(request: Request) {
         amount: totalAmount,
         customerName: name,
         customerEmail: email,
-        customerPhone: phoneNumber || "",
-        description: `Tickets for ${eventName || "Event"}`,
+        customerPhone: phoneNumber ?? "",
+        description: `Tickets for ${eventName ?? "Event"}`,
         // Use our callback endpoints but include the external system's returnUrl
         // so we can redirect back to them after processing
         returnUrl: returnUrl
@@ -167,7 +167,7 @@ export async function POST(request: Request) {
           externalId: reservationId,
           // In a real implementation, this would generate an actual ChillPay payment URL
           // For now, we'll return the URL to your existing credit-card payment page
-          paymentUrl: `${baseUrl}/checkout/credit-card?bookingId=${bookingId}&amount=${totalAmount}&customerName=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}&phone=${encodeURIComponent(phoneNumber || "")}&eventTitle=${encodeURIComponent(eventName || "")}`,
+          paymentUrl: `${baseUrl}/checkout/credit-card?bookingId=${bookingId}&amount=${totalAmount}&customerName=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}&phone=${encodeURIComponent(phoneNumber ?? "")}&eventTitle=${encodeURIComponent(eventName ?? "")}`,
           // Include the data that would be sent to ChillPay for reference
           paymentData,
         },

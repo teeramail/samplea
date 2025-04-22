@@ -4,7 +4,7 @@ import { config } from "dotenv";
 // Load environment variables
 config();
 
-const DATABASE_URL = process.env.DATABASE_URL || "postgresql://muaythai_owner:npg_uo1cbjDyXRx0@ep-hidden-morning-a134x57e-pooler.ap-southeast-1.aws.neon.tech/muaythai?sslmode=require";
+const DATABASE_URL = process.env.DATABASE_URL ?? "postgresql://muaythai_owner:npg_uo1cbjDyXRx0@ep-hidden-morning-a134x57e-pooler.ap-southeast-1.aws.neon.tech/muaythai?sslmode=require";
 
 async function migrateDayOfMonthToArray() {
   console.log("Starting migration: Converting dayOfMonth from integer to integer[]");
@@ -27,7 +27,7 @@ async function migrateDayOfMonthToArray() {
       return;
     }
     
-    console.log(`Found column: ${columnCheck[0]?.column_name || 'unnamed'} (${columnCheck[0]?.data_type || 'unknown'})`);
+    console.log(`Found column: ${columnCheck[0]?.column_name ?? 'unnamed'} (${columnCheck[0]?.data_type ?? 'unknown'})`);
     
     // 2. Create a temporary backup of existing values
     console.log("Creating backup of existing dayOfMonth values...");

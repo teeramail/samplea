@@ -260,7 +260,7 @@ export default function EditVenuePage() {
     }
   };
 
-  if (isFetching || isLoadingRegions) {
+  if (isFetching ?? isLoadingRegions) {
     return <div className="text-center py-10">Loading venue data...</div>;
   }
 
@@ -476,7 +476,7 @@ export default function EditVenuePage() {
           </Link>
           <button
             type="submit"
-            disabled={isLoading || isFetching}
+            disabled={isLoading ?? isFetching}
             className="bg-blue-600 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
           >
             {isLoading ? "Saving..." : "Save Changes"}

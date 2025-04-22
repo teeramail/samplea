@@ -190,11 +190,11 @@ export default function CheckoutPage() {
 
       if (paymentMethod === "paypal") {
         router.push(
-          `/checkout/paypal?bookingId=${data.bookingId}&amount=${totalCost}&customerName=${encodeURIComponent(contactInfo.fullName)}&email=${encodeURIComponent(contactInfo.email)}&phone=${encodeURIComponent(contactInfo.phone || "")}&eventTitle=${encodeURIComponent(eventTitle || "")}`,
+          `/checkout/paypal?bookingId=${data.bookingId}&amount=${totalCost}&customerName=${encodeURIComponent(contactInfo.fullName)}&email=${encodeURIComponent(contactInfo.email)}&phone=${encodeURIComponent(contactInfo.phone ?? "")}&eventTitle=${encodeURIComponent(eventTitle ?? "")}`,
         );
       } else {
         router.push(
-          `/checkout/credit-card?bookingId=${data.bookingId}&amount=${totalCost}&customerName=${encodeURIComponent(contactInfo.fullName)}&email=${encodeURIComponent(contactInfo.email)}&phone=${encodeURIComponent(contactInfo.phone || "")}&eventTitle=${encodeURIComponent(eventTitle || "")}`,
+          `/checkout/credit-card?bookingId=${data.bookingId}&amount=${totalCost}&customerName=${encodeURIComponent(contactInfo.fullName)}&email=${encodeURIComponent(contactInfo.email)}&phone=${encodeURIComponent(contactInfo.phone ?? "")}&eventTitle=${encodeURIComponent(eventTitle ?? "")}`,
         );
       }
     } catch (error) {

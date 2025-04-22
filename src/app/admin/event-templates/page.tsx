@@ -29,7 +29,7 @@ export default function EventTemplatesListPage() {
     limit: itemsPerPage,
     sortField,
     sortDirection,
-    query: searchQuery || undefined,
+    query: searchQuery ?? undefined,
   });
 
   // Handle sort click

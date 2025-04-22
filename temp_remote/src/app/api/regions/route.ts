@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
     const regionId = uuidv4();
     
     // Generate slug if not provided
-    const slug = data.slug || generateSlug(data.name);
+    const slug = data.slug ?? generateSlug(data.name);
     
     console.log("Creating region with data:", {
       id: regionId,

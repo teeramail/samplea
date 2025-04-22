@@ -47,8 +47,7 @@ export async function POST(request: Request) {
     if (
       !data.eventId ||
       !data.contactInfo ||
-      !data.tickets ||
-      data.totalCost === undefined
+      !data.tickets || data.totalCost === undefined
     ) {
       // Check totalCost for undefined explicitly if needed
       return NextResponse.json(
