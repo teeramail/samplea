@@ -70,6 +70,10 @@ const navItems = [
 
   { name: "Enrollments", group: "enrollments" },
   { name: "All Enrollments", href: "/admin/enrollments", group: "enrollments" },
+
+  { name: "Products", group: "products" },
+  { name: "All Products", href: "/admin/products", group: "products" },
+  { name: "Create Product", href: "/admin/products/create", group: "products" },
 ];
 
 // Top navigation sections for quick access to content management
@@ -80,6 +84,7 @@ const topNavSections = [
   { name: "Fighters", href: "/admin/fighters", icon: "🥊" },
   { name: "Courses", href: "/admin/courses", icon: "📚" },
   { name: "Blog", href: "/admin/posts", icon: "📰" },
+  { name: "Products", href: "/admin/products", icon: "🛍️" },
 ];
 
 // Featured content sections for quick access
@@ -88,6 +93,7 @@ const featuredSections = [
   { name: "Featured Courses", href: "/admin/courses", icon: "📚" },
   { name: "Featured News", href: "/admin/posts", icon: "📰" },
   { name: "Featured Fighters", href: "/admin/fighters", icon: "🥊" },
+  { name: "Featured Products", href: "/admin/products", icon: "🛍️" },
 ];
 
 function AdminSidebar({
@@ -311,7 +317,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           {pathname.includes("/admin/venues") ||
           pathname.includes("/admin/courses") ||
           pathname.includes("/admin/posts") ||
-          pathname.includes("/admin/fighters") ? (
+          pathname.includes("/admin/fighters") ||
+          pathname.includes("/admin/products") ? (
             <div className="mb-4 overflow-x-auto bg-indigo-50">
               <div className="flex space-x-2 px-4 py-3">
                 <div className="py-2 font-medium text-indigo-600">

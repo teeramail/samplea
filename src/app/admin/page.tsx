@@ -6,11 +6,12 @@ import {
   fighters,
   posts,
   trainingCourses,
+  products,
 } from "~/server/db/schema";
 
 export default async function AdminDashboardPage() {
   // Get counts for dashboard stats
-  const [eventsCount, venuesCount, fightersCount, coursesCount, postsCount] =
+  const [eventsCount, venuesCount, fightersCount, coursesCount, postsCount, productsCount] =
     await Promise.all([
       db
         .select({ count: events.id })
@@ -31,6 +32,10 @@ export default async function AdminDashboardPage() {
       db
         .select({ count: posts.id })
         .from(posts)
+        .then((result) => result.length),
+      db
+        .select({ count: products.id })
+        .from(products)
         .then((result) => result.length),
     ]);
 
@@ -79,6 +84,12 @@ export default async function AdminDashboardPage() {
       icon: "📚",
       color: "green",
     },
+    {
+      name: "Add Product",
+      href: "/admin/products/create",
+      icon: "🛍️",
+      color: "teal",
+    },
   ];
 
   // Featured content links
@@ -87,6 +98,7 @@ export default async function AdminDashboardPage() {
     { name: "Manage Featured Courses", href: "/admin/courses", icon: "📚" },
     { name: "Manage Featured News", href: "/admin/posts", icon: "📰" },
     { name: "Manage Featured Fighters", href: "/admin/fighters", icon: "🥊" },
+    { name: "Manage Featured Products", href: "/admin/products", icon: "🛍️" },
   ];
 
   return (
@@ -186,6 +198,24 @@ export default async function AdminDashboardPage() {
           <Link
             href="/admin/posts"
             className="text-xs font-medium text-amber-800 hover:underline"
+          >
+            View all →
+          </Link>
+        </div>
+
+        <div className="rounded-lg bg-teal-100 p-4 shadow-sm">
+          <div className="mb-2 flex items-center">
+            <div className="mr-3 rounded-full bg-teal-200 p-2">
+              <span className="text-xl">🛍️</span>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-teal-800">Products</p>
+              <p className="text-2xl font-bold text-teal-900">{productsCount}</p>
+            </div>
+          </div>
+          <Link
+            href="/admin/products"
+            className="text-xs font-medium text-teal-800 hover:underline"
           >
             View all →
           </Link>

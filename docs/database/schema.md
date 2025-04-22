@@ -1,6 +1,6 @@
 # PostgreSQL Database Schema Documentation
 
-*Generated on: 4/21/2025, 7:10:31 AM*
+*Generated on: 4/23/2025, 4:30:00 AM*
 
 ## Table of Contents
 
@@ -16,6 +16,7 @@
   - [Fighter](#fighter)
   - [Instructor](#instructor)
   - [Post](#post)
+  - [Product](#product)
   - [Region](#region)
   - [Ticket](#ticket)
   - [TrainingCourse](#trainingcourse)
@@ -330,6 +331,19 @@ Values: `monthly`, `weekly`, `none`
 |--------|------------|------------|
 | authorId | User(id) | SET NULL |
 | regionId | Region(id) | SET NULL |
+
+### Product
+
+| Column | Type | Nullable | Default | Description |
+| ------ | ---- | -------- | ------- | ----------- |
+| id | text | No |  | Primary Key |
+| name | text | No |  |  |
+| description | text | Yes |  |  |
+| price | double precision | No |  |  |
+| imageUrls | text[] | Yes |  |  |
+| isFeatured | boolean | No | false |  |
+| createdAt | timestamp without time zone | No | CURRENT_TIMESTAMP |  |
+| updatedAt | timestamp without time zone | No | CURRENT_TIMESTAMP |  |
 
 ### Region
 
