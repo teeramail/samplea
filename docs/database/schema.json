@@ -1769,11 +1769,11 @@
     {
       "typname": "recurrence_type",
       "enumlabels": [
-        "monthly",
+        "none",
         "weekly",
-        "none"
+        "monthly"
       ]
     }
   ],
-  "generatedAt": "2025-04-21T00:10:31.745Z"
+  "generatedAt": "2025-04-22T03:21:57.651Z"
 }

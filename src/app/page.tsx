@@ -7,10 +7,12 @@ import { MapPinIcon, BuildingLibraryIcon } from "@heroicons/react/24/outline";
 // Import the server-side tRPC caller and direct DB access
 import { api } from "~/trpc/server";
 import { db } from "~/server/db";
-import { desc, eq } from "drizzle-orm";
-import { venues } from "~/server/db/schema";
+import { desc, eq, and, sql } from "drizzle-orm";
+import { venues, events, fighters, trainingCourses, posts } from "~/server/db/schema";
 // Import the type helper from the correct location
 import type { RouterOutputs } from "~/trpc/react";
+// Import cache configuration
+import { rscCacheConfig, logCacheStatus } from "~/utils/cache-config";
 
 // Helper function (consider moving to a utils file)
 const formatDate = (date: Date | string | null | undefined) => {
@@ -48,30 +50,81 @@ interface VenuesByTypeResponse {
   groupedVenues: Record<string, VenueWithTypes[]>;
 }
 
-export default async function Home() {
-  // Fetch all data in parallel
-  const [upcomingEvents, featuredFighters, featuredCourses, featuredPosts] =
-    await Promise.all([
-      api.event.getUpcoming({ limit: 3 }), // Assuming this router/procedure exists now
-      api.fighter.getFeatured({ limit: 3 }),
-      api.trainingCourse.getFeatured({ limit: 2 }),
-      api.post.getFeatured({ limit: 2 }),
-    ]);
+// Apply cache configuration based on environment
+// This ensures data refreshes immediately in development
+export const dynamic = rscCacheConfig.dynamic as 'auto' | 'force-dynamic';
+export const revalidate = rscCacheConfig.revalidate;
 
-  // Fetch venues directly from the database - similar to the venues page
-  // This ensures consistency between the homepage and venues page
-  const recommendedVenues = await db.query.venues.findMany({
-    limit: 12, // Limit to 12 venues for the homepage
-    orderBy: [desc(venues.isFeatured), desc(venues.createdAt)], // Featured first, then newest
-    with: {
-      region: true,
-      venueTypes: {
+export default async function Home() {
+  // Log cache status on server
+  logCacheStatus();
+
+  // Fetch all data directly from the database in parallel
+  // This ensures we get fresh data during development
+  const [upcomingEventsData, featuredFightersData, featuredCoursesData, featuredPostsData, recommendedVenues] =
+    await Promise.all([
+      // Upcoming events - direct DB query
+      db.query.events.findMany({
+        limit: 3,
+        orderBy: [desc(events.date)],
+        where: and(
+          eq(events.status, 'SCHEDULED'),
+          // Only future events - using SQL expression for date comparison
+          // Using a raw SQL condition for date comparison
+          sql`${events.date} > NOW()`
+        ),
         with: {
-          venueType: true,
+          venue: true,
+          region: true,
         },
-      },
-    },
-  });
+      }),
+      
+      // Featured fighters - direct DB query
+      db.query.fighters.findMany({
+        limit: 3,
+        where: eq(fighters.isFeatured, true),
+        orderBy: [desc(fighters.updatedAt)],
+      }),
+      
+      // Featured courses - direct DB query
+      db.query.trainingCourses.findMany({
+        limit: 2,
+        where: eq(trainingCourses.isFeatured, true),
+        orderBy: [desc(trainingCourses.updatedAt)],
+        with: {
+          venue: true,
+          instructor: true,
+        },
+      }),
+      
+      // Featured posts - direct DB query
+      db.query.posts.findMany({
+        limit: 2,
+        where: and(
+          eq(posts.isFeatured, true),
+          eq(posts.status, 'PUBLISHED')
+        ),
+        orderBy: [desc(posts.publishedAt)],
+        with: {
+          author: true,
+          region: true,
+        },
+      }),
+      
+      // Recommended venues - direct DB query
+      db.query.venues.findMany({
+        limit: 12, // Limit to 12 venues for the homepage
+        orderBy: [desc(venues.isFeatured), desc(venues.createdAt)], // Featured first, then newest
+        with: {
+          region: true,
+          venueTypes: {
+            with: {
+              venueType: true,
+            },
+          },
+        },
+      }),
+    ]);
 
   // Process venues to include their types
   const venuesWithTypes = recommendedVenues.map((venue) => ({
@@ -79,6 +132,12 @@ export default async function Home() {
     venueTypeNames: venue.venueTypes.map((vt) => vt.venueType.name),
   }));
 
+  // Map the data to match the expected types from TRPC
+  const upcomingEvents = upcomingEventsData;
+  const featuredFighters = featuredFightersData;
+  const featuredCourses = featuredCoursesData;
+  const featuredPosts = featuredPostsData;
+  
   // Check if we have venues to display
   const hasVenues = venuesWithTypes.length > 0;
 
@@ -246,7 +305,7 @@ export default async function Home() {
           </div>
           {featuredCourses && featuredCourses.length > 0 ? (
             <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-              {featuredCourses.map((course: CourseType) => (
+              {featuredCourses.map((course) => (
                 // --- REPLACE WITH <CourseCard /> IF AVAILABLE ---
                 <Link
                   key={course.id}
