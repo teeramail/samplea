@@ -296,6 +296,7 @@ export const products = createTable("Product", {
   name: text("name").notNull(),
   description: text("description"),
   price: doublePrecision("price").notNull(),
+  thumbnailUrl: text("thumbnailUrl"), // Add thumbnailUrl field
   imageUrls: text("imageUrls").array(),
   isFeatured: boolean("isFeatured").notNull().default(false),
   createdAt: timestamp("createdAt", { withTimezone: false })
