@@ -9,6 +9,7 @@ import { eventTemplateRouter } from "~/server/api/routers/eventTemplate";
 import { fighterRouter } from "~/server/api/routers/fighter";
 import { venueRouter } from "~/server/api/routers/venue";
 import { regionRouter } from "~/server/api/routers/region";
+import { productRouter } from "~/server/api/routers/product";
 
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
@@ -28,6 +29,7 @@ export const appRouter = createTRPCRouter({
   fighter: fighterRouter,
   venue: venueRouter,
   region: regionRouter,
+  product: productRouter,
 });
 
 // export type definition of API

@@ -24,4 +24,13 @@ export const productRouter = createTRPCRouter({
     .query(({ input }) =>
       db.query.products.findFirst({ where: eq(products.id, input.id) })
     ),
+  toggleFeatured: publicProcedure
+    .input(z.object({ id: z.string(), isFeatured: z.boolean() }))
+    .mutation(async ({ input }) => {
+      await db
+        .update(products)
+        .set({ isFeatured: input.isFeatured })
+        .where(eq(products.id, input.id));
+      return { success: true };
+    }),
 });
