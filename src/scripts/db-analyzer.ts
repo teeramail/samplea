@@ -80,14 +80,14 @@ async function analyzeDatabase() {
     console.log(`\nFound ${relationships.length} foreign key relationships:`);
     
     // Define type for relationship data
-    type TableRelationships = {
-      [tableName: string]: Array<{
-        column: string;
-        referencedTable: string;
-        referencedColumn: string;
-        deleteRule: string;
-      }>;
+    type RelationshipInfo = {
+      column: string;
+      referencedTable: string;
+      referencedColumn: string;
+      deleteRule: string;
     };
+    
+    type TableRelationships = Record<string, Array<RelationshipInfo>>;
     
     const relationshipsByTable: TableRelationships = {};
     
