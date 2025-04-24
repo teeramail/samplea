@@ -32,7 +32,7 @@ type CourseFormData = z.infer<typeof courseSchema>;
 
 // Define types for API responses
 type Region = { id: string; name: string };
-type Venue = { id: string; name: string };
+type Venue = { id: string; name: string; regionId: string };
 type Instructor = { id: string; name: string };
 
 export default function CreateCoursePage() {
@@ -43,6 +43,7 @@ export default function CreateCoursePage() {
   // State for resources
   const [regions, setRegions] = useState<Region[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
+  const [filteredVenues, setFilteredVenues] = useState<Venue[]>([]);
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -68,6 +69,7 @@ export default function CreateCoursePage() {
         if (!venuesResponse.ok) throw new Error("Failed to fetch venues");
         const venuesData = (await venuesResponse.json()) as Venue[];
         setVenues(venuesData);
+        setFilteredVenues([]); // Initialize with empty array until region is selected
 
         // Fetch instructors
         const instructorsResponse = await fetch("/api/instructors");
@@ -91,6 +93,8 @@ export default function CreateCoursePage() {
     register,
     handleSubmit,
     formState: { errors },
+    watch,
+    setValue,
     // reset is available but not used in this component
   } = useForm<CourseFormData>({
     resolver: zodResolver(courseSchema),
@@ -108,6 +112,26 @@ export default function CreateCoursePage() {
       isActive: true,
     },
   });
+  
+  // Watch for region changes to filter venues
+  const selectedRegionId = watch("regionId");
+  
+  // Update filtered venues when region changes
+  useEffect(() => {
+    if (selectedRegionId) {
+      const filtered = venues.filter(venue => venue.regionId === selectedRegionId);
+      setFilteredVenues(filtered);
+      
+      // If the currently selected venue is not in the filtered list, reset it
+      const currentVenueId = watch("venueId");
+      if (currentVenueId && !filtered.some(v => v.id === currentVenueId)) {
+        setValue("venueId", "");
+      }
+    } else {
+      setFilteredVenues([]);
+      setValue("venueId", "");
+    }
+  }, [selectedRegionId, venues, setValue, watch]);
 
   // Dropzone for thumbnail
   const {
@@ -459,6 +483,12 @@ export default function CreateCoursePage() {
               id="regionId"
               {...register("regionId")}
               className="w-full rounded-md border px-4 py-2 focus:border-indigo-500 focus:ring-indigo-500"
+              onChange={(e) => {
+                // Manually set the value and trigger validation
+                setValue("regionId", e.target.value, { shouldValidate: true });
+                // Reset venue selection when region changes
+                setValue("venueId", "", { shouldValidate: true });
+              }}
             >
               <option value="">Select Region</option>
               {regions.map((region) => (
@@ -488,9 +518,16 @@ export default function CreateCoursePage() {
               id="venueId"
               {...register("venueId")}
               className="w-full rounded-md border px-4 py-2 focus:border-indigo-500 focus:ring-indigo-500"
+              disabled={!selectedRegionId || filteredVenues.length === 0}
             >
-              <option value="">Select Venue (Optional)</option>
-              {venues.map((venue) => (
+              <option value="">
+                {!selectedRegionId
+                  ? "Select a region first"
+                  : filteredVenues.length === 0
+                  ? "No venues available in this region"
+                  : "Select Venue (Optional)"}
+              </option>
+              {filteredVenues.map((venue) => (
                 <option key={venue.id} value={venue.id}>
                   {venue.name}
                 </option>
