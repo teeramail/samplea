@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { db } from "~/server/db";
-import { products } from "~/server/db/schema";
+import { products, categories } from "~/server/db/schema";
 import { eq, desc, asc, like, and, or, count } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 
@@ -11,6 +11,9 @@ export const productRouter = createTRPCRouter({
       where: eq(products.isFeatured, true),
       orderBy: [desc(products.updatedAt)],
       limit: 4,
+      with: {
+        category: true,
+      },
     })
   ),
 
@@ -76,6 +79,9 @@ export const productRouter = createTRPCRouter({
         orderBy: [orderByClause],
         limit: perPage,
         offset: (page - 1) * perPage,
+        with: {
+          category: true,
+        },
       });
       
       return {
@@ -92,7 +98,12 @@ export const productRouter = createTRPCRouter({
   getById: publicProcedure
     .input(z.object({ id: z.string() }))
     .query(({ input }) =>
-      db.query.products.findFirst({ where: eq(products.id, input.id) })
+      db.query.products.findFirst({ 
+        where: eq(products.id, input.id),
+        with: {
+          category: true,
+        },
+      })
     ),
   toggleFeatured: publicProcedure
     .input(z.object({ id: z.string(), isFeatured: z.boolean() }))
@@ -114,6 +125,7 @@ export const productRouter = createTRPCRouter({
         thumbnailUrl: z.string().url().optional(),
         imageUrls: z.array(z.string().url()).max(8).optional(),
         isFeatured: z.boolean().optional(),
+        categoryId: z.string().optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -126,6 +138,7 @@ export const productRouter = createTRPCRouter({
           thumbnailUrl: input.thumbnailUrl || null,
           imageUrls: input.imageUrls || [],
           isFeatured: input.isFeatured ?? false,
+          categoryId: input.categoryId || null,
           updatedAt: new Date(),
         })
         .where(eq(products.id, input.id));
@@ -150,6 +163,7 @@ export const productRouter = createTRPCRouter({
         thumbnailUrl: z.string().url().optional(),
         imageUrls: z.array(z.string().url()).max(8).optional(),
         isFeatured: z.boolean().default(false),
+        categoryId: z.string().optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -162,6 +176,7 @@ export const productRouter = createTRPCRouter({
         thumbnailUrl: input.thumbnailUrl || null,
         imageUrls: input.imageUrls || [],
         isFeatured: input.isFeatured,
+        categoryId: input.categoryId || null,
       });
       return { id };
     }),

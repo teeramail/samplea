@@ -291,6 +291,21 @@ export const trainingCourses = createTable("TrainingCourse", {
     .$onUpdate(() => new Date()),
 });
 
+// Product Categories table
+export const categories = createTable("Category", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  description: text("description"),
+  createdAt: timestamp("createdAt", { withTimezone: false })
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: false })
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
 export const products = createTable("Product", {
   id: text("id").primaryKey().$defaultFn(() => createId()),
   name: text("name").notNull(),
@@ -298,6 +313,8 @@ export const products = createTable("Product", {
   price: doublePrecision("price").notNull(),
   thumbnailUrl: text("thumbnailUrl"), // Add thumbnailUrl field
   imageUrls: text("imageUrls").array(),
+  categoryId: text("categoryId")
+    .references(() => categories.id, { onDelete: "set null" }),
   isFeatured: boolean("isFeatured").notNull().default(false),
   createdAt: timestamp("createdAt", { withTimezone: false })
     .default(sql`CURRENT_TIMESTAMP`)
@@ -748,6 +765,19 @@ export const postsRelations = relations(posts, ({ one }) => ({
   author: one(users, {
     fields: [posts.authorId],
     references: [users.id],
+  }),
+}));
+
+// --- ADDED categoriesRelations ---
+export const categoriesRelations = relations(categories, ({ many }) => ({
+  products: many(products)
+}));
+
+// --- ADDED productsRelations ---
+export const productsRelations = relations(products, ({ one }) => ({
+  category: one(categories, {
+    fields: [products.categoryId],
+    references: [categories.id],
   }),
 }));
 

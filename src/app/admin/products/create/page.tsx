@@ -14,6 +14,7 @@ const productSchema = z.object({
   thumbnailUrl: z.string().url().optional(),
   imageUrls: z.array(z.string().url()).max(8).optional(),
   isFeatured: z.boolean().default(false),
+  categoryId: z.string().min(1, "Category is required"),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -27,6 +28,7 @@ export default function CreateProductPage() {
     thumbnailUrl: "",
     imageUrls: [],
     isFeatured: false,
+    categoryId: "",
   });
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
@@ -84,6 +86,14 @@ export default function CreateProductPage() {
     accept: { 'image/*': [] }
   });
 
+  // Fetch categories
+  const { data: categories, isLoading: isLoadingCategories } = api.category.list.useQuery({
+    page: 1,
+    limit: 100,
+    sortField: "name",
+    sortDirection: "asc",
+  });
+
   // Create product mutation
   const createProduct = api.product.create.useMutation({
     onSuccess: () => {
@@ -97,7 +107,7 @@ export default function CreateProductPage() {
   });
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value, type } = e.target;
     
@@ -170,17 +180,12 @@ export default function CreateProductPage() {
       setUploadStatus("Creating product...");
       
       // 3. Create the product with the uploaded image URLs
-      const productData = {
-        name: formData.name,
-        description: formData.description,
-        price: formData.price,
-        thumbnailUrl,
+      const validatedData = productSchema.parse({
+        ...formData,
+        thumbnailUrl: thumbnailUrl,
         imageUrls: productImageUrls,
-        isFeatured: formData.isFeatured,
-      };
-      
-      // Validate the data
-      const validatedData = productSchema.parse(productData);
+        categoryId: formData.categoryId,
+      });
       
       // Submit to API
       createProduct.mutate(validatedData);
@@ -214,33 +219,84 @@ export default function CreateProductPage() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Product Name
-          </label>
-          <input
-            type="text"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
-          />
-          {errors.name && (
-            <p className="mt-1 text-sm text-red-600">{errors.name}</p>
-          )}
-        </div>
+        {/* Basic Information */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Product Name
+            </label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+              required
+            />
+            {errors.name && (
+              <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+            )}
+          </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Description
-          </label>
-          <textarea
-            name="description"
-            value={formData.description}
-            onChange={handleChange}
-            rows={4}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
-          />
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Description
+            </label>
+            <textarea
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
+              rows={4}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+            />
+          </div>
+        </div>
+        
+        {/* Price and Category */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
+            <label htmlFor="price" className="block text-sm font-medium text-gray-700">
+              Price (THB)
+            </label>
+            <input
+              type="number"
+              id="price"
+              name="price"
+              value={formData.price}
+              onChange={handleChange}
+              min="0"
+              step="0.01"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+              required
+            />
+          </div>
+
+          <div>
+            <label htmlFor="categoryId" className="block text-sm font-medium text-gray-700">
+              Category <span className="text-red-500">*</span>
+            </label>
+            <select
+              id="categoryId"
+              name="categoryId"
+              value={formData.categoryId}
+              onChange={handleChange}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+              required
+            >
+              <option value="">Select a category</option>
+              {categories?.items.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+            {errors.categoryId && (
+              <p className="mt-1 text-sm text-red-600">{errors.categoryId}</p>
+            )}
+            {isLoadingCategories && (
+              <p className="mt-1 text-sm text-gray-500">Loading categories...</p>
+            )}
+          </div>
         </div>
 
         <div>
