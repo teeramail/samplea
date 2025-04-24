@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "~/trpc/react";
 import { z } from "zod";
+import { useDropzone } from "react-dropzone";
 
 // Define the schema for product validation
 const productSchema = z.object({
@@ -32,6 +33,56 @@ export default function CreateProductPage() {
   const [uploadStatus, setUploadStatus] = useState<string>("");
   const [errors, setErrors] = useState<Record<string, string | null>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Dropzone for thumbnail
+  const {
+    getRootProps: getThumbRootProps,
+    getInputProps: getThumbInputProps
+  } = useDropzone({
+    onDrop: (acceptedFiles: File[]) => {
+      if (acceptedFiles.length === 0) return;
+      // Safely access the first file
+      const file = acceptedFiles[0];
+      // Check file size (30KB max)
+      if (file && file.size > 30 * 1024) {
+        setErrors(prev => ({ ...prev, thumbnail: "Thumbnail must be less than 30KB" }));
+        return;
+      }
+      // Only set if file exists
+      if (file) {
+        setThumbnailFile(file);
+        setErrors(prev => ({ ...prev, thumbnail: null }));
+      }
+    },
+    multiple: false,
+    maxSize: 30 * 1024,
+    accept: { 'image/*': [] }
+  });
+  
+  // Dropzone for product images
+  const {
+    getRootProps: getImagesRootProps,
+    getInputProps: getImagesInputProps
+  } = useDropzone({
+    onDrop: (acceptedFiles: File[]) => {
+      if (acceptedFiles.length === 0) return;
+      const total = acceptedFiles.length;
+      if (total + imageFiles.length > 8) {
+        setErrors(prev => ({ ...prev, images: "Maximum 8 images allowed" }));
+        return;
+      }
+      const oversized = acceptedFiles.filter(f => f.size > 120 * 1024);
+      if (oversized.length) {
+        setErrors(prev => ({ ...prev, images: `${oversized.length} image(s) exceed the 120KB limit` }));
+        return;
+      }
+      setImageFiles(prev => [...prev, ...acceptedFiles]);
+      setErrors(prev => ({ ...prev, images: null }));
+    },
+    multiple: true,
+    maxSize: 120 * 1024,
+    accept: { 'image/*': [] }
+  });
 
   // Create product mutation
   const createProduct = api.product.create.useMutation({
@@ -60,36 +111,14 @@ export default function CreateProductPage() {
     }
   };
 
-  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const file = e.target.files[0];
-      // Check file size (30KB max)
-      if (file.size > 30 * 1024) {
-        setErrors({ ...errors, thumbnail: "Thumbnail must be less than 30KB" });
-        return;
-      }
-      setThumbnailFile(file);
-      setErrors({ ...errors, thumbnail: null });
-    }
+  // Remove image from the list
+  const removeImage = (index: number) => {
+    setImageFiles(prev => prev.filter((_, i) => i !== index));
   };
-
-  const handleImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      // Check file count (max 8)
-      if (files.length > 8) {
-        setErrors({ ...errors, images: "Maximum 8 images allowed" });
-        return;
-      }
-      // Check each file size (120KB max)
-      const oversizedFiles = files.filter(file => file.size > 120 * 1024);
-      if (oversizedFiles.length > 0) {
-        setErrors({ ...errors, images: `${oversizedFiles.length} image(s) exceed the 120KB limit` });
-        return;
-      }
-      setImageFiles(files);
-      setErrors({ ...errors, images: null });
-    }
+  
+  // Remove thumbnail
+  const removeThumbnail = () => {
+    setThumbnailFile(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -162,8 +191,9 @@ export default function CreateProductPage() {
       if (error instanceof z.ZodError) {
         const fieldErrors: Record<string, string> = {};
         error.errors.forEach((err) => {
-          if (err.path) {
-            fieldErrors[err.path[0]] = err.message;
+          if (err.path && err.path.length > 0) {
+            const path = String(err.path[0]); // Convert to string to ensure it's a valid index
+            fieldErrors[path] = err.message;
           }
         });
         setErrors(fieldErrors);
@@ -240,21 +270,45 @@ export default function CreateProductPage() {
           <label className="block text-sm font-medium text-gray-700">
             Thumbnail Image (max 30KB)
           </label>
-          <div className="mt-1 flex items-center space-x-2">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleThumbnailChange}
-              className="flex-1 rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
-            />
+          <div 
+            {...getThumbRootProps()} 
+            className="mt-1 flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-md text-gray-500 hover:border-indigo-500 cursor-pointer transition-colors"
+          >
+            <input {...getThumbInputProps()} />
+            {thumbnailFile ? (
+              <div className="flex flex-col items-center">
+                <img 
+                  src={URL.createObjectURL(thumbnailFile)} 
+                  alt="Thumbnail preview" 
+                  className="h-24 w-auto object-contain mb-2"
+                />
+                <div className="flex items-center">
+                  <span className="text-sm">
+                    {thumbnailFile.name} ({Math.round(thumbnailFile.size / 1024)}KB)
+                  </span>
+                  <button 
+                    type="button" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeThumbnail();
+                    }}
+                    className="ml-2 text-red-500 hover:text-red-700"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center">
+                <svg className="h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                  <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <p className="mt-1 text-sm">Drag & drop thumbnail here, or click to select</p>
+              </div>
+            )}
           </div>
           {errors.thumbnail && typeof errors.thumbnail === 'string' && (
             <p className="mt-1 text-sm text-red-600">{errors.thumbnail}</p>
-          )}
-          {thumbnailFile && (
-            <p className="mt-1 text-sm text-green-600">
-              Selected: {thumbnailFile.name} ({Math.round(thumbnailFile.size / 1024)}KB)
-            </p>
           )}
         </div>
 
@@ -262,30 +316,56 @@ export default function CreateProductPage() {
           <label className="block text-sm font-medium text-gray-700">
             Product Images (max 8 images, each max 120KB)
           </label>
-          <div className="mt-1">
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleImagesChange}
-              className="flex-1 rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
-            />
+          <div 
+            {...getImagesRootProps()} 
+            className="mt-1 flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-md text-gray-500 hover:border-indigo-500 cursor-pointer transition-colors"
+          >
+            <input {...getImagesInputProps()} />
+            <div className="flex flex-col items-center">
+              <svg className="h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <p className="mt-1 text-sm">
+                {imageFiles.length > 0 
+                  ? `${imageFiles.length} image(s) selected. Drag more or click to add.` 
+                  : "Drag & drop images here, or click to select"}
+              </p>
+            </div>
           </div>
           {errors.images && typeof errors.images === 'string' && (
             <p className="mt-1 text-sm text-red-600">{errors.images}</p>
           )}
           {imageFiles.length > 0 && (
-            <div className="mt-2">
-              <p className="text-sm text-green-600">
-                Selected {imageFiles.length} image(s):
-              </p>
-              <ul className="mt-1 text-xs text-gray-500">
+            <div className="mt-4">
+              <p className="text-sm font-medium text-gray-700 mb-2">Selected Images:</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {imageFiles.map((file, index) => (
-                  <li key={index}>
-                    {file.name} ({Math.round(file.size / 1024)}KB)
-                  </li>
+                  <div key={index} className="relative group">
+                    <img 
+                      src={URL.createObjectURL(file)} 
+                      alt={`Product image ${index + 1}`} 
+                      className="h-24 w-full object-cover rounded-md"
+                    />
+                    <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-md">
+                      <button 
+                        type="button" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeImage(index);
+                        }}
+                        className="text-white bg-red-500 hover:bg-red-700 rounded-full p-1"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500 truncate">
+                      {file.name.length > 20 ? file.name.substring(0, 17) + '...' : file.name} ({Math.round(file.size / 1024)}KB)
+                    </p>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
           )}
         </div>
