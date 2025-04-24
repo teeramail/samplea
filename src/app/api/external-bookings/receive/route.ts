@@ -428,10 +428,16 @@ async function handleBooking(input: unknown) {
     // Prepare ChillPay payload
     // Use a fixed origin since we don't have access to the request object here
     const origin = new URL("https://teeonedwinsurf.com").origin;
+    
+    // Format the order number for ChillPay - they might have specific requirements
+    // Generate a shorter order number that's more compatible with payment gateways
+    const orderNo = `TE${Date.now().toString().slice(-8)}`;
+    console.log("Generated order number for ChillPay:", orderNo);
+    
     const payload: Record<string, string> = {
       MerchantCode: CHILLPAY_MERCHANT_CODE!,
-      OrderNo: bookingId,
-      CustomerId: bookingId,
+      OrderNo: orderNo, // Use our formatted order number instead of the external bookingId
+      CustomerId: orderNo, // Use the same value for consistency
       Amount: Math.round(amount * 100).toString(),
       Description: `Tickets for ${eventTitle || 'Event Tickets'}`,
       PhoneNumber: phone || "0000000000",
@@ -485,12 +491,25 @@ async function handleBooking(input: unknown) {
 
     if (data.Status === 0 && data.Code === 200 && data.PaymentUrl) {
       console.log("ChillPay payment URL generated:", data.PaymentUrl);
+      
+      // Update the booking with the ChillPay order number for reference
+      await db
+        .update(bookings)
+        .set({ 
+          paymentOrderNo: payload.OrderNo,
+          updatedAt: new Date()
+        })
+        .where(eq(bookings.id, internalId));
+      
       return { internalId, paymentUrl: data.PaymentUrl };
     } else {
       console.error("ChillPay API error:", data);
       await db
         .update(bookings)
-        .set({ paymentStatus: "PENDING" })
+        .set({ 
+          paymentStatus: "PENDING",
+          updatedAt: new Date()
+        })
         .where(eq(bookings.id, internalId));
       throw new Error(data.Message || "ChillPay init failed");
     }
