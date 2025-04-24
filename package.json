@@ -20,6 +20,8 @@
     "db:pull-schema": "tsx src/scripts/db-schema-manager.ts pull",
     "db:document": "tsx src/scripts/db-schema-manager.ts document",
     "db:manage": "tsx src/scripts/db-schema-manager.ts all",
+    "db:fix-production": "npx drizzle-kit push",
+    "db:fix-category": "tsx src/scripts/fix-category-table.ts",
     "dev": "next dev --turbo",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
