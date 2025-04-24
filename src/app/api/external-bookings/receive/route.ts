@@ -434,13 +434,34 @@ async function handleBooking(input: unknown) {
     const orderNo = `TE${Date.now().toString().slice(-8)}`;
     console.log("Generated order number for ChillPay:", orderNo);
     
+    // Format phone number to meet ChillPay requirements
+    // ChillPay typically requires a valid Thai mobile number (10 digits starting with 0)
+    let formattedPhone = phone || "";
+    
+    // Remove any non-digit characters
+    formattedPhone = formattedPhone.replace(/\D/g, "");
+    
+    // Ensure it starts with 0 and has 10 digits
+    if (!formattedPhone.startsWith("0")) {
+      formattedPhone = "0" + formattedPhone;
+    }
+    
+    // Pad with zeros if too short, or truncate if too long
+    if (formattedPhone.length < 10) {
+      formattedPhone = formattedPhone.padEnd(10, "0");
+    } else if (formattedPhone.length > 10) {
+      formattedPhone = formattedPhone.substring(0, 10);
+    }
+    
+    console.log("Formatted phone number for ChillPay:", formattedPhone);
+    
     const payload: Record<string, string> = {
       MerchantCode: CHILLPAY_MERCHANT_CODE!,
       OrderNo: orderNo, // Use our formatted order number instead of the external bookingId
       CustomerId: orderNo, // Use the same value for consistency
       Amount: Math.round(amount * 100).toString(),
       Description: `Tickets for ${eventTitle || 'Event Tickets'}`,
-      PhoneNumber: phone || "0000000000",
+      PhoneNumber: formattedPhone,
       CustEmail: email,
       ApiKey: CHILLPAY_API_KEY!,
       ReturnUrl: `${origin}/checkout/payment-result?bookingId=${internalId}`,
