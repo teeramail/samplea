@@ -74,6 +74,10 @@ const navItems = [
   { name: "Products", group: "products" },
   { name: "All Products", href: "/admin/products", group: "products" },
   { name: "Create Product", href: "/admin/products/create", group: "products" },
+  
+  { name: "Categories", group: "categories" },
+  { name: "All Categories", href: "/admin/categories", group: "categories" },
+  { name: "Create Category", href: "/admin/categories/create", group: "categories" },
 ];
 
 // Top navigation sections for quick access to content management
@@ -85,6 +89,7 @@ const topNavSections = [
   { name: "Courses", href: "/admin/courses", icon: "📚" },
   { name: "Blog", href: "/admin/posts", icon: "📰" },
   { name: "Products", href: "/admin/products", icon: "🛍️" },
+  { name: "Categories", href: "/admin/categories", icon: "🏷️" },
 ];
 
 // Featured content sections for quick access
