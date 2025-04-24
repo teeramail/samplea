@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test External Booking API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #response {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+            white-space: pre-wrap;
+            display: none;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: 1px solid #ddd;
+            background-color: #f1f1f1;
+        }
+        .tab.active {
+            background-color: #fff;
+            border-bottom: none;
+        }
+        .tab-content {
+            display: none;
+            padding: 20px;
+            border: 1px solid #ddd;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test External Booking API</h1>
+    
+    <div class="tabs">
+        <div class="tab active" onclick="openTab(event, 'get-tab')">GET Request</div>
+        <div class="tab" onclick="openTab(event, 'post-tab')">POST Request</div>
+    </div>
+    
+    <div id="get-tab" class="tab-content active">
+        <h2>Send GET Request</h2>
+        <p>This will simulate an external site sending a booking via URL parameters.</p>
+        
+        <div class="form-group">
+            <label for="get-api-url">API URL:</label>
+            <input type="text" id="get-api-url" value="http://localhost:3000/api/external-bookings/receive">
+        </div>
+        
+        <div class="form-group">
+            <label for="get-booking-id">Booking ID:</label>
+            <input type="text" id="get-booking-id" value="ext-booking-123">
+        </div>
+        
+        <div class="form-group">
+            <label for="get-amount">Amount:</label>
+            <input type="number" id="get-amount" value="600">
+        </div>
+        
+        <div class="form-group">
+            <label for="get-customer-name">Customer Name:</label>
+            <input type="text" id="get-customer-name" value="John Doe">
+        </div>
+        
+        <div class="form-group">
+            <label for="get-email">Email:</label>
+            <input type="email" id="get-email" value="john@example.com">
+        </div>
+        
+        <div class="form-group">
+            <label for="get-phone">Phone:</label>
+            <input type="text" id="get-phone" value="0812345678">
+        </div>
+        
+        <div class="form-group">
+            <label for="get-event-title">Event Title:</label>
+            <input type="text" id="get-event-title" value="Loi Kroh Muay Thai Stadium">
+        </div>
+        
+        <div class="form-group">
+            <label for="get-event-date">Event Date:</label>
+            <input type="datetime-local" id="get-event-date" value="2025-04-25T19:00">
+        </div>
+        
+        <div class="form-group">
+            <label for="get-venue-name">Venue Name:</label>
+            <input type="text" id="get-venue-name" value="Loi Kroh Stadium">
+        </div>
+        
+        <div class="form-group">
+            <label for="get-seat-type">Seat Type:</label>
+            <select id="get-seat-type">
+                <option value="Standard">Standard</option>
+                <option value="VIP">VIP</option>
+                <option value="Ringside">Ringside</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="get-quantity">Quantity:</label>
+            <input type="number" id="get-quantity" value="2" min="1" max="10">
+        </div>
+        
+        <div class="form-group">
+            <label for="get-price">Price per Seat:</label>
+            <input type="number" id="get-price" value="300">
+        </div>
+        
+        <button onclick="sendGetRequest()">Send GET Request</button>
+    </div>
+    
+    <div id="post-tab" class="tab-content">
+        <h2>Send POST Request</h2>
+        <p>This will simulate an external system sending a booking via JSON payload.</p>
+        
+        <div class="form-group">
+            <label for="post-api-url">API URL:</label>
+            <input type="text" id="post-api-url" value="http://localhost:3000/api/external-bookings/receive">
+        </div>
+        
+        <div class="form-group">
+            <label for="post-booking-id">Booking ID:</label>
+            <input type="text" id="post-booking-id" value="ext-booking-456">
+        </div>
+        
+        <div class="form-group">
+            <label for="post-amount">Amount:</label>
+            <input type="number" id="post-amount" value="1200">
+        </div>
+        
+        <div class="form-group">
+            <label for="post-customer-name">Customer Name:</label>
+            <input type="text" id="post-customer-name" value="Jane Smith">
+        </div>
+        
+        <div class="form-group">
+            <label for="post-email">Email:</label>
+            <input type="email" id="post-email" value="jane@example.com">
+        </div>
+        
+        <div class="form-group">
+            <label for="post-phone">Phone:</label>
+            <input type="text" id="post-phone" value="0898765432">
+        </div>
+        
+        <div class="form-group">
+            <label for="post-event-title">Event Title:</label>
+            <input type="text" id="post-event-title" value="Thapae Boxing Stadium">
+        </div>
+        
+        <div class="form-group">
+            <label for="post-event-date">Event Date:</label>
+            <input type="datetime-local" id="post-event-date" value="2025-04-26T19:00">
+        </div>
+        
+        <div class="form-group">
+            <label for="post-venue-name">Venue Name:</label>
+            <input type="text" id="post-venue-name" value="Thapae Stadium">
+        </div>
+        
+        <div class="form-group">
+            <label for="post-seat-type">Seat Type:</label>
+            <select id="post-seat-type">
+                <option value="Standard">Standard</option>
+                <option value="VIP">VIP</option>
+                <option value="Ringside">Ringside</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="post-quantity">Quantity:</label>
+            <input type="number" id="post-quantity" value="2" min="1" max="10">
+        </div>
+        
+        <div class="form-group">
+            <label for="post-price">Price per Seat:</label>
+            <input type="number" id="post-price" value="600">
+        </div>
+        
+        <button onclick="sendPostRequest()">Send POST Request</button>
+    </div>
+    
+    <div id="response">
+        <h3>Response:</h3>
+        <pre id="response-data"></pre>
+    </div>
+    
+    <script>
+        function openTab(evt, tabName) {
+            const tabContents = document.getElementsByClassName("tab-content");
+            for (let i = 0; i < tabContents.length; i++) {
+                tabContents[i].classList.remove("active");
+            }
+            
+            const tabs = document.getElementsByClassName("tab");
+            for (let i = 0; i < tabs.length; i++) {
+                tabs[i].classList.remove("active");
+            }
+            
+            document.getElementById(tabName).classList.add("active");
+            evt.currentTarget.classList.add("active");
+        }
+        
+        function sendGetRequest() {
+            const apiUrl = document.getElementById("get-api-url").value;
+            const bookingId = document.getElementById("get-booking-id").value;
+            const amount = document.getElementById("get-amount").value;
+            const customerName = document.getElementById("get-customer-name").value;
+            const email = document.getElementById("get-email").value;
+            const phone = document.getElementById("get-phone").value;
+            const eventTitle = document.getElementById("get-event-title").value;
+            const eventDate = document.getElementById("get-event-date").value;
+            const venueName = document.getElementById("get-venue-name").value;
+            const seatType = document.getElementById("get-seat-type").value;
+            const quantity = document.getElementById("get-quantity").value;
+            const price = document.getElementById("get-price").value;
+            
+            // Calculate total amount
+            const totalAmount = quantity * price;
+            
+            // Create seats JSON
+            const seats = [{
+                quantity: parseInt(quantity),
+                seatType: seatType,
+                pricePaid: parseInt(price),
+                costAtBooking: null
+            }];
+            
+            // Build URL with query parameters
+            const url = new URL(apiUrl);
+            url.searchParams.append("bookingId", bookingId);
+            url.searchParams.append("amount", totalAmount);
+            url.searchParams.append("customerName", customerName);
+            url.searchParams.append("email", email);
+            url.searchParams.append("phone", phone);
+            url.searchParams.append("eventTitle", eventTitle);
+            url.searchParams.append("eventDate", new Date(eventDate).toISOString());
+            url.searchParams.append("venueName", venueName);
+            url.searchParams.append("seats", JSON.stringify(seats));
+            
+            // Display the URL
+            const responseDiv = document.getElementById("response");
+            const responseData = document.getElementById("response-data");
+            responseDiv.style.display = "block";
+            responseData.textContent = "Sending GET request to:\n" + url.toString();
+            
+            // Open the URL in a new tab
+            window.open(url.toString(), "_blank");
+        }
+        
+        function sendPostRequest() {
+            const apiUrl = document.getElementById("post-api-url").value;
+            const bookingId = document.getElementById("post-booking-id").value;
+            const amount = document.getElementById("post-amount").value;
+            const customerName = document.getElementById("post-customer-name").value;
+            const email = document.getElementById("post-email").value;
+            const phone = document.getElementById("post-phone").value;
+            const eventTitle = document.getElementById("post-event-title").value;
+            const eventDate = document.getElementById("post-event-date").value;
+            const venueName = document.getElementById("post-venue-name").value;
+            const seatType = document.getElementById("post-seat-type").value;
+            const quantity = document.getElementById("post-quantity").value;
+            const price = document.getElementById("post-price").value;
+            
+            // Calculate total amount
+            const totalAmount = quantity * price;
+            
+            // Create payload
+            const payload = {
+                bookingId: bookingId,
+                amount: totalAmount,
+                customerName: customerName,
+                email: email,
+                phone: phone,
+                eventTitle: eventTitle,
+                eventDate: new Date(eventDate).toISOString(),
+                venueName: venueName,
+                seats: JSON.stringify([{
+                    quantity: parseInt(quantity),
+                    seatType: seatType,
+                    pricePaid: parseInt(price),
+                    costAtBooking: null
+                }])
+            };
+            
+            // Display the payload
+            const responseDiv = document.getElementById("response");
+            const responseData = document.getElementById("response-data");
+            responseDiv.style.display = "block";
+            responseData.textContent = "Sending POST request to:\n" + apiUrl + "\n\nPayload:\n" + JSON.stringify(payload, null, 2);
+            
+            // Send the POST request
+            fetch(apiUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                responseData.textContent += "\n\nResponse:\n" + JSON.stringify(data, null, 2);
+                
+                // If there's a payment URL, offer to redirect
+                if (data.paymentUrl) {
+                    if (confirm("Received payment URL. Do you want to redirect to the payment page?")) {
+                        window.open(data.paymentUrl, "_blank");
+                    }
+                }
+            })
+            .catch(error => {
+                responseData.textContent += "\n\nError:\n" + error.message;
+            });
+        }
+    </script>
+</body>
+</html>
