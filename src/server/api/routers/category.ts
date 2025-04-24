@@ -96,6 +96,8 @@ export const categoryRouter = createTRPCRouter({
         name: z.string().min(1, "Name is required"),
         slug: z.string().min(1, "Slug is required"),
         description: z.string().optional(),
+        thumbnailUrl: z.string().url().optional(),
+        imageUrls: z.array(z.string().url()).max(8).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -118,6 +120,8 @@ export const categoryRouter = createTRPCRouter({
         name: input.name,
         slug: input.slug,
         description: input.description ?? null,
+        thumbnailUrl: input.thumbnailUrl || null,
+        imageUrls: input.imageUrls || [],
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -135,6 +139,8 @@ export const categoryRouter = createTRPCRouter({
         name: z.string().min(1, "Name is required"),
         slug: z.string().min(1, "Slug is required"),
         description: z.string().optional(),
+        thumbnailUrl: z.string().url().optional(),
+        imageUrls: z.array(z.string().url()).max(8).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -178,6 +184,8 @@ export const categoryRouter = createTRPCRouter({
           name: input.name,
           slug: input.slug,
           description: input.description ?? null,
+          thumbnailUrl: input.thumbnailUrl || null,
+          imageUrls: input.imageUrls || [],
           updatedAt: new Date(),
         })
         .where(eq(categories.id, input.id));

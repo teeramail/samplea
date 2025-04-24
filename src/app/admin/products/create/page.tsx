@@ -14,7 +14,8 @@ const productSchema = z.object({
   thumbnailUrl: z.string().url().optional(),
   imageUrls: z.array(z.string().url()).max(8).optional(),
   isFeatured: z.boolean().default(false),
-  categoryId: z.string().min(1, "Category is required"),
+  categoryId: z.string().min(1, "Primary category is required"),
+  categoryIds: z.array(z.string()).optional(),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -29,6 +30,7 @@ export default function CreateProductPage() {
     imageUrls: [],
     isFeatured: false,
     categoryId: "",
+    categoryIds: [],
   });
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
@@ -94,9 +96,26 @@ export default function CreateProductPage() {
     sortDirection: "asc",
   });
 
+  // Create product-to-category association mutation
+  const setProductCategories = api.productToCategory.setProductCategories.useMutation();
+
   // Create product mutation
   const createProduct = api.product.create.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // If we have additional categories, create the associations
+      if (formData.categoryIds && formData.categoryIds.length > 0) {
+        // Make sure the primary category is included
+        const allCategoryIds = [...formData.categoryIds];
+        if (!allCategoryIds.includes(formData.categoryId)) {
+          allCategoryIds.push(formData.categoryId);
+        }
+        
+        setProductCategories.mutate({
+          productId: data.id,
+          categoryIds: allCategoryIds,
+        });
+      }
+      
       router.push("/admin/products");
       router.refresh();
     },
@@ -273,7 +292,7 @@ export default function CreateProductPage() {
 
           <div>
             <label htmlFor="categoryId" className="block text-sm font-medium text-gray-700">
-              Category <span className="text-red-500">*</span>
+              Primary Category <span className="text-red-500">*</span>
             </label>
             <select
               id="categoryId"
@@ -283,7 +302,7 @@ export default function CreateProductPage() {
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
               required
             >
-              <option value="">Select a category</option>
+              <option value="">Select a primary category</option>
               {categories?.items.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}
@@ -424,6 +443,48 @@ export default function CreateProductPage() {
               </div>
             </div>
           )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Additional Categories
+          </label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+            {categories?.items.map((category) => (
+              <div key={category.id} className="flex items-center">
+                <input
+                  type="checkbox"
+                  id={`category-${category.id}`}
+                  name="categoryIds"
+                  value={category.id}
+                  checked={formData.categoryIds?.includes(category.id) || false}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    const isChecked = e.target.checked;
+                    
+                    setFormData((prev) => {
+                      const currentCategoryIds = prev.categoryIds || [];
+                      if (isChecked) {
+                        return { ...prev, categoryIds: [...currentCategoryIds, value] };
+                      } else {
+                        return { ...prev, categoryIds: currentCategoryIds.filter(id => id !== value) };
+                      }
+                    });
+                  }}
+                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <label
+                  htmlFor={`category-${category.id}`}
+                  className="ml-2 block text-sm text-gray-700"
+                >
+                  {category.name}
+                </label>
+              </div>
+            ))}
+          </div>
+          <p className="mt-1 text-sm text-gray-500">
+            Select additional categories this product should appear in
+          </p>
         </div>
 
         <div className="flex items-center">

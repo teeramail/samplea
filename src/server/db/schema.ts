@@ -297,6 +297,8 @@ export const categories = createTable("Category", {
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
   description: text("description"),
+  thumbnailUrl: text("thumbnailUrl"),
+  imageUrls: text("imageUrls").array(),
   createdAt: timestamp("createdAt", { withTimezone: false })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
@@ -304,6 +306,20 @@ export const categories = createTable("Category", {
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull()
     .$onUpdate(() => new Date()),
+});
+
+// Junction table for many-to-many relationship between products and categories
+export const productToCategories = createTable("ProductToCategory", {
+  id: text("id").primaryKey().$defaultFn(() => createId()),
+  productId: text("productId")
+    .notNull()
+    .references(() => products.id, { onDelete: "cascade" }),
+  categoryId: text("categoryId")
+    .notNull()
+    .references(() => categories.id, { onDelete: "cascade" }),
+  createdAt: timestamp("createdAt", { withTimezone: false })
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
 });
 
 export const products = createTable("Product", {
@@ -770,13 +786,26 @@ export const postsRelations = relations(posts, ({ one }) => ({
 
 // --- ADDED categoriesRelations ---
 export const categoriesRelations = relations(categories, ({ many }) => ({
-  products: many(products)
+  productToCategories: many(productToCategories)
 }));
 
 // --- ADDED productsRelations ---
-export const productsRelations = relations(products, ({ one }) => ({
+export const productsRelations = relations(products, ({ one, many }) => ({
   category: one(categories, {
     fields: [products.categoryId],
+    references: [categories.id],
+  }),
+  productToCategories: many(productToCategories)
+}));
+
+// --- ADDED productToCategoriesRelations ---
+export const productToCategoriesRelations = relations(productToCategories, ({ one }) => ({
+  product: one(products, {
+    fields: [productToCategories.productId],
+    references: [products.id],
+  }),
+  category: one(categories, {
+    fields: [productToCategories.categoryId],
     references: [categories.id],
   }),
 }));
