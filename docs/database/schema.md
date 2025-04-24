@@ -1,41 +1,34 @@
-# PostgreSQL Database Schema Documentation
+# Database Schema
 
-*Generated on: 4/23/2025, 4:30:00 AM*
-
-## Table of Contents
-
-- [Enum Types](#enum-types)
-- [Tables](#tables)
-  - [Booking](#booking)
-  - [CourseEnrollment](#courseenrollment)
-  - [Customer](#customer)
-  - [Event](#event)
-  - [EventTemplate](#eventtemplate)
-  - [EventTemplateTicket](#eventtemplateticket)
-  - [EventTicket](#eventticket)
-  - [Fighter](#fighter)
-  - [Instructor](#instructor)
-  - [Post](#post)
-  - [Product](#product)
-  - [Region](#region)
-  - [Ticket](#ticket)
-  - [TrainingCourse](#trainingcourse)
-  - [User](#user)
-  - [Venue](#venue)
-  - [VenueToVenueType](#venuetovenuetype)
-  - [VenueType](#venuetype)
-  - [account](#account)
-  - [session](#session)
-  - [verification_token](#verification_token)
-
-## Enum Types
-
-### recurrence_type
-
-Values: `monthly`, `weekly`, `none`
-
+*Last updated: 2025-04-24T07:22:49.176Z*
 
 ## Tables
+
+- [Booking](#booking)
+- [Category](#category)
+- [CourseEnrollment](#courseenrollment)
+- [Customer](#customer)
+- [Event](#event)
+- [EventTemplate](#eventtemplate)
+- [EventTemplateTicket](#eventtemplateticket)
+- [EventTicket](#eventticket)
+- [Fighter](#fighter)
+- [Instructor](#instructor)
+- [Post](#post)
+- [Product](#product)
+- [ProductToCategory](#producttocategory)
+- [Region](#region)
+- [Ticket](#ticket)
+- [TrainingCourse](#trainingcourse)
+- [User](#user)
+- [Venue](#venue)
+- [VenueToVenueType](#venuetovenuetype)
+- [VenueType](#venuetype)
+- [account](#account)
+- [session](#session)
+- [verification_token](#verification_token)
+
+## Schema Details
 
 ### Booking
 
@@ -69,14 +62,36 @@ Values: `monthly`, `weekly`, `none`
 
 | Column | References | On Delete |
 |--------|------------|------------|
-| customerId | Customer(id) | RESTRICT |
-| eventId | Event(id) | CASCADE |
+| customerId | Customer.id | RESTRICT |
+| eventId | Event.id | CASCADE |
 
-#### Referenced By
+#### Indexes
 
-| Table | Column | On Delete |
-|-------|--------|------------|
-| Ticket | bookingId | CASCADE |
+| Name | Definition |
+|------|------------|
+| Booking_pkey | CREATE UNIQUE INDEX "Booking_pkey" ON public."Booking" USING btree (id) |
+
+### Category
+
+#### Columns
+
+| Column Name | Data Type | Nullable | Default |
+|-------------|-----------|----------|----------|
+| id | text | NO | NULL |
+| name | text | NO | NULL |
+| slug | text | NO | NULL |
+| description | text | YES | NULL |
+| thumbnailUrl | text | YES | NULL |
+| imageUrls | ARRAY | YES | NULL |
+| createdAt | timestamp without time zone | NO | CURRENT_TIMESTAMP |
+| updatedAt | timestamp without time zone | NO | CURRENT_TIMESTAMP |
+
+#### Indexes
+
+| Name | Definition |
+|------|------------|
+| Category_pkey | CREATE UNIQUE INDEX "Category_pkey" ON public."Category" USING btree (id) |
+| Category_slug_unique | CREATE UNIQUE INDEX "Category_slug_unique" ON public."Category" USING btree (slug) |
 
 ### CourseEnrollment
 
@@ -101,8 +116,14 @@ Values: `monthly`, `weekly`, `none`
 
 | Column | References | On Delete |
 |--------|------------|------------|
-| courseId | TrainingCourse(id) | CASCADE |
-| customerId | Customer(id) | RESTRICT |
+| courseId | TrainingCourse.id | CASCADE |
+| customerId | Customer.id | RESTRICT |
+
+#### Indexes
+
+| Name | Definition |
+|------|------------|
+| CourseEnrollment_pkey | CREATE UNIQUE INDEX "CourseEnrollment_pkey" ON public."CourseEnrollment" USING btree (id) |
 
 ### Customer
 
@@ -122,14 +143,14 @@ Values: `monthly`, `weekly`, `none`
 
 | Column | References | On Delete |
 |--------|------------|------------|
-| userId | User(id) | SET NULL |
+| userId | User.id | SET NULL |
 
-#### Referenced By
+#### Indexes
 
-| Table | Column | On Delete |
-|-------|--------|------------|
-| Booking | customerId | RESTRICT |
-| CourseEnrollment | customerId | RESTRICT |
+| Name | Definition |
+|------|------------|
+| Customer_pkey | CREATE UNIQUE INDEX "Customer_pkey" ON public."Customer" USING btree (id) |
+| customer_email_idx | CREATE INDEX customer_email_idx ON public."Customer" USING btree (email) |
 
 ### Event
 
@@ -160,16 +181,14 @@ Values: `monthly`, `weekly`, `none`
 
 | Column | References | On Delete |
 |--------|------------|------------|
-| regionId | Region(id) | SET NULL |
-| venueId | Venue(id) | SET NULL |
+| regionId | Region.id | SET NULL |
+| venueId | Venue.id | SET NULL |
 
-#### Referenced By
+#### Indexes
 
-| Table | Column | On Delete |
-|-------|--------|------------|
-| Booking | eventId | CASCADE |
-| EventTicket | eventId | CASCADE |
-| Ticket | eventId | NO ACTION |
+| Name | Definition |
+|------|------------|
+| Event_pkey | CREATE UNIQUE INDEX "Event_pkey" ON public."Event" USING btree (id) |
 
 ### EventTemplate
 
@@ -179,12 +198,12 @@ Values: `monthly`, `weekly`, `none`
 |-------------|-----------|----------|----------|
 | id | text | NO | NULL |
 | templateName | text | NO | NULL |
-| venueId | text | NO | NULL |
-| regionId | text | NO | NULL |
-| defaultTitleFormat | text | NO | NULL |
+| venueId | text | YES | NULL |
+| regionId | text | YES | NULL |
+| defaultTitleFormat | text | YES | NULL |
 | defaultDescription | text | YES | NULL |
-| recurringDaysOfWeek | ARRAY | NO | NULL |
-| defaultStartTime | time without time zone | NO | NULL |
+| recurringDaysOfWeek | ARRAY | YES | NULL |
+| defaultStartTime | time without time zone | YES | NULL |
 | defaultEndTime | time without time zone | YES | NULL |
 | isActive | boolean | NO | true |
 | createdAt | timestamp without time zone | NO | CURRENT_TIMESTAMP |
@@ -198,14 +217,14 @@ Values: `monthly`, `weekly`, `none`
 
 | Column | References | On Delete |
 |--------|------------|------------|
-| regionId | Region(id) | RESTRICT |
-| venueId | Venue(id) | RESTRICT |
+| regionId | Region.id | RESTRICT |
+| venueId | Venue.id | RESTRICT |
 
-#### Referenced By
+#### Indexes
 
-| Table | Column | On Delete |
-|-------|--------|------------|
-| EventTemplateTicket | eventTemplateId | CASCADE |
+| Name | Definition |
+|------|------------|
+| EventTemplate_pkey | CREATE UNIQUE INDEX "EventTemplate_pkey" ON public."EventTemplate" USING btree (id) |
 
 ### EventTemplateTicket
 
@@ -226,7 +245,13 @@ Values: `monthly`, `weekly`, `none`
 
 | Column | References | On Delete |
 |--------|------------|------------|
-| eventTemplateId | EventTemplate(id) | CASCADE |
+| eventTemplateId | EventTemplate.id | CASCADE |
+
+#### Indexes
+
+| Name | Definition |
+|------|------------|
+| EventTemplateTicket_pkey | CREATE UNIQUE INDEX "EventTemplateTicket_pkey" ON public."EventTemplateTicket" USING btree (id) |
 
 ### EventTicket
 
@@ -250,13 +275,13 @@ Values: `monthly`, `weekly`, `none`
 
 | Column | References | On Delete |
 |--------|------------|------------|
-| eventId | Event(id) | CASCADE |
+| eventId | Event.id | CASCADE |
 
-#### Referenced By
+#### Indexes
 
-| Table | Column | On Delete |
-|-------|--------|------------|
-| Ticket | eventDetailId | RESTRICT |
+| Name | Definition |
+|------|------------|
+| EventTicket_pkey | CREATE UNIQUE INDEX "EventTicket_pkey" ON public."EventTicket" USING btree (id) |
 
 ### Fighter
 
@@ -274,6 +299,12 @@ Values: `monthly`, `weekly`, `none`
 | createdAt | timestamp without time zone | NO | CURRENT_TIMESTAMP |
 | updatedAt | timestamp without time zone | NO | CURRENT_TIMESTAMP |
 | isFeatured | boolean | NO | false |
+
+#### Indexes
+
+| Name | Definition |
+|------|------------|
+| Fighter_pkey | CREATE UNIQUE INDEX "Fighter_pkey" ON public."Fighter" USING btree (id) |
 
 ### Instructor
 
@@ -294,13 +325,13 @@ Values: `monthly`, `weekly`, `none`
 
 | Column | References | On Delete |
 |--------|------------|------------|
-| userId | User(id) | SET NULL |
+| userId | User.id | SET NULL |
 
-#### Referenced By
+#### Indexes
 
-| Table | Column | On Delete |
-|-------|--------|------------|
-| TrainingCourse | instructorId | SET NULL |
+| Name | Definition |
+|------|------------|
+| Instructor_pkey | CREATE UNIQUE INDEX "Instructor_pkey" ON public."Instructor" USING btree (id) |
 
 ### Post
 
@@ -329,21 +360,68 @@ Values: `monthly`, `weekly`, `none`
 
 | Column | References | On Delete |
 |--------|------------|------------|
-| authorId | User(id) | SET NULL |
-| regionId | Region(id) | SET NULL |
+| authorId | User.id | SET NULL |
+| regionId | Region.id | SET NULL |
+
+#### Indexes
+
+| Name | Definition |
+|------|------------|
+| Post_pkey | CREATE UNIQUE INDEX "Post_pkey" ON public."Post" USING btree (id) |
+| Post_slug_unique | CREATE UNIQUE INDEX "Post_slug_unique" ON public."Post" USING btree (slug) |
 
 ### Product
 
-| Column | Type | Nullable | Default | Description |
-| ------ | ---- | -------- | ------- | ----------- |
-| id | text | No |  | Primary Key |
-| name | text | No |  |  |
-| description | text | Yes |  |  |
-| price | double precision | No |  |  |
-| imageUrls | text[] | Yes |  |  |
-| isFeatured | boolean | No | false |  |
-| createdAt | timestamp without time zone | No | CURRENT_TIMESTAMP |  |
-| updatedAt | timestamp without time zone | No | CURRENT_TIMESTAMP |  |
+#### Columns
+
+| Column Name | Data Type | Nullable | Default |
+|-------------|-----------|----------|----------|
+| id | text | NO | NULL |
+| name | text | NO | NULL |
+| description | text | YES | NULL |
+| price | double precision | NO | NULL |
+| imageUrls | ARRAY | YES | NULL |
+| isFeatured | boolean | NO | false |
+| createdAt | timestamp without time zone | NO | CURRENT_TIMESTAMP |
+| updatedAt | timestamp without time zone | NO | CURRENT_TIMESTAMP |
+| thumbnailUrl | text | YES | NULL |
+| categoryId | text | YES | NULL |
+
+#### Foreign Keys
+
+| Column | References | On Delete |
+|--------|------------|------------|
+| categoryId | Category.id | SET NULL |
+
+#### Indexes
+
+| Name | Definition |
+|------|------------|
+| Product_pkey | CREATE UNIQUE INDEX "Product_pkey" ON public."Product" USING btree (id) |
+
+### ProductToCategory
+
+#### Columns
+
+| Column Name | Data Type | Nullable | Default |
+|-------------|-----------|----------|----------|
+| id | text | NO | NULL |
+| productId | text | NO | NULL |
+| categoryId | text | NO | NULL |
+| createdAt | timestamp without time zone | NO | CURRENT_TIMESTAMP |
+
+#### Foreign Keys
+
+| Column | References | On Delete |
+|--------|------------|------------|
+| categoryId | Category.id | CASCADE |
+| productId | Product.id | CASCADE |
+
+#### Indexes
+
+| Name | Definition |
+|------|------------|
+| ProductToCategory_pkey | CREATE UNIQUE INDEX "ProductToCategory_pkey" ON public."ProductToCategory" USING btree (id) |
 
 ### Region
 
@@ -363,15 +441,12 @@ Values: `monthly`, `weekly`, `none`
 | metaDescription | text | YES | NULL |
 | keywords | ARRAY | YES | NULL |
 
-#### Referenced By
+#### Indexes
 
-| Table | Column | On Delete |
-|-------|--------|------------|
-| Event | regionId | SET NULL |
-| EventTemplate | regionId | RESTRICT |
-| Post | regionId | SET NULL |
-| TrainingCourse | regionId | RESTRICT |
-| Venue | regionId | RESTRICT |
+| Name | Definition |
+|------|------------|
+| Region_pkey | CREATE UNIQUE INDEX "Region_pkey" ON public."Region" USING btree (id) |
+| Region_slug_unique | CREATE UNIQUE INDEX "Region_slug_unique" ON public."Region" USING btree (slug) |
 
 ### Ticket
 
@@ -391,9 +466,15 @@ Values: `monthly`, `weekly`, `none`
 
 | Column | References | On Delete |
 |--------|------------|------------|
-| bookingId | Booking(id) | CASCADE |
-| eventDetailId | EventTicket(id) | RESTRICT |
-| eventId | Event(id) | NO ACTION |
+| bookingId | Booking.id | CASCADE |
+| eventDetailId | EventTicket.id | RESTRICT |
+| eventId | Event.id | NO ACTION |
+
+#### Indexes
+
+| Name | Definition |
+|------|------------|
+| Ticket_pkey | CREATE UNIQUE INDEX "Ticket_pkey" ON public."Ticket" USING btree (id) |
 
 ### TrainingCourse
 
@@ -427,15 +508,16 @@ Values: `monthly`, `weekly`, `none`
 
 | Column | References | On Delete |
 |--------|------------|------------|
-| instructorId | Instructor(id) | SET NULL |
-| regionId | Region(id) | RESTRICT |
-| venueId | Venue(id) | SET NULL |
+| instructorId | Instructor.id | SET NULL |
+| regionId | Region.id | RESTRICT |
+| venueId | Venue.id | SET NULL |
 
-#### Referenced By
+#### Indexes
 
-| Table | Column | On Delete |
-|-------|--------|------------|
-| CourseEnrollment | courseId | CASCADE |
+| Name | Definition |
+|------|------------|
+| TrainingCourse_pkey | CREATE UNIQUE INDEX "TrainingCourse_pkey" ON public."TrainingCourse" USING btree (id) |
+| TrainingCourse_slug_unique | CREATE UNIQUE INDEX "TrainingCourse_slug_unique" ON public."TrainingCourse" USING btree (slug) |
 
 ### User
 
@@ -452,15 +534,12 @@ Values: `monthly`, `weekly`, `none`
 | createdAt | timestamp without time zone | NO | CURRENT_TIMESTAMP |
 | updatedAt | timestamp without time zone | NO | CURRENT_TIMESTAMP |
 
-#### Referenced By
+#### Indexes
 
-| Table | Column | On Delete |
-|-------|--------|------------|
-| Customer | userId | SET NULL |
-| Instructor | userId | SET NULL |
-| Post | authorId | SET NULL |
-| account | user_id | CASCADE |
-| session | user_id | CASCADE |
+| Name | Definition |
+|------|------------|
+| User_email_unique | CREATE UNIQUE INDEX "User_email_unique" ON public."User" USING btree (email) |
+| User_pkey | CREATE UNIQUE INDEX "User_pkey" ON public."User" USING btree (id) |
 
 ### Venue
 
@@ -491,16 +570,13 @@ Values: `monthly`, `weekly`, `none`
 
 | Column | References | On Delete |
 |--------|------------|------------|
-| regionId | Region(id) | RESTRICT |
+| regionId | Region.id | RESTRICT |
 
-#### Referenced By
+#### Indexes
 
-| Table | Column | On Delete |
-|-------|--------|------------|
-| Event | venueId | SET NULL |
-| EventTemplate | venueId | RESTRICT |
-| TrainingCourse | venueId | SET NULL |
-| VenueToVenueType | venueId | CASCADE |
+| Name | Definition |
+|------|------------|
+| Venue_pkey | CREATE UNIQUE INDEX "Venue_pkey" ON public."Venue" USING btree (id) |
 
 ### VenueToVenueType
 
@@ -519,8 +595,15 @@ Values: `monthly`, `weekly`, `none`
 
 | Column | References | On Delete |
 |--------|------------|------------|
-| venueId | Venue(id) | CASCADE |
-| venueTypeId | VenueType(id) | CASCADE |
+| venueId | Venue.id | CASCADE |
+| venueTypeId | VenueType.id | CASCADE |
+
+#### Indexes
+
+| Name | Definition |
+|------|------------|
+| VenueToVenueType_pkey | CREATE UNIQUE INDEX "VenueToVenueType_pkey" ON public."VenueToVenueType" USING btree (id) |
+| venue_to_venue_type_unique_idx | CREATE UNIQUE INDEX venue_to_venue_type_unique_idx ON public."VenueToVenueType" USING btree ("venueId", "venueTypeId") |
 
 ### VenueType
 
@@ -534,11 +617,11 @@ Values: `monthly`, `weekly`, `none`
 | createdAt | timestamp without time zone | NO | CURRENT_TIMESTAMP |
 | updatedAt | timestamp without time zone | NO | CURRENT_TIMESTAMP |
 
-#### Referenced By
+#### Indexes
 
-| Table | Column | On Delete |
-|-------|--------|------------|
-| VenueToVenueType | venueTypeId | CASCADE |
+| Name | Definition |
+|------|------------|
+| VenueType_pkey | CREATE UNIQUE INDEX "VenueType_pkey" ON public."VenueType" USING btree (id) |
 
 ### account
 
@@ -562,7 +645,14 @@ Values: `monthly`, `weekly`, `none`
 
 | Column | References | On Delete |
 |--------|------------|------------|
-| user_id | User(id) | CASCADE |
+| user_id | User.id | CASCADE |
+
+#### Indexes
+
+| Name | Definition |
+|------|------------|
+| account_provider_provider_account_id_pk | CREATE UNIQUE INDEX account_provider_provider_account_id_pk ON public.account USING btree (provider, provider_account_id) |
+| account_user_id_idx | CREATE INDEX account_user_id_idx ON public.account USING btree (user_id) |
 
 ### session
 
@@ -578,7 +668,14 @@ Values: `monthly`, `weekly`, `none`
 
 | Column | References | On Delete |
 |--------|------------|------------|
-| user_id | User(id) | CASCADE |
+| user_id | User.id | CASCADE |
+
+#### Indexes
+
+| Name | Definition |
+|------|------------|
+| session_pkey | CREATE UNIQUE INDEX session_pkey ON public.session USING btree (session_token) |
+| session_user_id_idx | CREATE INDEX session_user_id_idx ON public.session USING btree (user_id) |
 
 ### verification_token
 
@@ -589,4 +686,11 @@ Values: `monthly`, `weekly`, `none`
 | identifier | text | NO | NULL |
 | token | text | NO | NULL |
 | expires | timestamp with time zone | NO | NULL |
+
+#### Indexes
+
+| Name | Definition |
+|------|------------|
+| verification_token_identifier_token_pk | CREATE UNIQUE INDEX verification_token_identifier_token_pk ON public.verification_token USING btree (identifier, token) |
+| verification_token_token_unique | CREATE UNIQUE INDEX verification_token_token_unique ON public.verification_token USING btree (token) |
 
