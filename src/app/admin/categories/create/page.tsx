@@ -2,63 +2,54 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { api } from "~/trpc/react";
-import { z } from "zod";
 import { useDropzone } from "react-dropzone";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { z } from "zod";
 
 // Define the schema for category validation
 const categorySchema = z.object({
   name: z.string().min(1, "Name is required"),
   slug: z.string().min(1, "Slug is required"),
   description: z.string().optional(),
-  thumbnailUrl: z.string().url().optional(),
-  imageUrls: z.array(z.string().url()).max(8).optional(),
+  thumbnailUrl: z.union([
+    z.string().url(),
+    z.string().length(0),
+    z.null(),
+    z.undefined()
+  ]),
+  imageUrls: z.array(z.string().url()).max(8).optional().default([]),
 });
 
 type CategoryFormData = z.infer<typeof categorySchema>;
 
 export default function CreateCategoryPage() {
   const router = useRouter();
+  const [formData, setFormData] = useState<CategoryFormData>({
+    name: "",
+    slug: "",
+    description: "",
+    thumbnailUrl: "",
+    imageUrls: [],
+  });
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [uploadStatus, setUploadStatus] = useState<string>("");
   const [errors, setErrors] = useState<Record<string, string | null>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const {
-    register,
-    handleSubmit,
-    formState: { errors: formErrors },
-    setValue,
-    watch,
-  } = useForm<CategoryFormData>({
-    resolver: zodResolver(categorySchema),
-    defaultValues: {
-      name: "",
-      slug: "",
-      description: "",
-      thumbnailUrl: "",
-      imageUrls: [],
-    },
-  });
 
-  // Auto-generate slug from name
-  const name = watch("name");
-  const generateSlug = (name: string) => {
-    return name
+  const generateSlug = (value: string) =>
+    value
       .toLowerCase()
+      .trim()
       .replace(/[^\w\s-]/g, "")
-      .replace(/[\s_-]+/g, "-")
-      .replace(/^-+|-+$/g, "");
-  };
+      .replace(/\s+/g, "-");
 
-  // Update slug when name changes
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newName = e.target.value;
-    setValue("name", newName);
-    setValue("slug", generateSlug(newName));
+    const val = e.target.value;
+    setFormData(prev => ({
+      ...prev,
+      name: val,
+      slug: generateSlug(val)
+    }));
   };
   
   // Dropzone for thumbnail
@@ -110,19 +101,7 @@ export default function CreateCategoryPage() {
     maxSize: 120 * 1024,
     accept: { 'image/*': [] }
   });
-
-  // Create category mutation
-  const createCategory = api.category.create.useMutation({
-    onSuccess: () => {
-      router.push("/admin/categories");
-      router.refresh();
-    },
-    onError: (error) => {
-      setIsSubmitting(false);
-      setErrors({ form: error.message });
-    },
-  });
-
+  
   // Remove image from the list
   const removeImage = (index: number) => {
     setImageFiles(prev => prev.filter((_, i) => i !== index));
@@ -133,239 +112,215 @@ export default function CreateCategoryPage() {
     setThumbnailFile(null);
   };
 
-  const onSubmit = async (data: CategoryFormData) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsSubmitting(true);
     setErrors({});
-    setUploadStatus("Uploading files...");
-
+    setUploadStatus("");
+    
     try {
-      // Generate a temporary ID for grouping uploads
-      const tempId = Math.random().toString(36).substring(2, 15);
-      
-      // 1. Upload thumbnail if exists
-      let thumbnailUrl = "";
+      // Upload thumbnail if present
       if (thumbnailFile) {
-        const formData = new FormData();
-        formData.append("file", thumbnailFile);
-        formData.append("type", "category-thumbnail");
-        formData.append("id", tempId);
+        setUploadStatus("Uploading thumbnail...");
+        const thumbnailFormData = new FormData();
+        thumbnailFormData.append("entityType", "category");
+        thumbnailFormData.append("image", thumbnailFile);
         
-        const thumbnailResponse = await fetch("/api/upload", {
+        const thumbnailRes = await fetch("/api/upload-thumbnail", {
           method: "POST",
-          body: formData,
+          body: thumbnailFormData,
         });
         
-        if (!thumbnailResponse.ok) {
-          throw new Error("Failed to upload thumbnail");
+        const thumbnailData = await thumbnailRes.json();
+        if (!thumbnailRes.ok) {
+          throw new Error(thumbnailData.error || "Failed to upload thumbnail");
         }
         
-        const thumbnailData = await thumbnailResponse.json();
-        thumbnailUrl = thumbnailData.url;
+        if (thumbnailData.urls && thumbnailData.urls.length > 0) {
+          setFormData(prev => ({
+            ...prev,
+            thumbnailUrl: thumbnailData.urls[0]
+          }));
+        }
       }
       
-      // 2. Upload product images if exist
-      let categoryImageUrls: string[] = [];
+      // Upload images if present
       if (imageFiles.length > 0) {
-        setUploadStatus(`Uploading images (0/${imageFiles.length})...`);
+        setUploadStatus("Uploading images...");
+        const imagesFormData = new FormData();
+        imagesFormData.append("entityType", "category");
         
-        for (let i = 0; i < imageFiles.length; i++) {
-          const formData = new FormData();
-          formData.append("file", imageFiles[i]);
-          formData.append("type", "category-image");
-          formData.append("id", tempId);
-          
-          const imageResponse = await fetch("/api/upload", {
-            method: "POST",
-            body: formData,
-          });
-          
-          if (!imageResponse.ok) {
-            throw new Error(`Failed to upload image ${i + 1}`);
-          }
-          
-          const imageData = await imageResponse.json();
-          categoryImageUrls.push(imageData.url);
-          
-          setUploadStatus(`Uploading images (${i + 1}/${imageFiles.length})...`);
+        imageFiles.forEach((file, index) => {
+          imagesFormData.append(`image${index}`, file);
+        });
+        
+        const imagesRes = await fetch("/api/upload", {
+          method: "POST",
+          body: imagesFormData,
+        });
+        
+        const imagesData = await imagesRes.json();
+        if (!imagesRes.ok) {
+          throw new Error(imagesData.error || "Failed to upload images");
+        }
+        
+        if (imagesData.urls && imagesData.urls.length > 0) {
+          setFormData(prev => ({
+            ...prev,
+            imageUrls: imagesData.urls
+          }));
         }
       }
       
+      // Create the category with uploaded image URLs
       setUploadStatus("Creating category...");
       
-      // 3. Create the category with the uploaded image URLs
-      const validatedData = categorySchema.parse({
-        ...data,
-        thumbnailUrl: thumbnailUrl,
-        imageUrls: categoryImageUrls,
+      // Prepare the data for submission
+      const categoryData = {
+        ...formData,
+        // Ensure thumbnailUrl is empty string if not set
+        thumbnailUrl: formData.thumbnailUrl || "",
+        // Ensure imageUrls is an array
+        imageUrls: formData.imageUrls || [],
+      };
+      
+      const res = await fetch("/api/temp-create-category", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(categoryData),
       });
       
-      // Submit to API
-      createCategory.mutate(validatedData);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Unknown error");
       
-    } catch (error) {
+      router.push("/admin/categories");
+    } catch (err: any) {
+      setErrors({ form: err.message });
+    } finally {
       setIsSubmitting(false);
-      if (error instanceof Error) {
-        setErrors({ form: error.message });
-      } else {
-        setErrors({ form: "An unknown error occurred" });
-      }
+      setUploadStatus("");
     }
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="mb-6 text-2xl font-bold">Create New Category</h1>
-
-      {errors.form && (
-        <div className="mb-4 rounded-md bg-red-50 p-4">
-          <div className="flex">
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">
-                Error creating category
-              </h3>
-              <div className="mt-2 text-sm text-red-700">{errors.form}</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Basic Information */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Category Name
-            </label>
-            <input
-              type="text"
-              {...register("name")}
-              onChange={handleNameChange}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
-              required
-            />
-            {formErrors.name && (
-              <p className="mt-1 text-sm text-red-600">{formErrors.name.message}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Slug
-            </label>
-            <input
-              type="text"
-              {...register("slug")}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
-              required
-            />
-            {formErrors.slug && (
-              <p className="mt-1 text-sm text-red-600">{formErrors.slug.message}</p>
-            )}
-          </div>
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Create New Category</h1>
+      {errors.form && <p className="text-red-600 mb-4">{errors.form}</p>}
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div>
+          <label className="block font-medium">Name</label>
+          <input
+            type="text"
+            value={formData.name}
+            onChange={handleNameChange}
+            className="mt-1 block w-full border rounded px-3 py-2"
+            required
+          />
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Description
-          </label>
+          <label className="block font-medium">Slug</label>
+          <input
+            type="text"
+            value={formData.slug}
+            onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
+            className="mt-1 block w-full border rounded px-3 py-2"
+            required
+          />
+          <p className="mt-1 text-sm text-gray-500">Used in URLs, must be unique</p>
+        </div>
+        
+        <div>
+          <label className="block font-medium">Description</label>
           <textarea
-            {...register("description")}
-            rows={4}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+            value={formData.description}
+            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+            className="mt-1 block w-full border rounded px-3 py-2 h-24"
           />
         </div>
-
+        
+        {/* Thumbnail Upload */}
         <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Thumbnail Image (max 30KB)
-          </label>
-          <div
-            {...getThumbRootProps()}
-            className={`mt-1 flex justify-center rounded-md border-2 border-dashed px-6 pt-5 pb-6 ${
-              thumbnailFile ? "border-green-300" : "border-gray-300"
-            } hover:bg-gray-50 cursor-pointer`}
+          <label className="block font-medium mb-2">Thumbnail Image (Optional)</label>
+          <div 
+            {...getThumbRootProps()} 
+            className={`border-2 border-dashed rounded-md p-4 text-center cursor-pointer ${errors.thumbnail ? 'border-red-500' : 'border-gray-300 hover:border-blue-500'}`}
           >
             <input {...getThumbInputProps()} />
-            <div className="space-y-1 text-center">
-              {thumbnailFile ? (
-                <div className="relative mx-auto h-32 w-32">
-                  <img
-                    src={URL.createObjectURL(thumbnailFile)}
-                    alt="Thumbnail preview"
-                    className="h-32 w-32 object-cover"
-                  />
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeThumbnail();
-                    }}
-                    className="absolute -top-2 -right-2 rounded-full bg-red-500 p-1 text-white hover:bg-red-700"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                  </button>
+            {thumbnailFile ? (
+              <div className="relative">
+                <div className="flex items-center justify-center">
+                  <div className="relative w-32 h-32 overflow-hidden">
+                    <img 
+                      src={URL.createObjectURL(thumbnailFile)} 
+                      alt="Thumbnail preview" 
+                      className="object-cover w-full h-full"
+                    />
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeThumbnail();
+                      }}
+                      className="absolute top-0 right-0 text-white bg-red-500 hover:bg-red-700 rounded-full p-1"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
-              ) : (
-                <>
-                  <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
-                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  <p className="text-sm text-gray-500">
-                    Drag and drop a thumbnail image, or click to select
-                  </p>
-                </>
-              )}
-            </div>
+                <p className="mt-1 text-xs text-gray-500">
+                  {thumbnailFile.name} ({Math.round(thumbnailFile.size / 1024)}KB)
+                </p>
+              </div>
+            ) : (
+              <div>
+                <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                  <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4h-12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <p className="mt-1 text-sm text-gray-500">Click or drag to upload a thumbnail (max 30KB)</p>
+              </div>
+            )}
+            {errors.thumbnail && <p className="text-red-500 text-sm mt-1">{errors.thumbnail}</p>}
           </div>
-          {errors.thumbnail && (
-            <p className="mt-1 text-sm text-red-600">{errors.thumbnail}</p>
-          )}
         </div>
-
+        
+        {/* Multiple Images Upload */}
         <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Category Images (max 8 images, each max 120KB)
-          </label>
-          <div
-            {...getImagesRootProps()}
-            className="mt-1 flex cursor-pointer justify-center rounded-md border-2 border-dashed border-gray-300 px-6 py-4 hover:bg-gray-50"
+          <label className="block font-medium mb-2">Additional Images (Optional)</label>
+          <div 
+            {...getImagesRootProps()} 
+            className={`border-2 border-dashed rounded-md p-4 text-center cursor-pointer ${errors.images ? 'border-red-500' : 'border-gray-300 hover:border-blue-500'}`}
           >
             <input {...getImagesInputProps()} />
-            <div className="flex flex-col items-center">
-              <svg className="h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
-                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              <p className="mt-1 text-sm">
-                {imageFiles.length > 0 
-                  ? `${imageFiles.length} image(s) selected. Drag more or click to add.` 
-                  : "Drag & drop images here, or click to select"}
-              </p>
-            </div>
+            <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+              <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4h-12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <p className="mt-1 text-sm text-gray-500">Click or drag to upload images (max 8, each max 120KB)</p>
+            {errors.images && <p className="text-red-500 text-sm mt-1">{errors.images}</p>}
           </div>
-          {errors.images && typeof errors.images === 'string' && (
-            <p className="mt-1 text-sm text-red-600">{errors.images}</p>
-          )}
+          
+          {/* Preview of uploaded images */}
           {imageFiles.length > 0 && (
             <div className="mt-4">
-              <p className="text-sm font-medium text-gray-700 mb-2">Selected Images:</p>
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Uploaded Images</h4>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {imageFiles.map((file, index) => (
-                  <div key={index} className="relative group">
-                    <img 
-                      src={URL.createObjectURL(file)} 
-                      alt={`Category image ${index + 1}`} 
-                      className="h-24 w-full object-cover rounded-md"
-                    />
-                    <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-md">
-                      <button 
-                        type="button" 
+                  <div key={index} className="relative">
+                    <div className="relative w-full h-24 overflow-hidden rounded border">
+                      <img 
+                        src={URL.createObjectURL(file)} 
+                        alt={`Image ${index + 1}`} 
+                        className="object-cover w-full h-full"
+                      />
+                      <button
+                        type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           removeImage(index);
                         }}
-                        className="text-white bg-red-500 hover:bg-red-700 rounded-full p-1"
+                        className="absolute top-0 right-0 text-white bg-red-500 hover:bg-red-700 rounded-full p-1"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                           <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -381,8 +336,8 @@ export default function CreateCategoryPage() {
             </div>
           )}
         </div>
-
-        <div className="flex justify-end space-x-3">
+        
+        <div className="flex justify-end space-x-3 pt-4">
           <button
             type="button"
             onClick={() => router.back()}
@@ -393,7 +348,7 @@ export default function CreateCategoryPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
             {isSubmitting ? uploadStatus || "Creating..." : "Create Category"}
           </button>
