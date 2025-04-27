@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import React from "react";
 import { useRouter } from "next/navigation";
 import { api } from "~/trpc/react";
 import { z } from "zod";
@@ -22,7 +23,9 @@ type CategoryFormData = z.infer<typeof categorySchema>;
 
 export default function EditCategoryPage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const { id } = params;
+  // Properly unwrap params with React.use()
+  const unwrappedParams = React.use(params as unknown as Promise<{id: string}>);
+  const id = unwrappedParams.id;
   
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
@@ -71,6 +74,9 @@ export default function EditCategoryPage({ params }: { params: { id: string } })
       
       if (category.imageUrls && category.imageUrls.length > 0) {
         setExistingImages(category.imageUrls);
+        console.log("Setting existing images:", category.imageUrls);
+      // Make sure we're setting the form value too
+      setValue("imageUrls", category.imageUrls);
       }
     }
   }, [category, reset]);
@@ -132,33 +138,39 @@ export default function EditCategoryPage({ params }: { params: { id: string } })
   } = useDropzone({
     onDrop: (acceptedFiles: File[]) => {
       if (acceptedFiles.length === 0) return;
-      const total = acceptedFiles.length;
-      if (total + imageFiles.length + existingImages.length > 8) {
+      // Check if adding these files would exceed the 8 image limit
+      if (existingImages.length + imageFiles.length + acceptedFiles.length > 8) {
         setErrors(prev => ({ ...prev, images: "Maximum 8 images allowed" }));
         return;
       }
-      const oversized = acceptedFiles.filter(f => f.size > 120 * 1024);
-      if (oversized.length) {
-        setErrors(prev => ({ ...prev, images: `${oversized.length} image(s) exceed the 120KB limit` }));
+      // Check file sizes
+      const oversizedFiles = acceptedFiles.filter(file => file.size > 120 * 1024);
+      if (oversizedFiles.length > 0) {
+        setErrors(prev => ({ ...prev, images: `${oversizedFiles.length} image(s) exceed the 120KB limit` }));
         return;
       }
       setImageFiles(prev => [...prev, ...acceptedFiles]);
       setErrors(prev => ({ ...prev, images: null }));
     },
+    accept: { 'image/*': [] },
     multiple: true,
-    maxSize: 120 * 1024,
-    accept: { 'image/*': [] }
+    maxSize: 120 * 1024 // 120KB max
   });
 
   // Update category mutation
   const updateCategory = api.category.update.useMutation({
     onSuccess: () => {
+      setUploadStatus("Category updated successfully!");
       router.push("/admin/categories");
       router.refresh();
     },
     onError: (error) => {
       setIsSubmitting(false);
-      setErrors({ form: error.message });
+      if (error instanceof Error) {
+        setErrors({ form: error.message });
+      } else {
+        setErrors({ form: "An unknown error occurred" });
+      }
     },
   });
 
@@ -179,80 +191,82 @@ export default function EditCategoryPage({ params }: { params: { id: string } })
   };
 
   const onSubmit = async (data: CategoryFormData) => {
-    setIsSubmitting(true);
-    setErrors({});
-    setUploadStatus("Uploading files...");
-
     try {
-      // Generate a temporary ID for grouping uploads
-      const tempId = Math.random().toString(36).substring(2, 15);
+      setIsSubmitting(true);
+      setUploadStatus("Preparing update...");
       
-      // 1. Upload thumbnail if exists
-      let thumbnailUrl = existingThumbnail || "";
+      // Upload thumbnail if exists
+      let thumbnailUrl = data.thumbnailUrl;
       if (thumbnailFile) {
+        setUploadStatus("Uploading thumbnail...");
         const formData = new FormData();
         formData.append("file", thumbnailFile);
-        formData.append("type", "category-thumbnail");
-        formData.append("id", tempId);
+        formData.append("upload_preset", "ml_default");
         
-        const thumbnailResponse = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        });
+        const response = await fetch(
+          "https://api.cloudinary.com/v1_1/dxvvzuam9/image/upload",
+          {
+            method: "POST",
+            body: formData,
+          }
+        );
         
-        if (!thumbnailResponse.ok) {
-          throw new Error("Failed to upload thumbnail");
-        }
-        
-        const thumbnailData = await thumbnailResponse.json();
-        thumbnailUrl = thumbnailData.url;
+        const fileData = await response.json();
+        thumbnailUrl = fileData.secure_url;
       }
       
-      // 2. Upload new category images if exist
-      let categoryImageUrls: string[] = [...existingImages];
+      // Upload new images if any
+      let allImageUrls = [...(existingImages || [])];
+      console.log("Existing images before update:", existingImages);
+      
       if (imageFiles.length > 0) {
         setUploadStatus(`Uploading images (0/${imageFiles.length})...`);
         
         for (let i = 0; i < imageFiles.length; i++) {
+          const file = imageFiles[i];
+          if (!file) continue;
+          
           const formData = new FormData();
-          formData.append("file", imageFiles[i]);
-          formData.append("type", "category-image");
-          formData.append("id", tempId);
+          formData.append("file", file);
+          formData.append("upload_preset", "ml_default");
           
-          const imageResponse = await fetch("/api/upload", {
-            method: "POST",
-            body: formData,
-          });
+          const response = await fetch(
+            "https://api.cloudinary.com/v1_1/dxvvzuam9/image/upload",
+            {
+              method: "POST",
+              body: formData,
+            }
+          );
           
-          if (!imageResponse.ok) {
-            throw new Error(`Failed to upload image ${i + 1}`);
-          }
-          
-          const imageData = await imageResponse.json();
-          categoryImageUrls.push(imageData.url);
+          const fileData = await response.json();
+          allImageUrls.push(fileData.secure_url);
           
           setUploadStatus(`Uploading images (${i + 1}/${imageFiles.length})...`);
         }
       }
       
+      // Update category
       setUploadStatus("Updating category...");
+      const updateData = {
+        id: data.id,
+        name: data.name,
+        slug: data.slug,
+        description: data.description,
+        thumbnailUrl: thumbnailUrl || undefined,
+        imageUrls: allImageUrls.length > 0 ? allImageUrls : undefined,
+      };
       
-      // 3. Update the category with the uploaded image URLs
-      const validatedData = categorySchema.parse({
-        ...data,
-        thumbnailUrl: thumbnailUrl,
-        imageUrls: categoryImageUrls,
-      });
+      console.log("Updating category with data:", updateData);
       
-      // Submit to API
-      updateCategory.mutate(validatedData);
-      
+      // Use the mutation from useMutation hook
+      updateCategory.mutate(updateData);
     } catch (error) {
+      console.error("Error uploading images:", error);
       setIsSubmitting(false);
       if (error instanceof Error) {
         setErrors({ form: error.message });
       } else {
-        setErrors({ form: "An unknown error occurred" });
+        setErrors({ form: "An error occurred while uploading images" });
       }
     }
   };
@@ -475,6 +489,9 @@ export default function EditCategoryPage({ params }: { params: { id: string } })
                         </svg>
                       </button>
                     </div>
+                    <p className="mt-1 truncate text-xs text-gray-500">
+                      Image {index + 1} - {Math.round((new Blob([imageUrl]).size) / 1024)}KB
+                    </p>
                   </div>
                 ))}
               </div>
