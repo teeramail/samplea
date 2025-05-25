@@ -97,9 +97,29 @@ export const instructorRouter = createTRPCRouter({
       }
     }),
 
-  list: publicProcedure.query(async ({ ctx }) => {
+  list: publicProcedure
+    .input(z.object({
+      limit: z.number().default(100),
+      query: z.string().optional(),
+    }).optional())
+    .query(async ({ ctx, input }) => {
     try {
-      return await ctx.db.select().from(instructors).orderBy(instructors.name);
+      const { limit = 100, query } = input ?? {};
+      let result = await ctx.db.select().from(instructors).orderBy(instructors.name);
+      
+      // Apply search filter if query exists
+      if (query && query.trim() !== "") {
+        result = result.filter((instructor) =>
+          instructor.name.toLowerCase().includes(query.toLowerCase()),
+        );
+      }
+      
+      return {
+        items: result.slice(0, limit),
+        meta: {
+          totalCount: result.length,
+        }
+      };
     } catch (error) {
       console.error("Failed to list instructors:", error);
       throw new TRPCError({

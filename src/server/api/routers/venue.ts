@@ -84,9 +84,11 @@ export const venueRouter = createTRPCRouter({
 
         return {
           items: venuesList,
-          totalCount,
-          pageCount: Math.ceil(totalCount / limit),
-          currentPage: page,
+          meta: {
+            totalCount,
+            pageCount: Math.ceil(totalCount / limit),
+            currentPage: page,
+          }
         };
       } catch (error) {
         console.error("Failed to fetch venues:", error);

@@ -285,7 +285,8 @@ export default function AdminCoursesPage() {
             {courses.map((course) => (
               <tr
                 key={course.id}
-                className={`${course.isFeatured ? "bg-indigo-50" : ""} hover:bg-gray-50`}
+                className={`${course.isFeatured ? "bg-indigo-50" : ""} hover:bg-gray-50 cursor-pointer`}
+                onClick={() => window.location.href = `/admin/courses/${course.id}/view`}
               >
                 <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
                   {course.title}

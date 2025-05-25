@@ -338,4 +338,34 @@ export const trainingCourseRouter = createTRPCRouter({
         });
       }
     }),
+    
+  // Get course by ID for admin edit and view
+  getById: publicProcedure // TODO: Change to adminProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      try {
+        const course = await ctx.db.query.trainingCourses.findFirst({
+          where: eq(trainingCourses.id, input.id),
+          with: {
+            region: true,
+            instructor: true,
+            venue: true,
+          },
+        });
+        if (!course) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Course not found",
+          });
+        }
+        return course;
+      } catch (error) {
+        console.error(`Failed to get course by ID ${input.id}:`, error);
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to retrieve course",
+        });
+      }
+    }),
 });

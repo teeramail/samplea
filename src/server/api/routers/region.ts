@@ -14,10 +14,16 @@ export const regionRouter = createTRPCRouter({
         sortField: z.string().default("name"),
         sortDirection: z.enum(["asc", "desc"]).default("asc"),
         query: z.string().optional(),
-      }),
+      }).optional(),
     )
     .query(async ({ ctx, input }) => {
-      const { page, limit, sortField, sortDirection, query } = input;
+      const { 
+        page = 1, 
+        limit = 10, 
+        sortField = "name", 
+        sortDirection = "asc", 
+        query 
+      } = input ?? {};
       const offset = (page - 1) * limit;
 
       try {
