@@ -36,6 +36,15 @@ export const env = createEnv({
     // Email configuration
     EMAIL_USER: z.string().optional(),
     EMAIL_PASSWORD: z.string().optional(),
+    // S3 Configuration
+    AWS_ACCESS_KEY_ID: z.string().min(1, "AWS_ACCESS_KEY_ID is required"),
+    AWS_SECRET_ACCESS_KEY: z.string().min(1, "AWS_SECRET_ACCESS_KEY is required"),
+    AWS_REGION: z.string().default("sgp1"),
+    AWS_ENDPOINT: z.string().default("https://sgp1.digitaloceanspaces.com"),
+    AWS_S3_BUCKET: z.string().min(1, "AWS_S3_BUCKET is required"),
+    AWS_S3_ROOT_FOLDER: z.string().default("thaiboxinghub"),
+    AWS_S3_MAX_FILE_SIZE_KB: z.string().default("120"),
+    AWS_S3_MAX_IMAGES: z.string().default("5"),
   },
 
   /**
@@ -71,6 +80,14 @@ export const env = createEnv({
     CHILLPAY_API_ENDPOINT: process.env.CHILLPAY_API_ENDPOINT,
     EMAIL_USER: process.env.EMAIL_USER,
     EMAIL_PASSWORD: process.env.EMAIL_PASSWORD,
+    AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
+    AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
+    AWS_REGION: process.env.AWS_REGION,
+    AWS_ENDPOINT: process.env.AWS_ENDPOINT,
+    AWS_S3_BUCKET: process.env.AWS_S3_BUCKET,
+    AWS_S3_ROOT_FOLDER: process.env.AWS_S3_ROOT_FOLDER,
+    AWS_S3_MAX_FILE_SIZE_KB: process.env.AWS_S3_MAX_FILE_SIZE_KB,
+    AWS_S3_MAX_IMAGES: process.env.AWS_S3_MAX_IMAGES,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

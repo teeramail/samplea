@@ -332,6 +332,7 @@ export const products = createTable("Product", {
   categoryId: text("categoryId")
     .references(() => categories.id, { onDelete: "set null" }),
   isFeatured: boolean("isFeatured").notNull().default(false),
+  stock: integer("stock").notNull().default(0), // Added stock quantity
   createdAt: timestamp("createdAt", { withTimezone: false })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
@@ -809,6 +810,22 @@ export const productToCategoriesRelations = relations(productToCategories, ({ on
     references: [categories.id],
   }),
 }));
+
+// TestUp2 Uploads Table
+export const testup2Uploads = createTable("Testup2Upload", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createId()), // Using CUID
+  imageUrl: text("image_url").notNull(),
+  originalFilename: text("original_filename").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: false })
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: false })
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
 
 // NextAuth relations
 export const accountsRelations = relations(accounts, ({ one }) => ({

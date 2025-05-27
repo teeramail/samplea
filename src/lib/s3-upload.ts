@@ -7,18 +7,20 @@ import { env } from "~/env";
 import sharp from "sharp";
 import { v4 as uuidv4 } from "uuid";
 
-// Initialize the S3 client
+// Initialize the S3 client with proper type safety
 const s3Client = new S3Client({
-  region: env.AWS_REGION ?? "sgp1",
-  endpoint: env.AWS_ENDPOINT ?? "https://sgp1.digitaloceanspaces.com",
+  region: env.AWS_REGION,
+  endpoint: env.AWS_ENDPOINT,
   credentials: {
-    accessKeyId: env.AWS_ACCESS_KEY_ID ?? "",
-    secretAccessKey: env.AWS_SECRET_ACCESS_KEY ?? "",
+    accessKeyId: env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
   },
+  forcePathStyle: true, // Required for some S3-compatible services like DigitalOcean Spaces
 });
 
-const MAX_FILE_SIZE = 120 * 1024; // 120KB
-const MAX_IMAGES = 5;
+// Get configuration from environment variables with defaults
+const MAX_FILE_SIZE = parseInt(env.AWS_S3_MAX_FILE_SIZE_KB) * 1024; // Convert KB to bytes
+const MAX_IMAGES = parseInt(env.AWS_S3_MAX_IMAGES);
 
 // Interface for upload response
 export interface UploadResponse {
@@ -100,8 +102,10 @@ export async function uploadImages(
       };
     }
 
-    // Prepend the main directory
-    const baseDirectory = "thaiboxinghub";
+    // Prepend the main directory from environment variable
+    // Make sure we're using the correct root folder from environment variables
+    const baseDirectory = env.AWS_S3_ROOT_FOLDER;
+    console.log("Using S3 root folder from env:", baseDirectory, "(env value:", env.AWS_S3_ROOT_FOLDER, ")");
 
     // Construct folder path under the base directory
     const entitySpecificPath = entityId
@@ -109,6 +113,7 @@ export async function uploadImages(
       : `${entityType}/${uuidv4()}`;
 
     const folderPath = `${baseDirectory}/${entitySpecificPath}`;
+    console.log("Full folder path for upload:", folderPath);
 
     // Process and upload each file
     const uploadPromises = imageFiles.map(async (file, index) => {
@@ -151,9 +156,11 @@ export async function uploadImages(
         );
 
         // Construct the public URL correctly - URLs should look like:
-        // https://sgp1.digitaloceanspaces.com/teerabucketone/region/xxx-0.jpg
+        // https://sgp1.digitaloceanspaces.com/teerabucketone/thaiboxinghub/testup2/xxx-0.jpg
         const bucketUrl = `${env.AWS_ENDPOINT}/${env.AWS_S3_BUCKET}`;
-        return `${bucketUrl}/${fileName}`;
+        const fullUrl = `${bucketUrl}/${fileName}`;
+        console.log("Generated URL:", fullUrl);
+        return fullUrl;
       } catch (error) {
         console.error(`Error uploading file ${file.name}:`, error);
         throw error; // Re-throw to handle in the outer catch
