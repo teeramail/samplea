@@ -14,6 +14,9 @@ export default function TestUp2Page() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
 
+  // tRPC mutation hook for creating a database record
+  const createTestUp2Record = api.testup2.create.useMutation();
+
   /**
    * Handle file selection and upload
    * This function is called directly from the UploadImage component
@@ -54,18 +57,30 @@ export default function TestUp2Page() {
         throw new Error(uploadResult.error || 'Upload failed with no URLs returned');
       }
       
-      const imageUrl = uploadResult.urls[0];
-      console.log('File uploaded successfully:', imageUrl);
+      const imageUrlFromUpload = uploadResult.urls[0];
+      console.log('File uploaded successfully:', imageUrlFromUpload);
+
+      if (!imageUrlFromUpload) {
+        // This case should ideally be caught by the earlier check on uploadResult.urls,
+        // but adding this explicitly satisfies TypeScript and adds robustness.
+        console.error('Upload succeeded but no image URL was returned.');
+        setUploadStatus('Upload failed: No image URL returned.');
+        throw new Error('Upload succeeded but no image URL was returned.');
+      }
       
-      // Verify the URL contains the expected path structure
-      if (!imageUrl?.includes(`/${env.AWS_S3_ROOT_FOLDER}/testup2/`)) {
-        console.warn('Warning: Uploaded file URL does not contain the expected path structure:', 
-          `Expected: /${env.AWS_S3_ROOT_FOLDER}/testup2/, Actual: ${imageUrl}`);
+      const imageUrl: string = imageUrlFromUpload; // imageUrl is now guaranteed to be a string
+
+      // Verify the URL contains the expected path structure (no optional chaining needed now)
+      if (!imageUrl.includes(`/${env.AWS_S3_ROOT_FOLDER}/testup2/`)) {
+        console.warn(
+          'Warning: Uploaded file URL does not contain the expected path structure:', 
+          `Expected: /${env.AWS_S3_ROOT_FOLDER}/testup2/, Actual: ${imageUrl}`
+        );
       }
       
       // Save the upload details to the database using tRPC
-      const dbResult = await api.testup2.create.mutate({
-        imageUrl,
+      const dbResult = await createTestUp2Record.mutateAsync({
+        imageUrl, // imageUrl is now definitely a string
         originalFilename: file.name,
       });
       

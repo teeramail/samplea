@@ -47,10 +47,10 @@ export const regions = createTable("Region", {
   metaDescription: text("metaDescription"),
   keywords: text("keywords").array(),
   // Timestamps
-  createdAt: timestamp("createdAt", { withTimezone: false })
+  createdAt: timestamp("createdAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
-  updatedAt: timestamp("updatedAt", { withTimezone: false })
+  updatedAt: timestamp("updatedAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull()
     .$onUpdate(() => new Date()),
@@ -81,10 +81,10 @@ export const venues = createTable("Venue", {
   metaDescription: text("metaDescription"),
   keywords: text("keywords").array(),
   // Timestamps
-  createdAt: timestamp("createdAt", { withTimezone: false })
+  createdAt: timestamp("createdAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
-  updatedAt: timestamp("updatedAt", { withTimezone: false })
+  updatedAt: timestamp("updatedAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull()
     .$onUpdate(() => new Date()),
@@ -95,10 +95,10 @@ export const venueTypes = createTable("VenueType", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description"),
-  createdAt: timestamp("createdAt", { withTimezone: false })
+  createdAt: timestamp("createdAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
-  updatedAt: timestamp("updatedAt", { withTimezone: false })
+  updatedAt: timestamp("updatedAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull()
     .$onUpdate(() => new Date()),
@@ -118,10 +118,10 @@ export const venueToVenueTypes = createTable(
       .references(() => venueTypes.id, { onDelete: "cascade" })
       .notNull(),
     isPrimary: boolean("isPrimary").notNull().default(false),
-    createdAt: timestamp("createdAt", { withTimezone: false })
+    createdAt: timestamp("createdAt", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
-    updatedAt: timestamp("updatedAt", { withTimezone: false })
+    updatedAt: timestamp("updatedAt", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull()
       .$onUpdate(() => new Date()),
@@ -140,7 +140,7 @@ export const events = createTable("Event", {
     .$defaultFn(() => createId()),
   title: text("title").notNull(),
   description: text("description"),
-  date: timestamp("date", { withTimezone: false }).notNull(),
+  date: timestamp("date", { withTimezone: true }).notNull(),
   startTime: timestamp("startTime", { withTimezone: false }).notNull(),
   endTime: timestamp("endTime", { withTimezone: false }),
   imageUrl: text("imageUrl"),
@@ -159,10 +159,10 @@ export const events = createTable("Event", {
   metaDescription: text("metaDescription"),
   keywords: text("keywords").array(),
   // Timestamps
-  createdAt: timestamp("createdAt", { withTimezone: false })
+  createdAt: timestamp("createdAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
-  updatedAt: timestamp("updatedAt", { withTimezone: false })
+  updatedAt: timestamp("updatedAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull()
     .$onUpdate(() => new Date()),
@@ -183,10 +183,10 @@ export const eventTickets = createTable("EventTicket", {
   capacity: integer("capacity").notNull(),
   description: text("description"),
   soldCount: integer("soldCount").default(0).notNull(),
-  createdAt: timestamp("createdAt", { withTimezone: false })
+  createdAt: timestamp("createdAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
-  updatedAt: timestamp("updatedAt", { withTimezone: false })
+  updatedAt: timestamp("updatedAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull()
     .$onUpdate(() => new Date()),
@@ -203,10 +203,10 @@ export const fighters = createTable("Fighter", {
   imageUrl: text("imageUrl"),
   country: text("country"),
   isFeatured: boolean("isFeatured").notNull().default(false), // Added featured flag
-  createdAt: timestamp("createdAt", { withTimezone: false })
+  createdAt: timestamp("createdAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
-  updatedAt: timestamp("updatedAt", { withTimezone: false })
+  updatedAt: timestamp("updatedAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull()
     .$onUpdate(() => new Date()),
@@ -223,10 +223,10 @@ export const users = createTable("User", {
   emailVerified: timestamp("emailVerified", { mode: "date" }),
   image: text("image"),
   role: text("role").default("user"), // Consider pgEnum
-  createdAt: timestamp("createdAt", { withTimezone: false })
+  createdAt: timestamp("createdAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
-  updatedAt: timestamp("updatedAt", { withTimezone: false })
+  updatedAt: timestamp("updatedAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull()
     .$onUpdate(() => new Date()),
@@ -242,10 +242,10 @@ export const instructors = createTable("Instructor", {
   imageUrl: text("imageUrl"),
   expertise: text("expertise").array(), // Array of strings like ["Clinch", "Kicks"]
   userId: text("userId").references(() => users.id, { onDelete: "set null" }), // Optional link to a user account
-  createdAt: timestamp("createdAt", { withTimezone: false })
+  createdAt: timestamp("createdAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
-  updatedAt: timestamp("updatedAt", { withTimezone: false })
+  updatedAt: timestamp("updatedAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull()
     .$onUpdate(() => new Date()),
@@ -282,10 +282,10 @@ export const trainingCourses = createTable("TrainingCourse", {
   metaDescription: text("metaDescription"),
   keywords: text("keywords").array(),
   // Timestamps
-  createdAt: timestamp("createdAt", { withTimezone: false })
+  createdAt: timestamp("createdAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
-  updatedAt: timestamp("updatedAt", { withTimezone: false })
+  updatedAt: timestamp("updatedAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull()
     .$onUpdate(() => new Date()),
@@ -299,10 +299,10 @@ export const categories = createTable("Category", {
   description: text("description"),
   thumbnailUrl: text("thumbnailUrl"),
   imageUrls: text("imageUrls").array(),
-  createdAt: timestamp("createdAt", { withTimezone: false })
+  createdAt: timestamp("createdAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
-  updatedAt: timestamp("updatedAt", { withTimezone: false })
+  updatedAt: timestamp("updatedAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull()
     .$onUpdate(() => new Date()),
@@ -317,7 +317,7 @@ export const productToCategories = createTable("ProductToCategory", {
   categoryId: text("categoryId")
     .notNull()
     .references(() => categories.id, { onDelete: "cascade" }),
-  createdAt: timestamp("createdAt", { withTimezone: false })
+  createdAt: timestamp("createdAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
 });
@@ -333,10 +333,10 @@ export const products = createTable("Product", {
     .references(() => categories.id, { onDelete: "set null" }),
   isFeatured: boolean("isFeatured").notNull().default(false),
   stock: integer("stock").notNull().default(0), // Added stock quantity
-  createdAt: timestamp("createdAt", { withTimezone: false })
+  createdAt: timestamp("createdAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
-  updatedAt: timestamp("updatedAt", { withTimezone: false })
+  updatedAt: timestamp("updatedAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull()
     .$onUpdate(() => new Date()),
@@ -353,10 +353,10 @@ export const customers = createTable(
     name: text("name").notNull(),
     email: text("email").notNull(), // Consider index for faster lookups if querying often
     phone: text("phone"),
-    createdAt: timestamp("createdAt", { withTimezone: false })
+    createdAt: timestamp("createdAt", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
-    updatedAt: timestamp("updatedAt", { withTimezone: false })
+    updatedAt: timestamp("updatedAt", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull()
       .$onUpdate(() => new Date()),
@@ -388,10 +388,10 @@ export const bookings = createTable("Booking", {
   paymentDate: text("paymentDate"), // Payment transaction date from ChillPay
   paymentMethod: text("paymentMethod"), // Payment method (creditcard, qrcode, etc.)
 
-  createdAt: timestamp("createdAt", { withTimezone: false })
+  createdAt: timestamp("createdAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
-  updatedAt: timestamp("updatedAt", { withTimezone: false })
+  updatedAt: timestamp("updatedAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull()
     .$onUpdate(() => new Date()),
@@ -422,10 +422,10 @@ export const tickets = createTable("Ticket", {
     .references(() => bookings.id, { onDelete: "cascade" })
     .notNull(), // Cascade delete if booking deleted
   status: text("status").notNull().default("ACTIVE"), // ACTIVE, USED, CANCELLED - consider pgEnum
-  createdAt: timestamp("createdAt", { withTimezone: false })
+  createdAt: timestamp("createdAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
-  updatedAt: timestamp("updatedAt", { withTimezone: false })
+  updatedAt: timestamp("updatedAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull()
     .$onUpdate(() => new Date()),
@@ -452,10 +452,10 @@ export const courseEnrollments = createTable("CourseEnrollment", {
   courseTitleSnapshot: text("courseTitleSnapshot"),
   customerNameSnapshot: text("customerNameSnapshot"),
   customerEmailSnapshot: text("customerEmailSnapshot"),
-  createdAt: timestamp("createdAt", { withTimezone: false })
+  createdAt: timestamp("createdAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
-  updatedAt: timestamp("updatedAt", { withTimezone: false })
+  updatedAt: timestamp("updatedAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull()
     .$onUpdate(() => new Date()),
@@ -489,10 +489,10 @@ export const eventTemplates = createTable("EventTemplate", {
   endDate: timestamp("endDate", { withTimezone: false }),
   // --- End Activation Fields ---
 
-  createdAt: timestamp("createdAt", { withTimezone: false })
+  createdAt: timestamp("createdAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
-  updatedAt: timestamp("updatedAt", { withTimezone: false })
+  updatedAt: timestamp("updatedAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull()
     .$onUpdate(() => new Date()),
@@ -510,10 +510,10 @@ export const eventTemplateTickets = createTable("EventTemplateTicket", {
   defaultPrice: doublePrecision("defaultPrice").notNull(),
   defaultCapacity: integer("defaultCapacity").notNull(),
   defaultDescription: text("defaultDescription"),
-  createdAt: timestamp("createdAt", { withTimezone: false })
+  createdAt: timestamp("createdAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
-  updatedAt: timestamp("updatedAt", { withTimezone: false })
+  updatedAt: timestamp("updatedAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull()
     .$onUpdate(() => new Date()),
@@ -543,10 +543,10 @@ export const posts = createTable(
     metaTitle: text("metaTitle"),
     metaDescription: text("metaDescription"),
     keywords: text("keywords").array(),
-    createdAt: timestamp("createdAt", { withTimezone: false })
+    createdAt: timestamp("createdAt", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
-    updatedAt: timestamp("updatedAt", { withTimezone: false })
+    updatedAt: timestamp("updatedAt", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull()
       .$onUpdate(() => new Date()), // Add $onUpdate if you want auto-update behavior
@@ -818,10 +818,10 @@ export const testup2Uploads = createTable("Testup2Upload", {
     .$defaultFn(() => createId()), // Using CUID
   imageUrl: text("image_url").notNull(),
   originalFilename: text("original_filename").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: false })
+  createdAt: timestamp("created_at", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: false })
+  updatedAt: timestamp("updated_at", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull()
     .$onUpdate(() => new Date()),
