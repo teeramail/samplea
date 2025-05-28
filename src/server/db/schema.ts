@@ -480,8 +480,8 @@ export const eventTemplates = createTable("EventTemplate", {
   dayOfMonth: integer("dayOfMonth").array(),
   // --- End Recurrence Fields ---
 
-  defaultStartTime: time("defaultStartTime", { withTimezone: true }),
-  defaultEndTime: time("defaultEndTime", { withTimezone: true }),
+  defaultStartTime: time("defaultStartTime", { withTimezone: false }),
+  defaultEndTime: time("defaultEndTime", { withTimezone: false }),
 
   // --- Activation Fields ---
   isActive: boolean("isActive").default(true).notNull(),
