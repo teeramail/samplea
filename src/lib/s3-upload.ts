@@ -4,8 +4,10 @@ import {
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 import { env } from "~/env";
-import sharp from "sharp";
 import { v4 as uuidv4 } from "uuid";
+
+// Import sharp dynamically only on the server side
+const sharp = typeof window === 'undefined' ? require('sharp') : null;
 
 // Initialize the S3 client with proper type safety
 const s3Client = new S3Client({
@@ -33,6 +35,15 @@ export interface UploadResponse {
  * Process and optimize image before upload
  */
 async function processImage(file: File): Promise<Buffer> {
+  // Ensure we're on the server side
+  if (typeof window !== 'undefined') {
+    throw new Error('Image processing can only be performed on the server side');
+  }
+  
+  if (!sharp) {
+    throw new Error('Sharp library is not available');
+  }
+  
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
   const maxSize = MAX_FILE_SIZE;
