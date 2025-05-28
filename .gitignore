@@ -41,8 +41,7 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # local env files
-.env
-.env*.local
+
 
 # vercel
 .vercel
@@ -56,5 +55,4 @@ yarn-error.log*
 
 # Ignore secret-tracked files from Codeium Windsurf
 .codeium/
-*.env
-**/*.env
+
