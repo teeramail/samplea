@@ -101,12 +101,12 @@ export const realestateCategory = pgTable("realestate_category", {
 
 // Product-Category Many-to-Many Relationship
 export const realestateProductCategory = pgTable("realestate_product_category", {
-  id: uuid("id").primaryKey().defaultRandom(),
   product_id: uuid("product_id").references(() => realestateProduct.id).notNull(),
   category_id: uuid("category_id").references(() => realestateCategory.id).notNull(),
   created_at: timestamp("created_at").defaultNow().notNull(),
 }, (table) => ({
   pk: primaryKey({ columns: [table.product_id, table.category_id] }),
+  // Use a unique composite key instead of an ID primary key
 }));
 
 // Real Estate Order

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { UploadImage } from '../components/UploadImage';
 import { api } from '../utils/api';
 import { uploadImages } from '../lib/s3-upload';
-import { env } from '~/env';
 
 /**
  * TestUp2Page - A page for testing file uploads to S3
@@ -48,8 +47,6 @@ export default function TestUp2Page() {
    */
   async function uploadFile(file: File) {
     try {
-      console.log('S3 Root Folder from env:', env.AWS_S3_ROOT_FOLDER);
-      
       // Upload the file to S3 using the uploadImages function
       const uploadResult = await uploadImages([file], 'testup2');
       
@@ -57,35 +54,28 @@ export default function TestUp2Page() {
         throw new Error(uploadResult.error || 'Upload failed with no URLs returned');
       }
       
-      const imageUrlFromUpload = uploadResult.urls[0];
-      console.log('File uploaded successfully:', imageUrlFromUpload);
+      const imageUrl = uploadResult.urls[0];
+      console.log('File uploaded successfully:', imageUrl);
 
-      if (!imageUrlFromUpload) {
-        // This case should ideally be caught by the earlier check on uploadResult.urls,
-        // but adding this explicitly satisfies TypeScript and adds robustness.
-        console.error('Upload succeeded but no image URL was returned.');
+      if (!imageUrl) {
         setUploadStatus('Upload failed: No image URL returned.');
         throw new Error('Upload succeeded but no image URL was returned.');
       }
       
-      const imageUrl: string = imageUrlFromUpload; // imageUrl is now guaranteed to be a string
-
-      // Verify the URL contains the expected path structure (no optional chaining needed now)
-      if (!imageUrl.includes(`/${env.AWS_S3_ROOT_FOLDER}/testup2/`)) {
-        console.warn(
-          'Warning: Uploaded file URL does not contain the expected path structure:', 
-          `Expected: /${env.AWS_S3_ROOT_FOLDER}/testup2/, Actual: ${imageUrl}`
-        );
-      }
-      
       // Save the upload details to the database using tRPC
-      const dbResult = await createTestUp2Record.mutateAsync({
-        imageUrl, // imageUrl is now definitely a string
-        originalFilename: file.name,
-      });
-      
-      console.log('Database record created:', dbResult);
-      setUploadStatus('Upload successful!');
+      try {
+        const dbResult = await createTestUp2Record.mutateAsync({
+          imageUrl,
+          originalFilename: file.name,
+        });
+        
+        console.log('Database record created:', dbResult);
+        setUploadStatus('Upload successful!');
+      } catch (dbError) {
+        console.error('Database save failed:', dbError);
+        // Even if DB save fails, the upload was successful
+        setUploadStatus('File uploaded but database record failed.');
+      }
     } catch (error) {
       console.error('Upload failed:', error);
       setUploadStatus('Upload failed. Please try again.');
