@@ -23,7 +23,8 @@ export const statusEnum = pgEnum('status', [
   'cancelled', 
   'in-progress', 
   'review', 
-  'deferred'
+  'deferred',
+  'planned' // Added for production order status
 ]);
 
 export const orderStatusEnum = pgEnum('order_status', [
