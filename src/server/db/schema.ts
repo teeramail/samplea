@@ -141,8 +141,8 @@ export const events = createTable("Event", {
   title: text("title").notNull(),
   description: text("description"),
   date: timestamp("date", { withTimezone: true }).notNull(),
-  startTime: timestamp("startTime", { withTimezone: false }).notNull(),
-  endTime: timestamp("endTime", { withTimezone: false }),
+  startTime: timestamp("startTime", { withTimezone: true }).notNull(),
+  endTime: timestamp("endTime", { withTimezone: true }),
   imageUrl: text("imageUrl"),
   thumbnailUrl: text("thumbnailUrl"),
   imageUrls: text("imageUrls").array(),
@@ -401,7 +401,7 @@ export const bookings = createTable("Booking", {
   customerEmailSnapshot: text("customerEmailSnapshot"),
   customerPhoneSnapshot: text("customerPhoneSnapshot"),
   eventTitleSnapshot: text("eventTitleSnapshot"),
-  eventDateSnapshot: timestamp("eventDateSnapshot", { withTimezone: false }),
+  eventDateSnapshot: timestamp("eventDateSnapshot", { withTimezone: true }),
   venueNameSnapshot: text("venueNameSnapshot"),
   regionNameSnapshot: text("regionNameSnapshot"),
   bookingItemsJson: jsonb("bookingItemsJson"), // Use jsonb type
@@ -480,13 +480,13 @@ export const eventTemplates = createTable("EventTemplate", {
   dayOfMonth: integer("dayOfMonth").array(),
   // --- End Recurrence Fields ---
 
-  defaultStartTime: time("defaultStartTime", { withTimezone: false }),
-  defaultEndTime: time("defaultEndTime", { withTimezone: false }),
+  defaultStartTime: time("defaultStartTime", { withTimezone: true }),
+  defaultEndTime: time("defaultEndTime", { withTimezone: true }),
 
   // --- Activation Fields ---
   isActive: boolean("isActive").default(true).notNull(),
-  startDate: timestamp("startDate", { withTimezone: false }),
-  endDate: timestamp("endDate", { withTimezone: false }),
+  startDate: timestamp("startDate", { withTimezone: true }),
+  endDate: timestamp("endDate", { withTimezone: true }),
   // --- End Activation Fields ---
 
   createdAt: timestamp("createdAt", { withTimezone: true })
