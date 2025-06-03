@@ -274,6 +274,7 @@ export const trainingCourses = createTable("TrainingCourse", {
   instructorId: text("instructorId").references(() => instructors.id, {
     onDelete: "set null",
   }), // Link to instructor
+  thumbnailUrl: text("thumbnailUrl"), // Add thumbnailUrl field for 30KB compressed thumbnails
   imageUrls: text("imageUrls").array(),
   primaryImageIndex: integer("primaryImageIndex").default(0),
   isActive: boolean("isActive").default(true).notNull(),
