@@ -7,7 +7,8 @@ import { z } from "zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "~/trpc/react";
-import Image from "next/image";
+import { UploadImage, type UploadedImageData } from "~/components/ui/UploadImage";
+import { UploadUltraSmallImage, type UploadedUltraSmallImageData } from "~/components/ui/UploadUltraSmallImage";
 
 // Define Zod schema for validation
 const eventTemplateTicketSchema = z.object({
@@ -73,6 +74,7 @@ const eventTemplateSchema = z.object({
   startDate: z.string().optional(),
   endDate: z.string().optional(),
   thumbnailUrl: z.string().optional(),
+  imageUrls: z.array(z.string().url()).max(8).optional(),
   templateTickets: z
     .array(eventTemplateTicketSchema)
     .min(1, "Add at least one ticket type"),
@@ -82,11 +84,6 @@ const eventTemplateSchema = z.object({
 type EventTemplateFormData = z.infer<typeof eventTemplateSchema>;
 type Venue = { id: string; name: string; regionId: string };
 type Region = { id: string; name: string };
-
-// Type for the upload API response
-type UploadResponse = {
-  urls: string[];
-};
 
 const daysOfWeek = [
   { id: 0, name: "Sunday" },
@@ -98,39 +95,6 @@ const daysOfWeek = [
   { id: 6, name: "Saturday" },
 ];
 
-// Upload Helper
-async function uploadFile(
-  file: File,
-  entityType: string,
-): Promise<string | null> {
-  const formData = new FormData();
-  formData.append("image", file);
-  formData.append("entityType", entityType);
-  try {
-    const response = await fetch("/api/upload", {
-      method: "POST",
-      body: formData,
-    });
-    if (!response.ok) {
-      console.error("Upload failed:", response.status, await response.text());
-      return null;
-    }
-    // Use type assertion here
-    const result = (await response.json()) as UploadResponse;
-    // Check result.urls directly now
-    if (result.urls && Array.isArray(result.urls) && result.urls.length > 0) {
-      // Use nullish coalescing operator to ensure null is returned if urls[0] is undefined
-      return result.urls[0] ?? null;
-    } else {
-      console.error("Upload API response error or no URLs returned:", result);
-      return null;
-    }
-  } catch (error) {
-    console.error("Upload fetch error:", error);
-    return null;
-  }
-}
-
 export default function CreateEventTemplatePage() {
   const router = useRouter();
   const [allVenues, setAllVenues] = useState<Venue[]>([]);
@@ -138,10 +102,9 @@ export default function CreateEventTemplatePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [submitError, setSubmitError] = useState<string | null>(null);
   
-  // Image State
-  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
-  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
-  const [thumbnailSize, setThumbnailSize] = useState<string>("");
+  // Upload states using our shared components
+  const [thumbnailImage, setThumbnailImage] = useState<UploadedUltraSmallImageData | undefined>(undefined);
+  const [templateImages, setTemplateImages] = useState<UploadedImageData[]>([]);
 
   const {
     register,
@@ -205,322 +168,307 @@ export default function CreateEventTemplatePage() {
     }
   }, [venuesData, regionsData, isLoadingVenues, isLoadingRegions]);
 
-  const filteredVenues = allVenues.filter(
-    (v) => v.regionId === selectedRegionId,
-  );
-
-  useEffect(() => {
-    const currentVenueId = watch("venueId");
-    if (
-      selectedRegionId &&
-      currentVenueId &&
-      !allVenues.some(
-        (v) => v.regionId === selectedRegionId && v.id === currentVenueId,
-      )
-    ) {
-      setValue("venueId", "", { shouldValidate: true });
-    }
-  }, [selectedRegionId, setValue, watch, allVenues]);
-
-  // Create event template mutation
-  const createTemplate = api.eventTemplate.create.useMutation({
-    onSuccess: () => {
-      router.push("/admin/event-templates");
-    },
-    onError: (error) => {
-      console.error("API error creating template:", error);
-      setSubmitError(error.message ?? "Failed to create event template");
-    },
-  });
-
-  // File Handlers
-  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Clear any previous errors
-      setSubmitError(null);
-      
-      // Check file type
-      const validImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-      if (!validImageTypes.includes(file.type)) {
-        setSubmitError("Please upload a valid image file (JPEG, PNG, GIF, or WEBP)");
-        e.target.value = ""; // Clear input
-        return;
-      }
-      
-      // Size check - must be less than 30KB
-      if (file.size > 30 * 1024) {
-        setSubmitError(`Thumbnail image size must be less than 30KB. Current size: ${(file.size / 1024).toFixed(1)}KB`);
-        e.target.value = ""; // Clear input
-        return;
-      }
-      
-      // Success - set file and preview
-      setThumbnailFile(file);
-      setThumbnailSize(`${(file.size / 1024).toFixed(1)}KB`);
-      
-      // Create preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setThumbnailPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+  // Handle thumbnail upload change
+  const handleThumbnailChange = (data: UploadedUltraSmallImageData | UploadedUltraSmallImageData[] | null) => {
+    if (data && !Array.isArray(data)) {
+      setThumbnailImage(data);
+      setValue("thumbnailUrl", data.url);
     } else {
-      // Clear thumbnail data if no file selected
-      setThumbnailFile(null);
-      setThumbnailPreview(null);
-      setThumbnailSize("");
+      setThumbnailImage(undefined);
+      setValue("thumbnailUrl", "");
+    }
+  };
+
+  // Handle template images upload change
+  const handleTemplateImagesChange = (data: UploadedImageData | UploadedImageData[] | null) => {
+    if (data) {
+      const imagesArray = Array.isArray(data) ? data : [data];
+      setTemplateImages(imagesArray);
+      setValue("imageUrls", imagesArray.map(img => img.url));
+    } else {
+      setTemplateImages([]);
+      setValue("imageUrls", []);
     }
   };
 
   const onSubmit: SubmitHandler<EventTemplateFormData> = async (data) => {
-    console.log("Form data:", data); // Add logging to see what data is being submitted
-    // Clear any previous errors
     setSubmitError(null);
-    
+
     try {
-      // Format the data for API submission
-      const payload = {
+      // Include image URLs in the template data - images are already uploaded!
+      const templateData = {
         ...data,
-        // Handle uploads
-        thumbnailUrl: thumbnailFile ? await uploadFile(thumbnailFile, "eventTemplate") : undefined,
-        
-        // Handle recurrence types
-        recurringDaysOfWeek: data.recurrenceType === "weekly" 
-          ? data.recurringDaysOfWeek?.map(d => Number(d)) || [] 
-          : [],
-          
-        // For monthly recurrence, ensure dayOfMonth is a single value, not an array
-        // The server only supports a single day of month currently
-        dayOfMonth: data.recurrenceType === "monthly" && data.dayOfMonth && data.dayOfMonth.length > 0
-          ? [Number(data.dayOfMonth[0])] 
-          : undefined,
-          
-        // Handle optional values
-        defaultEndTime: data.defaultEndTime ?? undefined,
-        startDate: data.startDate ?? undefined,
-        endDate: data.endDate ?? undefined,
-        
-        // Ensure ticket types have proper numeric values
-        templateTickets: data.templateTickets.map(ticket => ({
-          ...ticket,
-          defaultPrice: Number(ticket.defaultPrice),
-          defaultCapacity: Number(ticket.defaultCapacity),
-        })),
+        thumbnailUrl: thumbnailImage?.url || "",
+        imageUrls: templateImages.map(img => img.url),
       };
 
-      console.log("Sending payload:", payload); // Add this for debugging
-      // Submit using tRPC mutation
-      createTemplate.mutate(payload);
+      // Create the event template using tRPC
+      const createTemplate = api.eventTemplate.create.useMutation();
+      await createTemplate.mutateAsync(templateData);
+
+      // Redirect to the event templates list page
+      router.push("/admin/event-templates");
     } catch (error) {
-      console.error("Error in form submission:", error);
+      console.error("Error creating event template:", error);
       setSubmitError(
-        error instanceof Error ? error.message : "An unknown error occurred"
+        error instanceof Error ? error.message : "Failed to create event template"
       );
     }
   };
 
+  // Filter venues based on selected region
+  const filteredVenues = selectedRegionId
+    ? allVenues.filter((venue) => venue.regionId === selectedRegionId)
+    : [];
+
   if (isLoading) {
-    return <div className="py-10 text-center">Loading...</div>;
+    return <div className="p-4">Loading...</div>;
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">
-        Create New Event Template
-      </h1>
+    <div className="mx-auto max-w-4xl p-6">
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Create Event Template</h1>
+        <Link
+          href="/admin/event-templates"
+          className="rounded bg-gray-500 px-4 py-2 text-white hover:bg-gray-600"
+        >
+          Back to Templates
+        </Link>
+      </div>
 
-      <form
-        onSubmit={handleSubmit(onSubmit, (errors) => {
-          console.error("Form validation errors:", errors);
-          // If errors object is empty but we still got an error callback, there's likely another issue
-          if (Object.keys(errors).length === 0) {
-            setSubmitError("Form validation failed. Please check all fields and try again.");
-          } else {
-            // We have specific errors, let the form display them
-            alert("Please check form for errors");
-          }
-        })}
-        className="space-y-8 rounded-lg bg-white p-8 shadow-md"
-      >
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <div>
-            <label
-              htmlFor="templateName"
-              className="mb-1 block text-sm font-medium text-gray-700"
-            >
-              Template Name
-            </label>
-            <input
-              id="templateName"
-              {...register("templateName")}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-            />
-            {errors.templateName && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.templateName.message}
-              </p>
-            )}
-          </div>
-          <div>
-            <label
-              htmlFor="defaultTitleFormat"
-              className="mb-1 block text-sm font-medium text-gray-700"
-            >
-              Default Title Format
-            </label>
-            <input
-              id="defaultTitleFormat"
-              {...register("defaultTitleFormat")}
-              placeholder="e.g., Muay Thai Fight Night at {venueName}"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-            />
-            {errors.defaultTitleFormat && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.defaultTitleFormat.message}
-              </p>
-            )}
-          </div>
-          <div>
-            <label
-              htmlFor="regionId"
-              className="mb-1 block text-sm font-medium text-gray-700"
-            >
-              Region
-            </label>
-            <select
-              id="regionId"
-              {...register("regionId")}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-            >
-              <option value="">Select Region</option>
-              {regions.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name}
-                </option>
-              ))}
-            </select>
-            {errors.regionId && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.regionId.message}
-              </p>
-            )}
-          </div>
-          <div>
-            <label
-              htmlFor="venueId"
-              className="mb-1 block text-sm font-medium text-gray-700"
-            >
-              Venue
-            </label>
-            <select
-              id="venueId"
-              {...register("venueId")}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:bg-gray-100"
-              disabled={!selectedRegionId}
-            >
-              <option value="">Select Venue</option>
-              {filteredVenues.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.name}
-                </option>
-              ))}
-            </select>
-            {errors.venueId && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.venueId.message}
-              </p>
-            )}
-          </div>
-          <div className="md:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              Thumbnail Image (Optional, max 30KB)
-            </label>
-            <div className="mt-1 flex items-center space-x-4">
-              {thumbnailPreview && (
-                <div className="relative h-24 w-24 overflow-hidden rounded-md border border-gray-300">
-                  <Image
-                    src={thumbnailPreview}
-                    alt="Thumbnail preview"
-                    fill
-                    style={{ objectFit: "cover" }}
-                  />
-                </div>
+      {submitError && (
+        <div className="mb-4 rounded-md bg-red-50 p-4">
+          <p className="text-sm text-red-600">{submitError}</p>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* Basic Information */}
+        <div className="rounded-lg border bg-white p-6">
+          <h2 className="mb-4 text-lg font-semibold">Basic Information</h2>
+          
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Template Name *
+              </label>
+              <input
+                {...register("templateName")}
+                type="text"
+                placeholder="e.g., Weekly Lumpinee Event"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+              />
+              {errors.templateName && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.templateName.message}
+                </p>
               )}
-              <div className="flex-1">
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/gif,image/webp"
-                  onChange={handleThumbnailChange}
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-indigo-700 hover:file:bg-indigo-100"
-                />
-                <div className="mt-2 flex items-center">
-                  {thumbnailSize && (
-                    <span className="mr-2 inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-                      Size: {thumbnailSize}
-                    </span>
-                  )}
-                  <span className="text-xs text-gray-500">
-                    Accepted formats: JPEG, PNG, GIF, WEBP (max 30KB)
-                  </span>
-                </div>
-              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Default Title Format *
+              </label>
+              <input
+                {...register("defaultTitleFormat")}
+                type="text"
+                placeholder="e.g., Muay Thai Night - {date}"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+              />
+              {errors.defaultTitleFormat && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.defaultTitleFormat.message}
+                </p>
+              )}
             </div>
           </div>
-          <div className="md:col-span-2">
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              Recurrence Pattern
+
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700">
+              Default Description
             </label>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="flex items-center">
-                <input
-                  id="recurrence-none"
-                  type="radio"
-                  value="none"
-                  {...register("recurrenceType")}
-                  className="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                />
-                <label htmlFor="recurrence-none" className="ml-2 block text-sm text-gray-700">
-                  No recurrence
-                </label>
+            <textarea
+              {...register("defaultDescription")}
+              rows={3}
+              placeholder="Default description for events created from this template"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+            />
+          </div>
+        </div>
+
+        {/* Location */}
+        <div className="rounded-lg border bg-white p-6">
+          <h2 className="mb-4 text-lg font-semibold">Location</h2>
+          
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Region *
+              </label>
+              <select
+                {...register("regionId")}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+              >
+                <option value="">Select a region</option>
+                {regions.map((region) => (
+                  <option key={region.id} value={region.id}>
+                    {region.name}
+                  </option>
+                ))}
+              </select>
+              {errors.regionId && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.regionId.message}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Venue *
+              </label>
+              <select
+                {...register("venueId")}
+                disabled={!selectedRegionId}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 disabled:bg-gray-100"
+              >
+                <option value="">
+                  {selectedRegionId ? "Select a venue" : "Select region first"}
+                </option>
+                {filteredVenues.map((venue) => (
+                  <option key={venue.id} value={venue.id}>
+                    {venue.name}
+                  </option>
+                ))}
+              </select>
+              {errors.venueId && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.venueId.message}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Template Images */}
+        <div className="rounded-lg border bg-gray-50 p-6">
+          <h3 className="mb-4 text-lg font-semibold text-gray-900">Event Template Images</h3>
+          
+          {/* Thumbnail Upload - Ultra Small (30KB) */}
+          <div className="mb-6">
+            <h4 className="mb-2 text-md font-medium text-gray-800">Thumbnail</h4>
+            <p className="mb-4 text-sm text-gray-600">
+              Upload a thumbnail image that will be automatically compressed to 30KB or less. 
+              This ensures fast loading times in template listings.
+            </p>
+            <UploadUltraSmallImage
+              type="thumbnail"
+              entityType="event-templates"
+              value={thumbnailImage}
+              onChange={handleThumbnailChange}
+              label="Template Thumbnail (auto-compressed to 30KB)"
+              helpText="Recommended: Square images work best for thumbnails"
+              showInfo={true}
+            />
+          </div>
+
+          {/* Template Images Upload - Regular (120KB) */}
+          <div>
+            <h4 className="mb-2 text-md font-medium text-gray-800">Gallery Images</h4>
+            <p className="mb-4 text-sm text-gray-600">
+              Upload template images that will be automatically compressed to 120KB or less. 
+              You can upload up to 8 images to showcase your event template.
+            </p>
+            <UploadImage
+              type="images"
+              entityType="event-templates"
+              value={templateImages}
+              onChange={handleTemplateImagesChange}
+              maxImages={8}
+              label="Template Gallery Images (auto-compressed to 120KB each)"
+              helpText="Upload multiple images to showcase your event template"
+              showInfo={true}
+            />
+          </div>
+        </div>
+
+        {/* Image Summary */}
+        {(thumbnailImage || templateImages.length > 0) && (
+          <div className="rounded-lg border bg-blue-50 p-4">
+            <h4 className="mb-2 font-semibold text-blue-900">Upload Summary</h4>
+            <div className="grid grid-cols-1 gap-2 text-sm md:grid-cols-2">
+              <div>
+                <span className="font-medium">Thumbnail:</span>{" "}
+                {thumbnailImage ? (
+                  <span className="text-green-600">✓ Uploaded (30KB max)</span>
+                ) : (
+                  <span className="text-gray-500">Not uploaded</span>
+                )}
               </div>
-              <div className="flex items-center">
-                <input
-                  id="recurrence-weekly"
-                  type="radio"
-                  value="weekly"
-                  {...register("recurrenceType")}
-                  className="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                />
-                <label htmlFor="recurrence-weekly" className="ml-2 block text-sm text-gray-700">
-                  Weekly
-                </label>
-              </div>
-              <div className="flex items-center">
-                <input
-                  id="recurrence-monthly"
-                  type="radio"
-                  value="monthly"
-                  {...register("recurrenceType")}
-                  className="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                />
-                <label htmlFor="recurrence-monthly" className="ml-2 block text-sm text-gray-700">
-                  Monthly
-                </label>
+              <div>
+                <span className="font-medium">Gallery Images:</span>{" "}
+                {templateImages.length > 0 ? (
+                  <span className="text-green-600">✓ {templateImages.length} image(s) (120KB max each)</span>
+                ) : (
+                  <span className="text-gray-500">No images uploaded</span>
+                )}
               </div>
             </div>
-            {errors.recurrenceType && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.recurrenceType.message}
-              </p>
-            )}
           </div>
+        )}
+
+        {/* Recurrence Pattern */}
+        <div className="rounded-lg border bg-white p-6">
+          <h2 className="mb-4 text-lg font-semibold">Recurrence Pattern</h2>
+          
+          <div className="grid grid-cols-3 gap-4">
+            <div className="flex items-center">
+              <input
+                id="recurrence-none"
+                type="radio"
+                value="none"
+                {...register("recurrenceType")}
+                className="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <label htmlFor="recurrence-none" className="ml-2 block text-sm text-gray-700">
+                No recurrence
+              </label>
+            </div>
+            <div className="flex items-center">
+              <input
+                id="recurrence-weekly"
+                type="radio"
+                value="weekly"
+                {...register("recurrenceType")}
+                className="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <label htmlFor="recurrence-weekly" className="ml-2 block text-sm text-gray-700">
+                Weekly
+              </label>
+            </div>
+            <div className="flex items-center">
+              <input
+                id="recurrence-monthly"
+                type="radio"
+                value="monthly"
+                {...register("recurrenceType")}
+                className="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <label htmlFor="recurrence-monthly" className="ml-2 block text-sm text-gray-700">
+                Monthly
+              </label>
+            </div>
+          </div>
+          {errors.recurrenceType && (
+            <p className="mt-1 text-sm text-red-600">
+              {errors.recurrenceType.message}
+            </p>
+          )}
+
           {recurrenceType === "weekly" && (
-            <div className="md:col-span-2">
-              <label
-                htmlFor="recurringDaysOfWeek"
-                className="mb-2 block text-sm font-medium text-gray-700"
-              >
+            <div className="mt-4">
+              <label className="mb-2 block text-sm font-medium text-gray-700">
                 Days of Week
               </label>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -549,8 +497,9 @@ export default function CreateEventTemplatePage() {
               )}
             </div>
           )}
+
           {recurrenceType === "monthly" && (
-            <div className="md:col-span-2">
+            <div className="mt-4">
               <label className="mb-2 block text-sm font-medium text-gray-700">
                 Days of Month
               </label>
@@ -583,20 +532,17 @@ export default function CreateEventTemplatePage() {
               )}
             </div>
           )}
+
           {recurrenceType !== "none" && (
-            <>
+            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
-                <label
-                  htmlFor="startDate"
-                  className="mb-1 block text-sm font-medium text-gray-700"
-                >
+                <label className="block text-sm font-medium text-gray-700">
                   Start Date (Optional)
                 </label>
                 <input
-                  id="startDate"
                   type="date"
                   {...register("startDate")}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   From when the template should start generating events
@@ -607,19 +553,15 @@ export default function CreateEventTemplatePage() {
                   </p>
                 )}
               </div>
-              
+
               <div>
-                <label
-                  htmlFor="endDate"
-                  className="mb-1 block text-sm font-medium text-gray-700"
-                >
+                <label className="block text-sm font-medium text-gray-700">
                   End Date (Optional)
                 </label>
                 <input
-                  id="endDate"
                   type="date"
                   {...register("endDate")}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Until when the template should generate events (leave blank for no end date)
@@ -630,70 +572,72 @@ export default function CreateEventTemplatePage() {
                   </p>
                 )}
               </div>
-            </>
+            </div>
           )}
-          <div>
-            <label
-              htmlFor="defaultStartTime"
-              className="mb-1 block text-sm font-medium text-gray-700"
-            >
-              Default Start Time
-            </label>
-            <input
-              id="defaultStartTime"
-              type="time"
-              placeholder="HH:MM"
-              pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]"
-              {...register("defaultStartTime")}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-            />
-            <small className="text-xs text-gray-500">Format: HH:MM (24-hour)</small>
-            {errors.defaultStartTime && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.defaultStartTime.message}
-              </p>
-            )}
+        </div>
+
+        {/* Schedule */}
+        <div className="rounded-lg border bg-white p-6">
+          <h2 className="mb-4 text-lg font-semibold">Default Schedule</h2>
+          
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Default Start Time *
+              </label>
+              <input
+                type="time"
+                placeholder="HH:MM"
+                pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]"
+                {...register("defaultStartTime")}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+              />
+              <small className="text-xs text-gray-500">Format: HH:MM (24-hour)</small>
+              {errors.defaultStartTime && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.defaultStartTime.message}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Default End Time (Optional)
+              </label>
+              <input
+                type="time"
+                placeholder="HH:MM"
+                pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]"
+                {...register("defaultEndTime")}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+              />
+              <small className="text-xs text-gray-500">Format: HH:MM (24-hour)</small>
+              {errors.defaultEndTime && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.defaultEndTime.message}
+                </p>
+              )}
+            </div>
           </div>
-          <div>
-            <label
-              htmlFor="defaultEndTime"
-              className="mb-1 block text-sm font-medium text-gray-700"
-            >
-              Default End Time (Optional)
-            </label>
+
+          <div className="mt-4 flex items-center">
             <input
-              id="defaultEndTime"
-              type="time"
-              placeholder="HH:MM"
-              pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]"
-              {...register("defaultEndTime")}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              id="isActive"
+              type="checkbox"
+              {...register("isActive")}
+              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
             />
-            <small className="text-xs text-gray-500">Format: HH:MM (24-hour)</small>
-            {errors.defaultEndTime && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.defaultEndTime.message}
-              </p>
-            )}
+            <label
+              htmlFor="isActive"
+              className="ml-2 block text-sm font-medium text-gray-700"
+            >
+              Active Template
+            </label>
           </div>
         </div>
 
-        <div className="flex items-center border-t pt-6">
-          <input
-            id="isActive"
-            type="checkbox"
-            {...register("isActive")}
-            className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-          />
-          <label
-            htmlFor="isActive"
-            className="ml-2 block text-sm font-medium text-gray-700"
-          >
-            Active Template
-          </label>
-        </div>
-
-        <div className="border-t pt-6">
+        {/* Default Ticket Types */}
+        <div className="rounded-lg border bg-white p-6">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold">Default Ticket Types</h2>
             <button
@@ -813,25 +757,21 @@ export default function CreateEventTemplatePage() {
           </div>
         </div>
 
-        <div className="border-t pt-6">
-          {submitError && (
-            <p className="mb-4 text-sm text-red-600">Error: {submitError}</p>
-          )}
-          <div className="flex justify-end space-x-3">
-            <Link
-              href="/admin/event-templates"
-              className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
-            >
-              Cancel
-            </Link>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
-            >
-              {isSubmitting ? "Creating..." : "Create Template"}
-            </button>
-          </div>
+        {/* Submit Button */}
+        <div className="flex justify-end space-x-3">
+          <Link
+            href="/admin/event-templates"
+            className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Cancel
+          </Link>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {isSubmitting ? "Creating..." : "Create Template"}
+          </button>
         </div>
       </form>
     </div>

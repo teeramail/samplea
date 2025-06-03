@@ -40,6 +40,7 @@ export const regions = createTable("Region", {
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
   description: text("description"),
+  thumbnailUrl: text("thumbnailUrl"), // Add thumbnailUrl field
   imageUrls: text("imageUrls").array(), // Array of image URLs
   primaryImageIndex: integer("primaryImageIndex").default(0), // Index of primary image in the array
   // SEO Fields
@@ -473,6 +474,11 @@ export const eventTemplates = createTable("EventTemplate", {
     .references(() => regions.id, { onDelete: "restrict" }),
   defaultTitleFormat: text("defaultTitleFormat"),
   defaultDescription: text("defaultDescription"),
+
+  // --- Image Fields ---
+  thumbnailUrl: text("thumbnailUrl"), // Add thumbnail URL field
+  imageUrls: text("imageUrls").array(), // Add image URLs array field
+  // --- End Image Fields ---
 
   // --- Recurrence Fields ---
   recurrenceType: recurrenceTypeEnum("recurrenceType").default('none').notNull(),

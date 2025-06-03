@@ -1,21 +1,25 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import Image from "next/image";
-
-// Maximum file size: 120KB
-const MAX_FILE_SIZE = 120 * 1024;
-// Maximum number of images
-const MAX_IMAGES = 5;
+import Link from "next/link";
+import { api } from "~/trpc/react";
+import { UploadImage, type UploadedImageData } from "~/components/ui/UploadImage";
+import { UploadUltraSmallImage, type UploadedUltraSmallImageData } from "~/components/ui/UploadUltraSmallImage";
 
 const regionSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long"),
   slug: z.string().min(2, "Slug must be at least 2 characters long"),
   description: z.string().optional(),
+  thumbnailUrl: z.string().optional(),
+  imageUrls: z.array(z.string().url()).max(8).optional(),
+  primaryImageIndex: z.number().optional(),
+  metaTitle: z.string().optional(),
+  metaDescription: z.string().optional(),
+  keywords: z.array(z.string()).optional(),
 });
 
 // Function to convert a name to a URL-friendly slug
@@ -57,12 +61,11 @@ export default function CreateRegionPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [uploadingImages, setUploadingImages] = useState(false);
-  const [images, setImages] = useState<File[]>([]);
-  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  
+  // Upload states using our shared components
+  const [thumbnailImage, setThumbnailImage] = useState<UploadedUltraSmallImageData | undefined>(undefined);
+  const [regionImages, setRegionImages] = useState<UploadedImageData[]>([]);
   const [primaryImageIndex, setPrimaryImageIndex] = useState<number>(0);
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
     register,
@@ -76,6 +79,8 @@ export default function CreateRegionPage() {
       name: "",
       slug: "",
       description: "",
+      primaryImageIndex: 0,
+      keywords: [],
     },
   });
 
@@ -92,109 +97,51 @@ export default function CreateRegionPage() {
     setValue("slug", nameToSlug(regionName), { shouldValidate: true });
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-
-    const newFiles = Array.from(e.target.files);
-
-    // Check if we've reached max images
-    if (images.length + newFiles.length > MAX_IMAGES) {
-      setError(`You can only upload a maximum of ${MAX_IMAGES} images`);
-      return;
+  // Handle thumbnail upload change
+  const handleThumbnailChange = (data: UploadedUltraSmallImageData | UploadedUltraSmallImageData[] | null) => {
+    if (data && !Array.isArray(data)) {
+      setThumbnailImage(data);
+      setValue("thumbnailUrl", data.url);
+    } else {
+      setThumbnailImage(undefined);
+      setValue("thumbnailUrl", "");
     }
-
-    // Check file sizes and types
-    const validFiles = newFiles.filter((file) => {
-      // Check if it's an image
-      if (!file.type.startsWith("image/")) {
-        setError(`File ${file.name} is not an image`);
-        return false;
-      }
-
-      // Check file size
-      if (file.size > MAX_FILE_SIZE) {
-        setError(`File ${file.name} is too large. Maximum size is 120KB`);
-        return false;
-      }
-
-      return true;
-    });
-
-    if (validFiles.length === 0) return;
-
-    // Create image previews
-    const previews = validFiles.map((file) => URL.createObjectURL(file));
-
-    setImages((prev) => [...prev, ...validFiles]);
-    setImagePreviews((prev) => [...prev, ...previews]);
-
-    // Clear file input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-
-    // Clear error if successful
-    setError("");
   };
 
-  const removeImage = (index: number) => {
-    setImages((prev) => prev.filter((_, i) => i !== index));
-
-    // Add a null check before revoking the object URL
-    const previewUrl = imagePreviews[index];
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-    }
-    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
-
-    // Update primary image index if needed
-    if (primaryImageIndex === index) {
+  // Handle region images upload change
+  const handleRegionImagesChange = (data: UploadedImageData | UploadedImageData[] | null) => {
+    if (data) {
+      const imagesArray = Array.isArray(data) ? data : [data];
+      setRegionImages(imagesArray);
+      setValue("imageUrls", imagesArray.map(img => img.url));
+      
+      // Reset primary index if we have fewer images
+      if (primaryImageIndex >= imagesArray.length) {
+        setPrimaryImageIndex(0);
+        setValue("primaryImageIndex", 0);
+      }
+    } else {
+      setRegionImages([]);
+      setValue("imageUrls", []);
       setPrimaryImageIndex(0);
-    } else if (primaryImageIndex > index) {
-      setPrimaryImageIndex((prev) => prev - 1);
+      setValue("primaryImageIndex", 0);
     }
   };
 
-  const setPrimaryImage = (index: number) => {
+  // Handle primary image selection
+  const handlePrimaryImageChange = (index: number) => {
     setPrimaryImageIndex(index);
+    setValue("primaryImageIndex", index);
   };
 
-  const uploadImages = async (): Promise<string[]> => {
-    if (images.length === 0) return [];
-
-    setUploadingImages(true);
-
-    try {
-      const formData = new FormData();
-      formData.append("entityType", "region");
-
-      // Add each image to form data with the same field name
-      // Formidable will handle arrays of files with the same field name
-      images.forEach((file) => {
-        formData.append("images", file);
-      });
-
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = (await response.json()) as { error?: string };
-        throw new Error(errorData.error ?? "Failed to upload images");
-      }
-
-      const data = (await response.json()) as { urls?: string[] };
-      return data.urls ?? [];
-    } catch (error) {
-      console.error("Error uploading images:", error);
-      setError(
-        error instanceof Error ? error.message : "Failed to upload images",
-      );
-      return [];
-    } finally {
-      setUploadingImages(false);
-    }
+  // Handle keywords as comma-separated input
+  const handleKeywordsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const keywordsString = e.target.value;
+    const keywordsArray = keywordsString
+      .split(",")
+      .map(keyword => keyword.trim())
+      .filter(keyword => keyword.length > 0);
+    setValue("keywords", keywordsArray);
   };
 
   const onSubmit = async (data: RegionFormData) => {
@@ -202,76 +149,24 @@ export default function CreateRegionPage() {
     setError("");
 
     try {
-      // Upload images first if there are any
-      let urls: string[] = [];
-      if (images.length > 0) {
-        urls = await uploadImages();
-        if (urls.length === 0 && images.length > 0) {
-          // If we have images but no URLs, there was an error uploading
-          throw new Error("Failed to upload images");
-        }
-      }
-
+      // Include image URLs in the region data - images are already uploaded!
       const regionData = {
         ...data,
-        imageUrls: urls.length > 0 ? urls : undefined,
-        primaryImageIndex: urls.length > 0 ? primaryImageIndex : undefined,
+        thumbnailUrl: thumbnailImage?.url || "",
+        imageUrls: regionImages.map(img => img.url),
+        primaryImageIndex: regionImages.length > 0 ? primaryImageIndex : 0,
       };
 
-      console.log("Submitting region data:", regionData);
+      // Create region using tRPC
+      const createRegion = api.region.create.useMutation();
+      await createRegion.mutateAsync(regionData);
 
-      const response = await fetch("/api/regions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(regionData),
-      });
-
-      // Parse the JSON response
-      let responseData: {
-        error?: string;
-        details?: string;
-        id?: string;
-      } | null = null;
-      try {
-        responseData = (await response.json()) as {
-          error?: string;
-          details?: string;
-          id?: string;
-        };
-      } catch (e) {
-        console.error("Failed to parse response as JSON:", e);
-        responseData = { error: "Failed to parse server response" };
-      }
-
-      console.log("Response status:", response.status);
-      console.log("Response data:", responseData);
-
-      if (!response.ok) {
-        let errorMessage = "Failed to create region";
-        if (responseData?.error) {
-          errorMessage = responseData.error;
-        } else if (responseData?.details) {
-          errorMessage = responseData.details;
-        } else if (response.status === 500) {
-          errorMessage = "Server error. Please try again later.";
-        } else if (response.status === 400) {
-          errorMessage = "Invalid data submitted. Please check your inputs.";
-        }
-
-        throw new Error(errorMessage);
-      }
-
-      console.log("Region created successfully:", responseData);
+      // Redirect to regions list
       router.push("/admin/regions");
-      router.refresh();
     } catch (error) {
       console.error("Error creating region:", error);
       setError(
-        error instanceof Error
-          ? error.message
-          : "Failed to create region. Please try again.",
+        error instanceof Error ? error.message : "Failed to create region"
       );
     } finally {
       setIsLoading(false);
@@ -279,70 +174,39 @@ export default function CreateRegionPage() {
   };
 
   return (
-    <div className="rounded-lg bg-white p-6 shadow-md">
-      <h1 className="mb-6 text-2xl font-bold text-gray-800">Add New Region</h1>
+    <div className="mx-auto max-w-4xl p-6">
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-3xl font-bold text-gray-900">Create New Region</h1>
+        <Link
+          href="/admin/regions"
+          className="rounded bg-gray-500 px-4 py-2 text-white hover:bg-gray-600"
+        >
+          Back to Regions
+        </Link>
+      </div>
 
       {error && (
-        <div
-          className="mb-4 rounded border border-red-400 bg-red-100 px-4 py-3 text-red-700"
-          role="alert"
-        >
-          <span className="block sm:inline">{error}</span>
+        <div className="mb-4 rounded-md bg-red-50 p-4">
+          <p className="text-sm text-red-600">{error}</p>
         </div>
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <div>
-          <label
-            htmlFor="name"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Region Name
-          </label>
-          <input
-            id="name"
-            type="text"
-            {...register("name")}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-            placeholder="e.g., Bangkok, Phuket"
-          />
-          {errors.name && (
-            <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
-          )}
-        </div>
-
-        <div>
-          <label
-            htmlFor="slug"
-            className="block text-sm font-medium text-gray-700"
-          >
-            URL Slug (used in website URLs)
-          </label>
-          <input
-            id="slug"
-            type="text"
-            {...register("slug")}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-          />
-          {errors.slug && (
-            <p className="mt-1 text-sm text-red-600">{errors.slug.message}</p>
-          )}
-          <p className="mt-1 text-sm text-gray-500">
-            This will be used in URLs like: /region/your-slug
+        {/* Quick Thai Region Presets */}
+        <div className="rounded-lg border bg-blue-50 p-6">
+          <h3 className="mb-4 text-lg font-semibold text-blue-900">
+            Quick Thai Region Presets
+          </h3>
+          <p className="mb-4 text-sm text-blue-700">
+            Click on any region below to auto-fill the name and slug:
           </p>
-        </div>
-
-        <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
-            Common Regions in Thailand
-          </label>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
             {THAI_REGIONS.map((region) => (
               <button
                 key={region}
                 type="button"
                 onClick={() => setPresetRegion(region)}
-                className="inline-flex items-center rounded-md border border-transparent bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                className="rounded-md bg-blue-100 px-3 py-2 text-sm text-blue-800 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {region}
               </button>
@@ -350,131 +214,242 @@ export default function CreateRegionPage() {
           </div>
         </div>
 
-        <div>
-          <label
-            htmlFor="description"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Description (optional)
-          </label>
-          <textarea
-            id="description"
-            rows={3}
-            {...register("description")}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-            placeholder="Brief description of the region"
-          />
-          {errors.description && (
-            <p className="mt-1 text-sm text-red-600">
-              {errors.description.message}
-            </p>
-          )}
-        </div>
+        {/* Basic Information */}
+        <div className="rounded-lg border bg-white p-6">
+          <h2 className="mb-4 text-lg font-semibold">Basic Information</h2>
+          
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Region Name *
+              </label>
+              <input
+                {...register("name")}
+                type="text"
+                placeholder="e.g., Bangkok"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+              />
+              {errors.name && (
+                <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+              )}
+            </div>
 
-        {/* Image Upload Section */}
-        <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
-            Images (optional, max 5)
-          </label>
-          <div className="mt-1 flex justify-center rounded-md border-2 border-dashed border-gray-300 px-6 pb-6 pt-5">
-            <div className="space-y-1 text-center">
-              <svg
-                className="mx-auto h-12 w-12 text-gray-400"
-                stroke="currentColor"
-                fill="none"
-                viewBox="0 0 48 48"
-                aria-hidden="true"
-              >
-                <path
-                  d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <div className="flex text-sm text-gray-600">
-                <label
-                  htmlFor="file-upload"
-                  className="relative cursor-pointer rounded-md bg-white font-medium text-blue-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-2 hover:text-blue-500"
-                >
-                  <span>Upload images</span>
-                  <input
-                    id="file-upload"
-                    ref={fileInputRef}
-                    name="file-upload"
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleFileChange}
-                    className="sr-only"
-                    disabled={images.length >= MAX_IMAGES}
-                  />
-                </label>
-                <p className="pl-1">or drag and drop</p>
-              </div>
-              <p className="text-xs text-gray-500">PNG, JPG, GIF up to 120KB</p>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                URL Slug *
+              </label>
+              <input
+                {...register("slug")}
+                type="text"
+                placeholder="e.g., bangkok"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+              />
+              {errors.slug && (
+                <p className="mt-1 text-sm text-red-600">{errors.slug.message}</p>
+              )}
+              <p className="mt-1 text-xs text-gray-500">
+                Used in URLs. Auto-generated from name, but you can customize it.
+              </p>
             </div>
           </div>
 
-          {/* Image Previews */}
-          {imagePreviews.length > 0 && (
-            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
-              {imagePreviews.map((preview, index) => (
-                <div key={index} className="group relative">
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700">
+              Description
+            </label>
+            <textarea
+              {...register("description")}
+              rows={4}
+              placeholder="Describe this region..."
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+            />
+            {errors.description && (
+              <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>
+            )}
+          </div>
+        </div>
+
+        {/* Region Images */}
+        <div className="rounded-lg border bg-gray-50 p-6">
+          <h3 className="mb-4 text-lg font-semibold text-gray-900">Region Images</h3>
+          
+          {/* Thumbnail Upload - Ultra Small (30KB) */}
+          <div className="mb-6">
+            <h4 className="mb-2 text-md font-medium text-gray-800">Thumbnail</h4>
+            <p className="mb-4 text-sm text-gray-600">
+              Upload a thumbnail image that will be automatically compressed to 30KB or less. 
+              This ensures fast loading times in region listings.
+            </p>
+            <UploadUltraSmallImage
+              type="thumbnail"
+              entityType="regions"
+              value={thumbnailImage}
+              onChange={handleThumbnailChange}
+              label="Region Thumbnail (auto-compressed to 30KB)"
+              helpText="Recommended: Square images work best for thumbnails"
+              showInfo={true}
+            />
+          </div>
+
+          {/* Region Images Upload - Regular (120KB) */}
+          <div>
+            <h4 className="mb-2 text-md font-medium text-gray-800">Gallery Images</h4>
+            <p className="mb-4 text-sm text-gray-600">
+              Upload region images that will be automatically compressed to 120KB or less. 
+              You can upload up to 8 images to showcase your region.
+            </p>
+            <UploadImage
+              type="images"
+              entityType="regions"
+              value={regionImages}
+              onChange={handleRegionImagesChange}
+              maxImages={8}
+              label="Region Gallery Images (auto-compressed to 120KB each)"
+              helpText="Upload multiple images to showcase your region"
+              showInfo={true}
+            />
+          </div>
+
+          {/* Primary Image Selection */}
+          {regionImages.length > 1 && (
+            <div className="mt-6">
+              <h4 className="mb-2 text-md font-medium text-gray-800">Primary Image</h4>
+              <p className="mb-4 text-sm text-gray-600">
+                Select which image should be the primary display image for this region.
+              </p>
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+                {regionImages.map((image, index) => (
                   <div
-                    className={`aspect-w-16 aspect-h-9 relative overflow-hidden rounded-md border-2 ${index === primaryImageIndex ? "border-blue-500" : "border-gray-200"}`}
+                    key={index}
+                    className={`relative cursor-pointer rounded-lg border-2 p-2 ${
+                      primaryImageIndex === index
+                        ? "border-indigo-500 bg-indigo-50"
+                        : "border-gray-200 bg-white hover:border-gray-300"
+                    }`}
+                    onClick={() => handlePrimaryImageChange(index)}
                   >
                     <img
-                      src={preview}
-                      alt={`Preview ${index + 1}`}
-                      className="h-full w-full object-cover"
+                      src={image.url}
+                      alt={`Region image ${index + 1}`}
+                      className="h-20 w-full rounded object-cover"
                     />
-                  </div>
-
-                  <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 opacity-0 transition-opacity group-hover:bg-opacity-40 group-hover:opacity-100">
-                    <button
-                      type="button"
-                      onClick={() => setPrimaryImage(index)}
-                      className="mx-1 rounded-md bg-blue-500 p-1 text-white"
-                      title="Set as primary image"
-                    >
-                      Primary
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => removeImage(index)}
-                      className="mx-1 rounded-md bg-red-500 p-1 text-white"
-                      title="Remove image"
-                    >
-                      Remove
-                    </button>
-                  </div>
-
-                  {index === primaryImageIndex && (
-                    <div className="absolute left-2 top-2 rounded bg-blue-500 px-2 py-1 text-xs text-white">
-                      Primary
+                    <div className="mt-2 text-center">
+                      <span
+                        className={`text-xs ${
+                          primaryImageIndex === index
+                            ? "font-semibold text-indigo-700"
+                            : "text-gray-500"
+                        }`}
+                      >
+                        {primaryImageIndex === index ? "★ Primary" : `Image ${index + 1}`}
+                      </span>
                     </div>
-                  )}
-                </div>
-              ))}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
 
-        <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={() => router.push("/admin/regions")}
-            className="mr-3 rounded-md border border-gray-300 bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+        {/* Image Summary */}
+        {(thumbnailImage || regionImages.length > 0) && (
+          <div className="rounded-lg border bg-blue-50 p-4">
+            <h4 className="mb-2 font-semibold text-blue-900">Upload Summary</h4>
+            <div className="grid grid-cols-1 gap-2 text-sm md:grid-cols-3">
+              <div>
+                <span className="font-medium">Thumbnail:</span>{" "}
+                {thumbnailImage ? (
+                  <span className="text-green-600">✓ Uploaded (30KB max)</span>
+                ) : (
+                  <span className="text-gray-500">Not uploaded</span>
+                )}
+              </div>
+              <div>
+                <span className="font-medium">Gallery Images:</span>{" "}
+                {regionImages.length > 0 ? (
+                  <span className="text-green-600">✓ {regionImages.length} image(s) (120KB max each)</span>
+                ) : (
+                  <span className="text-gray-500">No images uploaded</span>
+                )}
+              </div>
+              <div>
+                <span className="font-medium">Primary Image:</span>{" "}
+                {regionImages.length > 0 ? (
+                  <span className="text-green-600">✓ Image #{primaryImageIndex + 1}</span>
+                ) : (
+                  <span className="text-gray-500">No primary image</span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* SEO Information */}
+        <div className="rounded-lg border bg-white p-6">
+          <h2 className="mb-4 text-lg font-semibold">SEO Information</h2>
+          
+          <div className="grid grid-cols-1 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Meta Title
+              </label>
+              <input
+                {...register("metaTitle")}
+                type="text"
+                placeholder="SEO title for search engines"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Optimal length: 50-60 characters
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Meta Description
+              </label>
+              <textarea
+                {...register("metaDescription")}
+                rows={3}
+                placeholder="Brief description for search engines"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Optimal length: 150-160 characters
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Keywords
+              </label>
+              <input
+                type="text"
+                onChange={handleKeywordsChange}
+                placeholder="muay thai, bangkok, thailand (comma separated)"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Separate keywords with commas
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Submit Button */}
+        <div className="flex justify-end space-x-3">
+          <Link
+            href="/admin/regions"
+            className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             Cancel
-          </button>
+          </Link>
           <button
             type="submit"
-            disabled={isLoading ?? uploadingImages}
-            className="rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            disabled={isLoading}
+            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
           >
-            {isLoading ?? uploadingImages ? "Creating..." : "Create Region"}
+            {isLoading ? "Creating..." : "Create Region"}
           </button>
         </div>
       </form>
