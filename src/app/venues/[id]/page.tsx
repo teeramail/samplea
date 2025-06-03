@@ -1,8 +1,19 @@
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
+import { format } from "date-fns";
+import { 
+  MapPinIcon, 
+  BuildingLibraryIcon, 
+  CalendarIcon,
+  ClockIcon,
+  UserGroupIcon,
+  GlobeAltIcon,
+  TagIcon
+} from "@heroicons/react/24/outline";
 import { db } from "~/server/db";
-import { eq } from "drizzle-orm";
-import { venues, events } from "~/server/db/schema";
+import { eq, and, or, gt, lte, sql } from "drizzle-orm";
+import { venues } from "~/server/db/schema";
 
 export default async function VenueDetailPage({
   params,
@@ -11,125 +22,340 @@ export default async function VenueDetailPage({
 }) {
   const { id } = await params;
 
+  // Fetch venue with all related data
   const venue = await db.query.venues.findFirst({
     where: eq(venues.id, id),
+    with: {
+      region: true,
+      venueTypes: {
+        with: {
+          venueType: true,
+        },
+      },
+      events: {
+        where: (events) => {
+          const now = new Date();
+          return gt(events.date, now);
+        },
+        orderBy: (events, { asc }) => [asc(events.date)],
+        limit: 6,
+        with: {
+          region: true,
+        },
+      },
+      trainingCourses: {
+        where: (courses) => eq(courses.isActive, true),
+        orderBy: (courses, { desc }) => [desc(courses.updatedAt)],
+        limit: 4,
+        with: {
+          instructor: true,
+        },
+      },
+    },
   });
 
   if (!venue) {
     return notFound();
   }
 
-  // Get events at this venue
-  const venueEvents = await db.query.events.findMany({
-    where: (events, { gt, and, or, lte, eq: equals }) => {
-      const now = new Date();
-      const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
-
-      return and(
-        equals(events.venueId, venue.id),
-        or(
-          gt(events.date, now),
-          and(
-            gt(events.startTime, fifteenMinutesAgo),
-            lte(events.startTime, now),
-          ),
-        ),
-      );
-    },
-    orderBy: (events, { desc }) => [desc(events.date)],
-  });
-
   const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    return format(new Date(date), "MMM dd, yyyy");
   };
 
+  const formatTime = (time: Date) => {
+    return format(new Date(time), "h:mm a");
+  };
+
+  const socialMediaLinks = venue.socialMediaLinks as Record<string, string> | null;
+
   return (
-    <main className="container mx-auto px-4 py-8">
-      <div className="overflow-hidden rounded-lg bg-white shadow-lg">
-        <div className="p-6">
-          <h1 className="text-3xl font-bold text-gray-800">{venue.name}</h1>
-          <p className="mt-2 text-gray-600">{venue.address}</p>
-
-          <div className="mt-4 flex flex-wrap gap-4">
-            {venue.capacity && (
-              <div className="rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800">
-                Capacity: {venue.capacity}
-              </div>
-            )}
+    <main className="min-h-screen bg-gradient-to-b from-[#2e026d] to-[#15162c] text-white">
+      {/* Header Section */}
+      <div className="relative">
+        {venue.thumbnailUrl ? (
+          <div className="relative h-80 w-full">
+            <Image
+              src={venue.thumbnailUrl}
+              alt={venue.name}
+              fill
+              className="object-cover"
+              priority
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#15162c] via-[#15162c]/50 to-transparent" />
           </div>
-
-          <div className="mt-8">
-            <h2 className="mb-4 text-2xl font-semibold text-gray-800">
-              Upcoming Events
-            </h2>
-
-            {venueEvents.length > 0 ? (
-              <div className="space-y-4">
-                {venueEvents.map((event) => (
-                  <div
-                    key={event.id}
-                    className="rounded-lg border border-gray-200 p-4 hover:bg-gray-50"
-                  >
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-medium text-gray-800">
-                        {event.title}
-                      </h3>
-                      <span className="text-sm text-gray-500">
-                        {formatDate(event.date)}
-                      </span>
-                    </div>
-
-                    <div className="mt-2">
-                      <Link
-                        href={`/events/${event.id}`}
-                        className="text-sm font-medium text-blue-600 hover:underline"
-                      >
-                        View Event Details
-                      </Link>
-                    </div>
-                  </div>
-                ))}
+        ) : (
+          <div className="flex h-80 w-full items-center justify-center bg-white/10">
+            <BuildingLibraryIcon className="h-32 w-32 text-white/30" />
+          </div>
+        )}
+        
+        {/* Venue Info Overlay */}
+        <div className="absolute bottom-0 left-0 right-0 p-8">
+          <div className="container mx-auto">
+            <div className="flex flex-wrap items-center gap-3 mb-4">
+              {venue.venueTypes.map((vt) => (
+                <span
+                  key={vt.venueType.id}
+                  className="inline-flex items-center rounded-full bg-[hsl(280,70%,30%)] px-3 py-1 text-sm font-medium text-white"
+                >
+                  <TagIcon className="mr-1 h-4 w-4" />
+                  {vt.venueType.name}
+                </span>
+              ))}
+              {venue.isFeatured && (
+                <span className="inline-flex items-center rounded-full bg-[hsl(280,100%,70%)] px-3 py-1 text-sm font-medium text-white">
+                  ⭐ Featured
+                </span>
+              )}
+            </div>
+            <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl">
+              {venue.name}
+            </h1>
+            {venue.region && (
+              <div className="mt-2 flex items-center text-xl text-gray-300">
+                <MapPinIcon className="mr-2 h-5 w-5" />
+                <span>{venue.region.name}</span>
               </div>
-            ) : (
-              <p className="text-gray-500">No upcoming events at this venue.</p>
             )}
           </div>
         </div>
       </div>
 
-      <div className="mt-6 flex gap-4">
-        <Link
-          href="/venues"
-          className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-200"
-        >
-          <svg
-            className="me-2 h-3.5 w-3.5 rotate-180"
-            aria-hidden="true"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 14 10"
-          >
-            <path
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M1 5h12m0 0L9 1m4 4L9 9"
-            />
-          </svg>
-          Back to Venues
-        </Link>
+      <div className="container mx-auto px-4 py-8">
+        {/* Venue Details */}
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+          {/* Main Content */}
+          <div className="lg:col-span-2">
+            {/* Basic Information */}
+            <section className="mb-8 rounded-lg bg-white/10 p-6">
+              <h2 className="mb-4 text-2xl font-bold">Venue Information</h2>
+              <div className="space-y-3">
+                <div className="flex items-start">
+                  <MapPinIcon className="mr-3 mt-1 h-5 w-5 text-gray-400" />
+                  <span className="text-gray-300">{venue.address}</span>
+                </div>
+                
+                {venue.capacity && (
+                  <div className="flex items-center">
+                    <UserGroupIcon className="mr-3 h-5 w-5 text-gray-400" />
+                    <span className="text-gray-300">Capacity: {venue.capacity} people</span>
+                  </div>
+                )}
 
-        <Link
-          href="/"
-          className="inline-flex items-center rounded-lg bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300"
-        >
-          Home
-        </Link>
+                {venue.googleMapsUrl && (
+                  <div className="flex items-center">
+                    <GlobeAltIcon className="mr-3 h-5 w-5 text-gray-400" />
+                    <a
+                      href={venue.googleMapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)] hover:underline"
+                    >
+                      View on Google Maps
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              {venue.remarks && (
+                <div className="mt-6">
+                  <h3 className="mb-2 text-lg font-semibold">About</h3>
+                  <p className="text-gray-300">{venue.remarks}</p>
+                </div>
+              )}
+            </section>
+
+            {/* Training Courses */}
+            {venue.trainingCourses && venue.trainingCourses.length > 0 && (
+              <section className="mb-8 rounded-lg bg-white/10 p-6">
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="text-2xl font-bold">Training Courses</h2>
+                  <Link
+                    href="/courses"
+                    className="text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]"
+                  >
+                    View All &rarr;
+                  </Link>
+                </div>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {venue.trainingCourses.map((course) => (
+                    <Link
+                      key={course.id}
+                      href={`/courses/${course.slug}`}
+                      className="block rounded-lg bg-white/5 p-4 transition-colors hover:bg-white/10"
+                    >
+                      <h3 className="mb-2 font-semibold text-[hsl(280,100%,70%)]">
+                        {course.title}
+                      </h3>
+                      <p className="mb-2 line-clamp-2 text-sm text-gray-300">
+                        {course.description}
+                      </p>
+                      {course.instructor && (
+                        <p className="text-sm text-gray-400">
+                          Instructor: {course.instructor.name}
+                        </p>
+                      )}
+                      <div className="mt-2 flex items-center justify-between">
+                        <span className="text-lg font-bold text-[hsl(280,100%,70%)]">
+                          ${course.price.toFixed(2)}
+                        </span>
+                        {course.duration && (
+                          <span className="text-sm text-gray-400">
+                            {course.duration}
+                          </span>
+                        )}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Upcoming Events */}
+            <section className="mb-8 rounded-lg bg-white/10 p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-2xl font-bold">Upcoming Events</h2>
+                <Link
+                  href="/events"
+                  className="text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]"
+                >
+                  View All &rarr;
+                </Link>
+              </div>
+
+              {venue.events && venue.events.length > 0 ? (
+                <div className="space-y-4">
+                  {venue.events.map((event) => (
+                    <Link
+                      key={event.id}
+                      href={`/events/${event.id}`}
+                      className="block rounded-lg bg-white/5 p-4 transition-colors hover:bg-white/10"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h3 className="mb-2 text-lg font-semibold text-[hsl(280,100%,70%)]">
+                            {event.title}
+                          </h3>
+                          {event.description && (
+                            <p className="mb-2 line-clamp-2 text-sm text-gray-300">
+                              {event.description}
+                            </p>
+                          )}
+                          <div className="flex flex-wrap gap-4 text-sm text-gray-400">
+                            <div className="flex items-center">
+                              <CalendarIcon className="mr-1 h-4 w-4" />
+                              {formatDate(event.date)}
+                            </div>
+                            <div className="flex items-center">
+                              <ClockIcon className="mr-1 h-4 w-4" />
+                              {formatTime(event.startTime)}
+                            </div>
+                          </div>
+                        </div>
+                        {event.thumbnailUrl && (
+                          <div className="ml-4 h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg">
+                            <Image
+                              src={event.thumbnailUrl}
+                              alt={event.title}
+                              width={64}
+                              height={64}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-400">No upcoming events at this venue.</p>
+              )}
+            </section>
+          </div>
+
+          {/* Sidebar */}
+          <div className="lg:col-span-1">
+            {/* Social Media Links */}
+            {socialMediaLinks && Object.keys(socialMediaLinks).length > 0 && (
+              <section className="mb-8 rounded-lg bg-white/10 p-6">
+                <h3 className="mb-4 text-xl font-bold">Connect With Us</h3>
+                <div className="space-y-3">
+                  {Object.entries(socialMediaLinks).map(([platform, url]) => (
+                    <a
+                      key={platform}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)] hover:underline"
+                    >
+                      <GlobeAltIcon className="mr-2 h-4 w-4" />
+                      {platform.charAt(0).toUpperCase() + platform.slice(1)}
+                    </a>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Additional Images */}
+            {venue.imageUrls && venue.imageUrls.length > 0 && (
+              <section className="mb-8 rounded-lg bg-white/10 p-6">
+                <h3 className="mb-4 text-xl font-bold">Gallery</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {venue.imageUrls.slice(0, 4).map((imageUrl, index) => (
+                    <div
+                      key={index}
+                      className="relative aspect-square overflow-hidden rounded-lg"
+                    >
+                      <Image
+                        src={imageUrl}
+                        alt={`${venue.name} - Image ${index + 1}`}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  ))}
+                </div>
+                {venue.imageUrls.length > 4 && (
+                  <p className="mt-2 text-sm text-gray-400">
+                    +{venue.imageUrls.length - 4} more images
+                  </p>
+                )}
+              </section>
+            )}
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <div className="mt-8 flex flex-wrap gap-4">
+          <Link
+            href="/venues"
+            className="inline-flex items-center rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/20 focus:outline-none focus:ring-4 focus:ring-white/20"
+          >
+            <svg
+              className="me-2 h-3.5 w-3.5 rotate-180"
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 14 10"
+            >
+              <path
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M1 5h12m0 0L9 1m4 4L9 9"
+              />
+            </svg>
+            Back to Venues
+          </Link>
+
+          <Link
+            href="/"
+            className="inline-flex items-center rounded-lg bg-[hsl(280,100%,70%)] px-4 py-2 text-sm font-medium text-white hover:bg-[hsl(280,100%,80%)] focus:outline-none focus:ring-4 focus:ring-[hsl(280,100%,70%)]/25"
+          >
+            Home
+          </Link>
+        </div>
       </div>
     </main>
   );
