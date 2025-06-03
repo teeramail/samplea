@@ -1,12 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { UploadImage, type UploadedImageData } from "~/components/ui/UploadImage";
+import { UploadUltraSmallImage, type UploadedUltraSmallImageData } from "~/components/ui/UploadUltraSmallImage";
 
 const venueSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long"),
@@ -20,7 +18,7 @@ const venueSchema = z.object({
     z.string().max(0),
     z.null(),
     z.undefined(),
-  ]),
+  ]).optional(),
   remarks: z.string().optional(),
   socialMediaLinks: z
     .object({
@@ -53,100 +51,51 @@ const venueSchema = z.object({
     .optional(),
   venueTypeIds: z.array(z.string()).min(1, "Select at least one venue type"),
   primaryVenueTypeId: z.string().optional(),
+  thumbnailUrl: z.string().url().optional(),
+  imageUrls: z.array(z.string().url()).max(8).optional(),
 });
 
-type VenueFormData = Omit<
-  z.infer<typeof venueSchema>,
-  "thumbnailUrl" | "imageUrls"
->;
-
-type UploadResponse = {
-  urls: string[];
-};
-
-async function uploadFile(
-  file: File,
-  isThumbnail: boolean,
-): Promise<string | null> {
-  const formData = new FormData();
-  formData.append("image", file);
-
-  try {
-    const endpoint = isThumbnail
-      ? "/api/upload-thumbnail"
-      : "/api/upload-venue-images";
-    const response = await fetch(endpoint, {
-      method: "POST",
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Upload failed with status:", response.status, errorText);
-      return null;
-    }
-
-    const result = (await response.json()) as UploadResponse;
-    if (result.urls && Array.isArray(result.urls) && result.urls.length > 0) {
-      return result.urls[0] ?? null;
-    } else {
-      console.error(
-        "Upload API response missing urls or urls array is empty:",
-        result,
-      );
-      return null;
-    }
-  } catch (error) {
-    console.error("Error during file upload fetch:", error);
-    return null;
-  }
-}
+type VenueFormData = z.infer<typeof venueSchema>;
 
 export default function CreateVenuePage() {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [formData, setFormData] = useState<VenueFormData>({
+    name: "",
+    address: "",
+    capacity: 0,
+    regionId: "",
+    latitude: undefined,
+    longitude: undefined,
+    googleMapsUrl: "",
+    remarks: "",
+    socialMediaLinks: {
+      facebook: "",
+      instagram: "",
+      tiktok: "",
+      twitter: "",
+      youtube: "",
+    },
+    venueTypeIds: [],
+    primaryVenueTypeId: "",
+    thumbnailUrl: "",
+    imageUrls: [],
+  });
+
+  // Upload states using our shared components
+  const [thumbnailImage, setThumbnailImage] = useState<UploadedUltraSmallImageData | undefined>(undefined);
+  const [venueImages, setVenueImages] = useState<UploadedImageData[]>([]);
+
   const [regions, setRegions] = useState<{ id: string; name: string }[]>([]);
   const [venueTypes, setVenueTypes] = useState<
     { id: string; name: string; description: string }[]
   >([]);
   const [isLoadingRegions, setIsLoadingRegions] = useState(true);
   const [isLoadingVenueTypes, setIsLoadingVenueTypes] = useState(true);
-  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
-  const [imageFiles, setImageFiles] = useState<File[]>([]);
-  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [selectedVenueTypes, setSelectedVenueTypes] = useState<string[]>([]);
   const [primaryVenueType, setPrimaryVenueType] = useState<string>("");
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    setValue,
-    watch,
-  } = useForm<VenueFormData>({
-    resolver: zodResolver(venueSchema),
-    defaultValues: {
-      name: "",
-      address: "",
-      capacity: 0,
-      regionId: "",
-      latitude: undefined,
-      longitude: undefined,
-      googleMapsUrl: "",
-      remarks: "",
-      socialMediaLinks: {
-        facebook: "",
-        instagram: "",
-        tiktok: "",
-        twitter: "",
-        youtube: "",
-      },
-      venueTypeIds: [],
-      primaryVenueTypeId: "",
-    },
-  });
+  const [uploadStatus, setUploadStatus] = useState<string>("");
+  const [errors, setErrors] = useState<Record<string, string | null>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchRegions = async () => {
@@ -160,7 +109,7 @@ export default function CreateVenuePage() {
         setRegions(data);
       } catch (error) {
         console.error("Error fetching regions:", error);
-        setError("Failed to load regions. Please try again later.");
+        setErrors({ form: "Failed to load regions. Please try again later." });
       } finally {
         setIsLoadingRegions(false);
       }
@@ -181,7 +130,7 @@ export default function CreateVenuePage() {
         setVenueTypes(data);
       } catch (error) {
         console.error("Error fetching venue types:", error);
-        setError("Failed to load venue types. Please try again later.");
+        setErrors({ form: "Failed to load venue types. Please try again later." });
       } finally {
         setIsLoadingVenueTypes(false);
       }
@@ -190,6 +139,33 @@ export default function CreateVenuePage() {
     void fetchRegions();
     void fetchVenueTypes();
   }, []);
+
+  // Handle form input changes
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { name, value, type } = e.target;
+    
+    if (type === "checkbox") {
+      const checked = (e.target as HTMLInputElement).checked;
+      setFormData((prev) => ({ ...prev, [name]: checked }));
+    } else if (name === "capacity") {
+      setFormData((prev) => ({ ...prev, [name]: parseFloat(value) || 0 }));
+    } else if (name === "latitude" || name === "longitude") {
+      setFormData((prev) => ({ ...prev, [name]: value ? parseFloat(value) : undefined }));
+    } else if (name.startsWith("socialMediaLinks.")) {
+      const field = name.split(".")[1];
+      setFormData((prev) => ({
+        ...prev,
+        socialMediaLinks: {
+          ...prev.socialMediaLinks,
+          [field!]: value,
+        },
+      }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
+  };
 
   // Handle venue type selection
   const handleVenueTypeChange = (typeId: string) => {
@@ -210,117 +186,95 @@ export default function CreateVenuePage() {
     });
   };
 
-  // Update form values when venue types change
+  // Update form data when venue types change
   useEffect(() => {
-    setValue("venueTypeIds", selectedVenueTypes);
-    setValue("primaryVenueTypeId", primaryVenueType);
-  }, [selectedVenueTypes, primaryVenueType, setValue]);
+    setFormData((prev) => ({
+      ...prev,
+      venueTypeIds: selectedVenueTypes,
+      primaryVenueTypeId: primaryVenueType,
+    }));
+  }, [selectedVenueTypes, primaryVenueType]);
 
-  const handleThumbnailChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setThumbnailFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setThumbnailPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+  // Handle thumbnail upload change
+  const handleThumbnailChange = (data: UploadedUltraSmallImageData | UploadedUltraSmallImageData[] | null) => {
+    if (data && !Array.isArray(data)) {
+      setThumbnailImage(data);
+      setFormData(prev => ({ ...prev, thumbnailUrl: data.url }));
+      setErrors(prev => ({ ...prev, thumbnail: null }));
     } else {
-      setThumbnailFile(null);
-      setThumbnailPreview(null);
+      setThumbnailImage(undefined);
+      setFormData(prev => ({ ...prev, thumbnailUrl: "" }));
     }
   };
 
-  const handleImagesChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files ? Array.from(e.target.files) : [];
-    setImageFiles(files);
-
-    const newPreviews: string[] = [];
-    files.forEach((file) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        newPreviews.push(reader.result as string);
-        if (newPreviews.length === files.length) {
-          setImagePreviews(newPreviews);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
-    if (files.length === 0) {
-      setImagePreviews([]);
+  // Handle venue images upload change
+  const handleVenueImagesChange = (data: UploadedImageData | UploadedImageData[] | null) => {
+    if (data) {
+      const imagesArray = Array.isArray(data) ? data : [data];
+      setVenueImages(imagesArray);
+      setFormData(prev => ({ ...prev, imageUrls: imagesArray.map(img => img.url) }));
+      setErrors(prev => ({ ...prev, images: null }));
+    } else {
+      setVenueImages([]);
+      setFormData(prev => ({ ...prev, imageUrls: [] }));
     }
   };
 
-  const onSubmit = async (data: VenueFormData) => {
-    setIsLoading(true);
-    setError("");
-
-    let uploadedThumbnailUrl: string | null = null;
-    const uploadedImageUrls: string[] = [];
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setErrors({});
+    setUploadStatus("Creating venue...");
 
     try {
-      if (thumbnailFile) {
-        uploadedThumbnailUrl = await uploadFile(thumbnailFile, true);
-        if (!uploadedThumbnailUrl) {
-          throw new Error(
-            "Failed to upload thumbnail image. Please try again.",
-          );
-        }
-      }
+      // Clean up the form data before validation
+      const cleanedFormData = {
+        ...formData,
+        // Handle googleMapsUrl - if it's empty, placeholder, or invalid, set to undefined
+        googleMapsUrl: formData.googleMapsUrl && 
+                      formData.googleMapsUrl.trim() !== "" && 
+                      formData.googleMapsUrl !== "https://goo.gl/maps/example" 
+                      ? formData.googleMapsUrl 
+                      : undefined,
+        // Handle remarks - if empty, set to undefined
+        remarks: formData.remarks && formData.remarks.trim() !== "" ? formData.remarks : undefined,
+      };
 
-      if (imageFiles.length > 0) {
-        const uploadVenueImages = async (files: File[]): Promise<string[]> => {
-          const formData = new FormData();
-          files.forEach((file) => formData.append("image", file));
-          const response = await fetch("/api/upload-venue-images", {
-            method: "POST",
-            body: formData,
-          });
-          if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error("Venue image upload failed: " + errorText);
-          }
-          const result = (await response.json()) as UploadResponse;
-          return result.urls ?? [];
-        };
-        const urls = await uploadVenueImages(imageFiles);
-        if (urls.length !== imageFiles.length) {
-          throw new Error(
-            "Failed to upload one or more venue images. Please try again.",
-          );
-        }
-        uploadedImageUrls.push(...urls);
-      }
+      // Validate the form data - images are already uploaded!
+      const validatedData = venueSchema.parse({
+        ...cleanedFormData,
+        thumbnailUrl: thumbnailImage?.url || "",
+        imageUrls: venueImages.map(img => img.url),
+      });
+
       // Filter out empty social media links
-      const socialMediaLinks = data.socialMediaLinks
+      const socialMediaLinks = validatedData.socialMediaLinks
         ? Object.fromEntries(
-            Object.entries(data.socialMediaLinks).filter(
+            Object.entries(validatedData.socialMediaLinks).filter(
               ([_, value]) => value && value.trim() !== "",
             ),
           )
         : {};
 
       const venueData = {
-        ...data,
+        ...validatedData,
         latitude:
-          data.latitude === undefined || isNaN(data.latitude)
+          validatedData.latitude === undefined || isNaN(validatedData.latitude)
             ? null
-            : data.latitude,
+            : validatedData.latitude,
         longitude:
-          data.longitude === undefined || isNaN(data.longitude)
+          validatedData.longitude === undefined || isNaN(validatedData.longitude)
             ? null
-            : data.longitude,
-        thumbnailUrl: uploadedThumbnailUrl,
-        imageUrls: uploadedImageUrls,
+            : validatedData.longitude,
         socialMediaLinks,
         // Include venue type information
-        venueTypes: data.venueTypeIds.map((typeId) => ({
+        venueTypes: validatedData.venueTypeIds.map((typeId) => ({
           venueTypeId: typeId,
-          isPrimary: typeId === data.primaryVenueTypeId,
+          isPrimary: typeId === validatedData.primaryVenueTypeId,
         })),
       };
 
-      console.log("Submitting final venue data:", venueData);
+      console.log("Submitting venue data:", venueData);
 
       const response = await fetch("/api/venues", {
         method: "POST",
@@ -337,16 +291,25 @@ export default function CreateVenuePage() {
         throw new Error(errorData.error ?? "Failed to create venue");
       }
 
+      setIsSubmitting(false);
       router.push("/admin/venues");
+      router.refresh();
     } catch (error) {
-      console.error("Error creating venue:", error);
-      setError(
-        error instanceof Error
-          ? error.message
-          : "Failed to create venue. Please check uploads and try again.",
-      );
-    } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
+      setUploadStatus("");
+      
+      if (error instanceof z.ZodError) {
+        const fieldErrors: Record<string, string> = {};
+        error.errors.forEach((err) => {
+          if (err.path && err.path.length > 0) {
+            const path = String(err.path[0]);
+            fieldErrors[path] = err.message;
+          }
+        });
+        setErrors(fieldErrors);
+      } else {
+        setErrors({ form: error instanceof Error ? error.message : "An unexpected error occurred" });
+      }
     }
   };
 
@@ -355,205 +318,179 @@ export default function CreateVenuePage() {
   };
 
   return (
-    <div className="rounded-lg bg-white p-6 shadow-md">
-      <h1 className="mb-6 text-2xl font-bold text-gray-800">Add New Venue</h1>
+    <div className="mx-auto max-w-4xl">
+      <h1 className="mb-6 text-2xl font-bold">Create New Venue</h1>
 
-      {error && (
-        <div
-          className="mb-4 rounded border border-red-400 bg-red-100 px-4 py-3 text-red-700"
-          role="alert"
-        >
-          <span className="block sm:inline">{error}</span>
+      {errors.form && (
+        <div className="mb-4 rounded-md bg-red-50 p-4 text-red-600">
+          {errors.form}
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <div>
-          <label
-            htmlFor="name"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Venue Name
-          </label>
-          <input
-            id="name"
-            type="text"
-            {...register("name")}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-            placeholder="e.g., Lumpinee Stadium, Rajadamnern Stadium"
-          />
-          {errors.name && (
-            <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
-          )}
-        </div>
-
-        <div>
-          <div className="flex items-center justify-between">
-            <label
-              htmlFor="regionId"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Region
-            </label>
-            <button
-              type="button"
-              onClick={handleCreateNewRegion}
-              className="text-sm text-blue-600 hover:text-blue-800"
-            >
-              + Add New Region
-            </button>
-          </div>
-          <select
-            id="regionId"
-            {...register("regionId")}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-            disabled={isLoadingRegions}
-          >
-            <option value="">Select a region</option>
-            {regions.map((region) => (
-              <option key={region.id} value={region.id}>
-                {region.name}
-              </option>
-            ))}
-          </select>
-          {isLoadingRegions && (
-            <p className="mt-1 text-sm text-gray-500">Loading regions...</p>
-          )}
-          {errors.regionId && (
-            <p className="mt-1 text-sm text-red-600">
-              {errors.regionId.message}
-            </p>
-          )}
-        </div>
-
-        <div>
-          <label
-            htmlFor="address"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Address
-          </label>
-          <textarea
-            id="address"
-            rows={3}
-            {...register("address")}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-            placeholder="Full address of the venue"
-          />
-          {errors.address && (
-            <p className="mt-1 text-sm text-red-600">
-              {errors.address.message}
-            </p>
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Basic Information */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
-            <label
-              htmlFor="latitude"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Latitude (Optional)
+            <label className="block text-sm font-medium text-gray-700">
+              Venue Name
             </label>
             <input
-              id="latitude"
-              type="number"
-              step="any"
-              {...register("latitude")}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-              placeholder="e.g., 13.7563"
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              placeholder="e.g., Lumpinee Stadium, Rajadamnern Stadium"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+              required
             />
-            {errors.latitude && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.latitude.message}
-              </p>
+            {errors.name && (
+              <p className="mt-1 text-sm text-red-600">{errors.name}</p>
             )}
           </div>
+
           <div>
-            <label
-              htmlFor="longitude"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Longitude (Optional)
+            <label className="block text-sm font-medium text-gray-700">
+              Address
             </label>
             <input
-              id="longitude"
-              type="number"
-              step="any"
-              {...register("longitude")}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-              placeholder="e.g., 100.5018"
+              type="text"
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+              required
             />
-            {errors.longitude && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.longitude.message}
-              </p>
+            {errors.address && (
+              <p className="mt-1 text-sm text-red-600">{errors.address}</p>
             )}
           </div>
         </div>
 
-        <div>
-          <label
-            htmlFor="capacity"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Capacity
-          </label>
-          <input
-            id="capacity"
-            type="number"
-            {...register("capacity")}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-          />
-          {errors.capacity && (
-            <p className="mt-1 text-sm text-red-600">
-              {errors.capacity.message}
-            </p>
-          )}
+        {/* Region and Capacity */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-medium text-gray-700">
+                Region
+              </label>
+              <button
+                type="button"
+                onClick={handleCreateNewRegion}
+                className="text-sm text-indigo-600 hover:text-indigo-500"
+              >
+                Create New Region
+              </button>
+            </div>
+            <select
+              name="regionId"
+              value={formData.regionId}
+              onChange={handleChange}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+              required
+            >
+              <option value="">Select a region</option>
+              {regions.map((region) => (
+                <option key={region.id} value={region.id}>
+                  {region.name}
+                </option>
+              ))}
+            </select>
+            {errors.regionId && (
+              <p className="mt-1 text-sm text-red-600">{errors.regionId}</p>
+            )}
+            {isLoadingRegions && (
+              <p className="mt-1 text-sm text-gray-500">Loading regions...</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Capacity
+            </label>
+            <input
+              type="number"
+              name="capacity"
+              value={formData.capacity}
+              onChange={handleChange}
+              min="0"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+            />
+            {errors.capacity && (
+              <p className="mt-1 text-sm text-red-600">{errors.capacity}</p>
+            )}
+          </div>
         </div>
 
+        {/* Location Coordinates */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Latitude
+            </label>
+            <input
+              type="number"
+              name="latitude"
+              value={formData.latitude ?? ""}
+              onChange={handleChange}
+              step="any"
+              placeholder="13.7563"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Longitude
+            </label>
+            <input
+              type="number"
+              name="longitude"
+              value={formData.longitude ?? ""}
+              onChange={handleChange}
+              step="any"
+              placeholder="100.5018"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+            />
+          </div>
+        </div>
+
+        {/* Google Maps URL */}
         <div>
-          <label
-            htmlFor="googleMapsUrl"
-            className="block text-sm font-medium text-gray-700"
-          >
+          <label className="block text-sm font-medium text-gray-700">
             Google Maps URL
           </label>
           <input
-            id="googleMapsUrl"
             type="url"
+            name="googleMapsUrl"
+            value={formData.googleMapsUrl || ""}
+            onChange={handleChange}
             placeholder="https://goo.gl/maps/example"
-            {...register("googleMapsUrl")}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
           />
           {errors.googleMapsUrl && (
-            <p className="mt-1 text-sm text-red-600">
-              {errors.googleMapsUrl.message}
-            </p>
+            <p className="mt-1 text-sm text-red-600">{errors.googleMapsUrl}</p>
           )}
         </div>
 
+        {/* Remarks */}
         <div>
-          <label
-            htmlFor="remarks"
-            className="block text-sm font-medium text-gray-700"
-          >
+          <label className="block text-sm font-medium text-gray-700">
             Remarks
           </label>
           <textarea
-            id="remarks"
+            name="remarks"
+            value={formData.remarks || ""}
+            onChange={handleChange}
             rows={3}
             placeholder="Additional information about the venue"
-            {...register("remarks")}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
           />
           {errors.remarks && (
-            <p className="mt-1 text-sm text-red-600">
-              {errors.remarks.message}
-            </p>
+            <p className="mt-1 text-sm text-red-600">{errors.remarks}</p>
           )}
         </div>
 
+        {/* Social Media Links */}
         <div className="space-y-4">
           <label className="block text-sm font-medium text-gray-700">
             Social Media Links
@@ -561,172 +498,136 @@ export default function CreateVenuePage() {
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label
-                htmlFor="facebook"
-                className="block text-sm font-medium text-gray-500"
-              >
+              <label className="block text-sm font-medium text-gray-500">
                 Facebook
               </label>
               <input
-                id="facebook"
                 type="url"
+                name="socialMediaLinks.facebook"
+                value={formData.socialMediaLinks?.facebook || ""}
+                onChange={handleChange}
                 placeholder="https://facebook.com/venuepage"
-                {...register("socialMediaLinks.facebook")}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
               />
-              {errors.socialMediaLinks?.facebook && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.socialMediaLinks.facebook.message}
-                </p>
+              {errors["socialMediaLinks.facebook"] && (
+                <p className="mt-1 text-sm text-red-600">{errors["socialMediaLinks.facebook"]}</p>
               )}
             </div>
 
             <div>
-              <label
-                htmlFor="instagram"
-                className="block text-sm font-medium text-gray-500"
-              >
+              <label className="block text-sm font-medium text-gray-500">
                 Instagram
               </label>
               <input
-                id="instagram"
                 type="url"
+                name="socialMediaLinks.instagram"
+                value={formData.socialMediaLinks?.instagram || ""}
+                onChange={handleChange}
                 placeholder="https://instagram.com/venuepage"
-                {...register("socialMediaLinks.instagram")}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
               />
-              {errors.socialMediaLinks?.instagram && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.socialMediaLinks.instagram.message}
-                </p>
+              {errors["socialMediaLinks.instagram"] && (
+                <p className="mt-1 text-sm text-red-600">{errors["socialMediaLinks.instagram"]}</p>
               )}
             </div>
 
             <div>
-              <label
-                htmlFor="tiktok"
-                className="block text-sm font-medium text-gray-500"
-              >
+              <label className="block text-sm font-medium text-gray-500">
                 TikTok
               </label>
               <input
-                id="tiktok"
                 type="url"
+                name="socialMediaLinks.tiktok"
+                value={formData.socialMediaLinks?.tiktok || ""}
+                onChange={handleChange}
                 placeholder="https://tiktok.com/@venuepage"
-                {...register("socialMediaLinks.tiktok")}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
               />
-              {errors.socialMediaLinks?.tiktok && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.socialMediaLinks.tiktok.message}
-                </p>
+              {errors["socialMediaLinks.tiktok"] && (
+                <p className="mt-1 text-sm text-red-600">{errors["socialMediaLinks.tiktok"]}</p>
               )}
             </div>
 
             <div>
-              <label
-                htmlFor="twitter"
-                className="block text-sm font-medium text-gray-500"
-              >
+              <label className="block text-sm font-medium text-gray-500">
                 Twitter
               </label>
               <input
-                id="twitter"
                 type="url"
+                name="socialMediaLinks.twitter"
+                value={formData.socialMediaLinks?.twitter || ""}
+                onChange={handleChange}
                 placeholder="https://twitter.com/venuepage"
-                {...register("socialMediaLinks.twitter")}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
               />
-              {errors.socialMediaLinks?.twitter && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.socialMediaLinks.twitter.message}
-                </p>
+              {errors["socialMediaLinks.twitter"] && (
+                <p className="mt-1 text-sm text-red-600">{errors["socialMediaLinks.twitter"]}</p>
               )}
             </div>
 
             <div>
-              <label
-                htmlFor="youtube"
-                className="block text-sm font-medium text-gray-500"
-              >
+              <label className="block text-sm font-medium text-gray-500">
                 YouTube
               </label>
               <input
-                id="youtube"
                 type="url"
+                name="socialMediaLinks.youtube"
+                value={formData.socialMediaLinks?.youtube || ""}
+                onChange={handleChange}
                 placeholder="https://youtube.com/channel/venuepage"
-                {...register("socialMediaLinks.youtube")}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
               />
-              {errors.socialMediaLinks?.youtube && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.socialMediaLinks.youtube.message}
-                </p>
+              {errors["socialMediaLinks.youtube"] && (
+                <p className="mt-1 text-sm text-red-600">{errors["socialMediaLinks.youtube"]}</p>
               )}
             </div>
           </div>
         </div>
 
-        <div>
-          <label
-            htmlFor="thumbnail"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Thumbnail Image (for listings)
-          </label>
-          <input
-            id="thumbnail"
-            type="file"
-            accept="image/*"
+        {/* Thumbnail Upload - Ultra Small (30KB) */}
+        <div className="rounded-lg border bg-gray-50 p-6">
+          <h3 className="mb-4 text-lg font-semibold text-gray-900">Venue Thumbnail</h3>
+          <p className="mb-4 text-sm text-gray-600">
+            Upload a thumbnail image that will be automatically compressed to 30KB or less. 
+            This ensures fast loading times in venue listings.
+          </p>
+          <UploadUltraSmallImage
+            type="thumbnail"
+            entityType="venues"
+            value={thumbnailImage}
             onChange={handleThumbnailChange}
-            className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100"
+            label="Venue Thumbnail (auto-compressed to 30KB)"
+            helpText="Recommended: Square images work best for thumbnails"
+            showInfo={true}
           />
-          {thumbnailPreview && (
-            <div className="mt-2">
-              <Image
-                src={thumbnailPreview}
-                alt="Thumbnail preview"
-                width={150}
-                height={96}
-                unoptimized
-                className="rounded-md object-cover"
-              />
-            </div>
+          {errors.thumbnail && (
+            <p className="mt-1 text-sm text-red-600">{errors.thumbnail}</p>
           )}
         </div>
 
-        <div>
-          <label
-            htmlFor="images"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Venue Images (Multiple allowed)
-          </label>
-          <input
-            id="images"
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={handleImagesChange}
-            className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100"
+        {/* Venue Images Upload - Regular (120KB) */}
+        <div className="rounded-lg border bg-gray-50 p-6">
+          <h3 className="mb-4 text-lg font-semibold text-gray-900">Venue Images</h3>
+          <p className="mb-4 text-sm text-gray-600">
+            Upload venue images that will be automatically compressed to 120KB or less. 
+            You can upload up to 8 images to showcase your venue.
+          </p>
+          <UploadImage
+            type="images"
+            entityType="venues"
+            value={venueImages}
+            onChange={handleVenueImagesChange}
+            maxImages={8}
+            label="Venue Gallery Images (auto-compressed to 120KB each)"
+            helpText="Upload multiple images to showcase your venue from different angles"
+            showInfo={true}
           />
-          {imagePreviews.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {imagePreviews.map((preview, index) => (
-                <Image
-                  key={index}
-                  src={preview}
-                  alt={`Venue image preview ${index + 1}`}
-                  width={150}
-                  height={96}
-                  unoptimized
-                  className="rounded-md object-cover"
-                />
-              ))}
-            </div>
+          {errors.images && (
+            <p className="mt-1 text-sm text-red-600">{errors.images}</p>
           )}
         </div>
 
+        {/* Venue Types */}
         <div className="space-y-4">
           <label className="block text-sm font-medium text-gray-700">
             Venue Types
@@ -749,7 +650,7 @@ export default function CreateVenuePage() {
                         type="checkbox"
                         checked={selectedVenueTypes.includes(type.id)}
                         onChange={() => handleVenueTypeChange(type.id)}
-                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                       />
                     </div>
                     <div className="ml-3 text-sm">
@@ -788,27 +689,53 @@ export default function CreateVenuePage() {
 
               {errors.venueTypeIds && (
                 <p className="mt-1 text-sm text-red-600">
-                  {errors.venueTypeIds.message}
+                  {errors.venueTypeIds}
                 </p>
               )}
             </div>
           )}
         </div>
 
-        <div className="flex justify-end">
+        {/* Image Summary */}
+        {(thumbnailImage || venueImages.length > 0) && (
+          <div className="rounded-lg border bg-blue-50 p-4">
+            <h4 className="mb-2 font-semibold text-blue-900">Upload Summary</h4>
+            <div className="grid grid-cols-1 gap-2 text-sm md:grid-cols-2">
+              <div>
+                <span className="font-medium">Thumbnail:</span>{" "}
+                {thumbnailImage ? (
+                  <span className="text-green-600">✓ Uploaded (30KB max)</span>
+                ) : (
+                  <span className="text-gray-500">Not uploaded</span>
+                )}
+              </div>
+              <div>
+                <span className="font-medium">Gallery Images:</span>{" "}
+                {venueImages.length > 0 ? (
+                  <span className="text-green-600">✓ {venueImages.length} image(s) (120KB max each)</span>
+                ) : (
+                  <span className="text-gray-500">No images uploaded</span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Submit Buttons */}
+        <div className="flex justify-end space-x-3">
           <button
             type="button"
-            onClick={() => router.push("/admin/venues")}
-            className="mr-3 rounded-md border border-gray-300 bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+            onClick={() => router.back()}
+            className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             Cancel
           </button>
           <button
             type="submit"
-            disabled={isLoading}
-            className="rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            disabled={isSubmitting}
+            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
           >
-            {isLoading ? "Creating..." : "Create Venue"}
+            {isSubmitting ? uploadStatus || "Creating..." : "Create Venue"}
           </button>
         </div>
       </form>
