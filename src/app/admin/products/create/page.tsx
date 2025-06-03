@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "~/trpc/react";
 import { z } from "zod";
-import { useDropzone } from "react-dropzone";
+import { UploadImage, type UploadedImageData } from "~/components/ui/UploadImage";
+import { UploadUltraSmallImage, type UploadedUltraSmallImageData } from "~/components/ui/UploadUltraSmallImage";
 
 // Define the schema for product validation
 const productSchema = z.object({
@@ -32,61 +33,14 @@ export default function CreateProductPage() {
     categoryId: "",
     categoryIds: [],
   });
-  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
-  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  
+  // New state for uploaded images using our components
+  const [thumbnailImage, setThumbnailImage] = useState<UploadedUltraSmallImageData | undefined>(undefined);
+  const [productImages, setProductImages] = useState<UploadedImageData[]>([]);
+  
   const [uploadStatus, setUploadStatus] = useState<string>("");
   const [errors, setErrors] = useState<Record<string, string | null>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // Dropzone for thumbnail
-  const {
-    getRootProps: getThumbRootProps,
-    getInputProps: getThumbInputProps
-  } = useDropzone({
-    onDrop: (acceptedFiles: File[]) => {
-      if (acceptedFiles.length === 0) return;
-      // Safely access the first file
-      const file = acceptedFiles[0];
-      // Check file size (30KB max)
-      if (file && file.size > 30 * 1024) {
-        setErrors(prev => ({ ...prev, thumbnail: "Thumbnail must be less than 30KB" }));
-        return;
-      }
-      // Only set if file exists
-      if (file) {
-        setThumbnailFile(file);
-        setErrors(prev => ({ ...prev, thumbnail: null }));
-      }
-    },
-    multiple: false,
-    maxSize: 30 * 1024,
-    accept: { 'image/*': [] }
-  });
-  
-  // Dropzone for product images
-  const {
-    getRootProps: getImagesRootProps,
-    getInputProps: getImagesInputProps
-  } = useDropzone({
-    onDrop: (acceptedFiles: File[]) => {
-      if (acceptedFiles.length === 0) return;
-      const total = acceptedFiles.length;
-      if (total + imageFiles.length > 8) {
-        setErrors(prev => ({ ...prev, images: "Maximum 8 images allowed" }));
-        return;
-      }
-      const oversized = acceptedFiles.filter(f => f.size > 120 * 1024);
-      if (oversized.length) {
-        setErrors(prev => ({ ...prev, images: `${oversized.length} image(s) exceed the 120KB limit` }));
-        return;
-      }
-      setImageFiles(prev => [...prev, ...acceptedFiles]);
-      setErrors(prev => ({ ...prev, images: null }));
-    },
-    multiple: true,
-    maxSize: 120 * 1024,
-    accept: { 'image/*': [] }
-  });
 
   // Fetch categories
   const { data: categories, isLoading: isLoadingCategories } = api.category.list.useQuery({
@@ -96,26 +50,10 @@ export default function CreateProductPage() {
     sortDirection: "asc",
   });
 
-  // Create product-to-category association mutation
-  const setProductCategories = api.productToCategory.setProductCategories.useMutation();
-
   // Create product mutation
   const createProduct = api.product.create.useMutation({
     onSuccess: (data) => {
-      // If we have additional categories, create the associations
-      if (formData.categoryIds && formData.categoryIds.length > 0) {
-        // Make sure the primary category is included
-        const allCategoryIds = [...formData.categoryIds];
-        if (!allCategoryIds.includes(formData.categoryId)) {
-          allCategoryIds.push(formData.categoryId);
-        }
-        
-        setProductCategories.mutate({
-          productId: data.id,
-          categoryIds: allCategoryIds,
-        });
-      }
-      
+      setIsSubmitting(false);
       router.push("/admin/products");
       router.refresh();
     },
@@ -140,69 +78,43 @@ export default function CreateProductPage() {
     }
   };
 
-  // Remove image from the list
-  const removeImage = (index: number) => {
-    setImageFiles(prev => prev.filter((_, i) => i !== index));
+  // Handle thumbnail upload change
+  const handleThumbnailChange = (data: UploadedUltraSmallImageData | UploadedUltraSmallImageData[] | null) => {
+    if (data && !Array.isArray(data)) {
+      setThumbnailImage(data);
+      setFormData(prev => ({ ...prev, thumbnailUrl: data.url }));
+      setErrors(prev => ({ ...prev, thumbnail: null }));
+    } else {
+      setThumbnailImage(undefined);
+      setFormData(prev => ({ ...prev, thumbnailUrl: "" }));
+    }
   };
-  
-  // Remove thumbnail
-  const removeThumbnail = () => {
-    setThumbnailFile(null);
+
+  // Handle product images upload change
+  const handleProductImagesChange = (data: UploadedImageData | UploadedImageData[] | null) => {
+    if (data) {
+      const imagesArray = Array.isArray(data) ? data : [data];
+      setProductImages(imagesArray);
+      setFormData(prev => ({ ...prev, imageUrls: imagesArray.map(img => img.url) }));
+      setErrors(prev => ({ ...prev, images: null }));
+    } else {
+      setProductImages([]);
+      setFormData(prev => ({ ...prev, imageUrls: [] }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setErrors({});
-    setUploadStatus("Uploading files...");
+    setUploadStatus("Creating product...");
 
     try {
-      // Generate a temporary ID for grouping uploads
-      const tempId = `product-${Date.now()}`;
-      let thumbnailUrl = "";
-      let productImageUrls: string[] = [];
-      
-      // Upload images via the server API route
-      if (thumbnailFile || imageFiles.length > 0) {
-        setUploadStatus("Uploading files to server...");
-        
-        const formData = new FormData();
-        formData.append("entityType", "product");
-        formData.append("entityId", tempId);
-        
-        // Add thumbnail if exists
-        if (thumbnailFile) {
-          formData.append("thumbnail", thumbnailFile);
-        }
-        
-        // Add all product images
-        imageFiles.forEach(file => {
-          formData.append("images", file);
-        });
-        
-        // Send to our server API route
-        const uploadResponse = await fetch("/api/product-images", {
-          method: "POST",
-          body: formData,
-        });
-        
-        if (!uploadResponse.ok) {
-          const errorData = await uploadResponse.json();
-          throw new Error(errorData.error || "Failed to upload images");
-        }
-        
-        const uploadResult = await uploadResponse.json();
-        thumbnailUrl = uploadResult.thumbnailUrl || "";
-        productImageUrls = uploadResult.imageUrls || [];
-      }
-      
-      setUploadStatus("Creating product...");
-      
-      // 3. Create the product with the uploaded image URLs
+      // Validate the form data - images are already uploaded!
       const validatedData = productSchema.parse({
         ...formData,
-        thumbnailUrl: thumbnailUrl,
-        imageUrls: productImageUrls,
+        thumbnailUrl: thumbnailImage?.url || "",
+        imageUrls: productImages.map(img => img.url),
         categoryId: formData.categoryId,
       });
       
@@ -216,7 +128,7 @@ export default function CreateProductPage() {
         const fieldErrors: Record<string, string> = {};
         error.errors.forEach((err) => {
           if (err.path && err.path.length > 0) {
-            const path = String(err.path[0]); // Convert to string to ensure it's a valid index
+            const path = String(err.path[0]);
             fieldErrors[path] = err.message;
           }
         });
@@ -277,17 +189,25 @@ export default function CreateProductPage() {
             <label htmlFor="price" className="block text-sm font-medium text-gray-700">
               Price (THB)
             </label>
-            <input
-              type="number"
-              id="price"
-              name="price"
-              value={formData.price}
-              onChange={handleChange}
-              min="0"
-              step="0.01"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
-              required
-            />
+            <div className="relative mt-1 rounded-md shadow-sm">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                <span className="text-gray-500">฿</span>
+              </div>
+              <input
+                type="number"
+                id="price"
+                name="price"
+                value={formData.price}
+                onChange={handleChange}
+                min="0"
+                step="0.01"
+                className="block w-full rounded-md border border-gray-300 pl-7 pr-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+                required
+              />
+            </div>
+            {errors.price && (
+              <p className="mt-1 text-sm text-red-600">{errors.price}</p>
+            )}
           </div>
 
           <div>
@@ -318,133 +238,50 @@ export default function CreateProductPage() {
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Price
-          </label>
-          <div className="relative mt-1 rounded-md shadow-sm">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <span className="text-gray-500">$</span>
-            </div>
-            <input
-              type="number"
-              name="price"
-              value={formData.price}
-              onChange={handleChange}
-              step="0.01"
-              min="0"
-              className="block w-full rounded-md border border-gray-300 pl-7 pr-12 py-2 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
-            />
-          </div>
-          {errors.price && (
-            <p className="mt-1 text-sm text-red-600">{errors.price}</p>
-          )}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Thumbnail Image (max 30KB)
-          </label>
-          <div 
-            {...getThumbRootProps()} 
-            className="mt-1 flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-md text-gray-500 hover:border-indigo-500 cursor-pointer transition-colors"
-          >
-            <input {...getThumbInputProps()} />
-            {thumbnailFile ? (
-              <div className="flex flex-col items-center">
-                <img 
-                  src={URL.createObjectURL(thumbnailFile)} 
-                  alt="Thumbnail preview" 
-                  className="h-24 w-auto object-contain mb-2"
-                />
-                <div className="flex items-center">
-                  <span className="text-sm">
-                    {thumbnailFile.name} ({Math.round(thumbnailFile.size / 1024)}KB)
-                  </span>
-                  <button 
-                    type="button" 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeThumbnail();
-                    }}
-                    className="ml-2 text-red-500 hover:text-red-700"
-                  >
-                    Remove
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center">
-                <svg className="h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
-                  <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                <p className="mt-1 text-sm">Drag & drop thumbnail here, or click to select</p>
-              </div>
-            )}
-          </div>
-          {errors.thumbnail && typeof errors.thumbnail === 'string' && (
+        {/* Thumbnail Upload - Ultra Small (30KB) */}
+        <div className="rounded-lg border bg-gray-50 p-6">
+          <h3 className="mb-4 text-lg font-semibold text-gray-900">Product Thumbnail</h3>
+          <p className="mb-4 text-sm text-gray-600">
+            Upload a thumbnail image that will be automatically compressed to 30KB or less. 
+            This ensures fast loading times while maintaining good visual quality.
+          </p>
+          <UploadUltraSmallImage
+            type="thumbnail"
+            entityType="products"
+            value={thumbnailImage}
+            onChange={handleThumbnailChange}
+            label="Product Thumbnail (auto-compressed to 30KB)"
+            helpText="Recommended: Square images work best for thumbnails"
+            showInfo={true}
+          />
+          {errors.thumbnail && (
             <p className="mt-1 text-sm text-red-600">{errors.thumbnail}</p>
           )}
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Product Images (max 8 images, each max 120KB)
-          </label>
-          <div 
-            {...getImagesRootProps()} 
-            className="mt-1 flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-md text-gray-500 hover:border-indigo-500 cursor-pointer transition-colors"
-          >
-            <input {...getImagesInputProps()} />
-            <div className="flex flex-col items-center">
-              <svg className="h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
-                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              <p className="mt-1 text-sm">
-                {imageFiles.length > 0 
-                  ? `${imageFiles.length} image(s) selected. Drag more or click to add.` 
-                  : "Drag & drop images here, or click to select"}
-              </p>
-            </div>
-          </div>
-          {errors.images && typeof errors.images === 'string' && (
+        {/* Product Images Upload - Regular (120KB) */}
+        <div className="rounded-lg border bg-gray-50 p-6">
+          <h3 className="mb-4 text-lg font-semibold text-gray-900">Product Images</h3>
+          <p className="mb-4 text-sm text-gray-600">
+            Upload product images that will be automatically compressed to 120KB or less. 
+            You can upload up to 8 images for your product gallery.
+          </p>
+          <UploadImage
+            type="images"
+            entityType="products"
+            value={productImages}
+            onChange={handleProductImagesChange}
+            maxImages={8}
+            label="Product Gallery Images (auto-compressed to 120KB each)"
+            helpText="Upload multiple images to showcase your product from different angles"
+            showInfo={true}
+          />
+          {errors.images && (
             <p className="mt-1 text-sm text-red-600">{errors.images}</p>
-          )}
-          {imageFiles.length > 0 && (
-            <div className="mt-4">
-              <p className="text-sm font-medium text-gray-700 mb-2">Selected Images:</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {imageFiles.map((file, index) => (
-                  <div key={index} className="relative group">
-                    <img 
-                      src={URL.createObjectURL(file)} 
-                      alt={`Product image ${index + 1}`} 
-                      className="h-24 w-full object-cover rounded-md"
-                    />
-                    <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-md">
-                      <button 
-                        type="button" 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeImage(index);
-                        }}
-                        className="text-white bg-red-500 hover:bg-red-700 rounded-full p-1"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                        </svg>
-                      </button>
-                    </div>
-                    <p className="mt-1 text-xs text-gray-500 truncate">
-                      {file.name.length > 20 ? file.name.substring(0, 17) + '...' : file.name} ({Math.round(file.size / 1024)}KB)
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
           )}
         </div>
 
+        {/* Additional Categories */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Additional Categories
@@ -487,6 +324,7 @@ export default function CreateProductPage() {
           </p>
         </div>
 
+        {/* Featured Product */}
         <div className="flex items-center">
           <input
             type="checkbox"
@@ -504,6 +342,32 @@ export default function CreateProductPage() {
           </label>
         </div>
 
+        {/* Image Summary */}
+        {(thumbnailImage || productImages.length > 0) && (
+          <div className="rounded-lg border bg-blue-50 p-4">
+            <h4 className="mb-2 font-semibold text-blue-900">Upload Summary</h4>
+            <div className="grid grid-cols-1 gap-2 text-sm md:grid-cols-2">
+              <div>
+                <span className="font-medium">Thumbnail:</span>{" "}
+                {thumbnailImage ? (
+                  <span className="text-green-600">✓ Uploaded (30KB max)</span>
+                ) : (
+                  <span className="text-gray-500">Not uploaded</span>
+                )}
+              </div>
+              <div>
+                <span className="font-medium">Gallery Images:</span>{" "}
+                {productImages.length > 0 ? (
+                  <span className="text-green-600">✓ {productImages.length} image(s) (120KB max each)</span>
+                ) : (
+                  <span className="text-gray-500">No images uploaded</span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Submit Buttons */}
         <div className="flex justify-end space-x-3">
           <button
             type="button"

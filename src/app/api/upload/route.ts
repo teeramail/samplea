@@ -59,6 +59,7 @@ export async function POST(req: Request) {
 
     // Check if this is a thumbnail upload (different size limit)
     const isThumbnail = formData.get("type") === "thumbnail";
+    const isUltraSmall = formData.get("type") === "ultra-small";
     
     // Get the file from form data
     const imageFile = formData.get("image");
@@ -83,11 +84,29 @@ export async function POST(req: Request) {
     const fileNameWithoutExt = originalFilename.split('.').slice(0, -1).join('.') || originalFilename;
     
     // Process the image with appropriate size limits
+    let maxWidth: number;
+    let maxSizeKB: number;
+    let quality: number;
+    
+    if (isUltraSmall) {
+      maxWidth = 300;
+      maxSizeKB = 30;
+      quality = 70;
+    } else if (isThumbnail) {
+      maxWidth = 400;
+      maxSizeKB = 80;
+      quality = 80;
+    } else {
+      maxWidth = 800;
+      maxSizeKB = 120;
+      quality = 80;
+    }
+    
     const processedImage = await processImageFile(imageFile, {
       format: "webp",
-      maxWidth: isThumbnail ? 400 : 800,
-      maxSizeKB: isThumbnail ? 80 : 120,
-      quality: 80,
+      maxWidth,
+      maxSizeKB,
+      quality,
     });
     
     let folderPath: string;
@@ -114,7 +133,17 @@ export async function POST(req: Request) {
         ? `${entityType}/${entityIdStr}`
         : `${entityType}/${uuidv4()}`;
       folderPath = `${baseDirectory}/${entitySpecificPath}`;
-      s3FileName = `${folderPath}/${Date.now()}-${isThumbnail ? 'thumb' : 'image'}.${processedImage.format}`;
+      
+      let filePrefix: string;
+      if (isUltraSmall) {
+        filePrefix = 'ultra-small';
+      } else if (isThumbnail) {
+        filePrefix = 'thumb';
+      } else {
+        filePrefix = 'image';
+      }
+      
+      s3FileName = `${folderPath}/${Date.now()}-${filePrefix}.${processedImage.format}`;
     }
     const fileName = s3FileName; // Use s3FileName for clarity in S3Client PutObjectCommand
     

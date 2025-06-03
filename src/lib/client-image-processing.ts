@@ -151,6 +151,18 @@ export async function processGalleryImage(file: File): Promise<ProcessedImage> {
 }
 
 /**
+ * Process an image for ultra-small size (max 30KB) - for thumbnails or previews
+ */
+export async function processUltraSmallImage(file: File): Promise<ProcessedImage> {
+  return processImage(file, {
+    maxWidth: 300,
+    quality: 70,
+    maxSizeKB: 30,
+    maintainAspectRatio: true,
+  });
+}
+
+/**
  * Check if client-side processing is supported in this browser
  */
 export function isClientProcessingSupported(): boolean {

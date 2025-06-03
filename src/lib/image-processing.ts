@@ -30,6 +30,13 @@ const DEFAULT_IMAGE_OPTIONS: ImageProcessingOptions = {
   quality: 80,
 };
 
+const DEFAULT_ULTRA_SMALL_OPTIONS: ImageProcessingOptions = {
+  format: "webp",
+  maxWidth: 300,
+  maxSizeKB: 30, // 30KB max for ultra-small images
+  quality: 70,
+};
+
 /**
  * Process an image with optimizations
  * @param imageBuffer Input image buffer
@@ -149,5 +156,17 @@ export async function generateOptimizedImage(file: File): Promise<ProcessedImage
     maxSizeKB: 120,
     maxWidth: 800,
     format: "webp",
+  });
+}
+
+/**
+ * Generate ultra-small optimized image (30KB max)
+ */
+export async function generateUltraSmallImage(file: File): Promise<ProcessedImage> {
+  return processImageFile(file, {
+    maxSizeKB: 30,
+    maxWidth: 300,
+    format: "webp",
+    quality: 70,
   });
 }

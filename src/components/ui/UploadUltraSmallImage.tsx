@@ -4,16 +4,15 @@ import { useState, useRef, useCallback } from "react";
 import Image from "next/image";
 import { 
   isClientProcessingSupported, 
-  processThumbnail, 
-  processGalleryImage
+  processUltraSmallImage
 } from "~/lib/client-image-processing";
 
-export interface UploadedImageData {
+export interface UploadedUltraSmallImageData {
   url: string;
   originalFilename: string;
 }
 
-export interface UploadImageProps {
+export interface UploadUltraSmallImageProps {
   /** Type of upload - thumbnail (single) or images (multiple) */
   type: "thumbnail" | "images";
   
@@ -24,10 +23,10 @@ export interface UploadImageProps {
   entityId?: string;
   
   /** Initial image URL(s) */
-  value?: string | string[] | UploadedImageData | UploadedImageData[];
+  value?: string | string[] | UploadedUltraSmallImageData | UploadedUltraSmallImageData[];
   
   /** Callback when images change */
-  onChange: (value: UploadedImageData | UploadedImageData[] | null) => void;
+  onChange: (value: UploadedUltraSmallImageData | UploadedUltraSmallImageData[] | null) => void;
   
   /** Custom label */
   label?: string;
@@ -45,7 +44,7 @@ export interface UploadImageProps {
   showInfo?: boolean;
 }
 
-export interface UploadStats {
+interface UploadStats {
   [url: string]: {
     originalSize: number;
     compressedSize: number;
@@ -53,7 +52,7 @@ export interface UploadStats {
   };
 }
 
-export function UploadImage({
+export function UploadUltraSmallImage({
   type = "thumbnail",
   entityType,
   entityId,
@@ -64,14 +63,14 @@ export function UploadImage({
   maxImages = 8,
   className = "",
   showInfo = true,
-}: UploadImageProps) {
+}: UploadUltraSmallImageProps) {
   // Current image data (URL and original filename)
-  const initialImages: UploadedImageData[] = (
+  const initialImages: UploadedUltraSmallImageData[] = (
     Array.isArray(value) ? value : value ? [value] : []
   ).map(item =>
     typeof item === 'string' ? { url: item, originalFilename: "" } : item
   );
-  const [currentImages, setCurrentImages] = useState<UploadedImageData[]>(initialImages);
+  const [currentImages, setCurrentImages] = useState<UploadedUltraSmallImageData[]>(initialImages);
   
   // Upload state
   const [isUploading, setIsUploading] = useState(false);
@@ -108,10 +107,9 @@ export function UploadImage({
     // For thumbnail, use only first file
     // For images, respect the max limit
     const filesToProcess = isThumbnail 
-      ? (imageFiles[0] ? [imageFiles[0]] : []) // Ensure imageFiles[0] exists and wrap in array or empty array
+      ? (imageFiles[0] ? [imageFiles[0]] : [])
       : imageFiles.slice(0, maxImages - currentImages.length);
 
-    // Ensure all items in filesToUpload are actual File objects
     const filesToUpload = filesToProcess.filter(f => f instanceof File) as File[];
     
     if (filesToUpload.length === 0) return;
@@ -121,13 +119,13 @@ export function UploadImage({
     setError(null);
     
     try {
-      const newlyUploadedItems: UploadedImageData[] = [];
+      const newlyUploadedItems: UploadedUltraSmallImageData[] = [];
       const newStats: UploadStats = {};
       
       // Process each file
       for (let i = 0; i < filesToUpload.length; i++) {
         const file = filesToUpload[i];
-        if (!file) continue; // Ensure file is defined
+        if (!file) continue;
         
         // Update progress
         setProgress(Math.round(5 + (i / filesToUpload.length) * 70));
@@ -139,9 +137,7 @@ export function UploadImage({
         // Try client-side processing first if supported
         if (useClientProcessing) {
           try {
-            const processed = isThumbnail 
-              ? await processThumbnail(file)
-              : await processGalleryImage(file);
+            const processed = await processUltraSmallImage(file);
             
             uploadFile = processed.file;
             originalSize = processed.originalSize;
@@ -150,13 +146,13 @@ export function UploadImage({
             // Fall back to server-side processing
             uploadFile = file;
             originalSize = Math.round(file.size / 1024);
-            compressedSize = 0; // Will be updated from server response
+            compressedSize = 0;
           }
         } else {
           // Use server-side processing
           uploadFile = file;
           originalSize = Math.round(file.size / 1024);
-          compressedSize = 0; // Will be updated from server response
+          compressedSize = 0;
         }
         
         if (!uploadFile || !(uploadFile instanceof File)) {
@@ -166,12 +162,11 @@ export function UploadImage({
 
         const formData = new FormData();
         formData.append('image', uploadFile); 
-        formData.append('type', isThumbnail ? 'thumbnail' : 'image');
+        formData.append('type', 'ultra-small'); // New type for 30KB limit
         formData.append('entityType', entityType);
         if (entityId) {
           formData.append('entityId', entityId);
         }
-        // Add original file name if available (especially for client-processed images)
         if (uploadFile.name) {
             formData.append('originalFilename', uploadFile.name);
         }
@@ -181,14 +176,14 @@ export function UploadImage({
           body: formData,
         });
 
-        setProgress(Math.round(5 + (i / filesToUpload.length) * 70 + 25)); // Progress after upload
+        setProgress(Math.round(5 + (i / filesToUpload.length) * 70 + 25));
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({ message: 'Upload failed with no details' }));
           throw new Error(errorData.message || `Upload failed: ${response.statusText}`);
         }
 
-        const uploadData = await response.json(); // Expected: { url: string, originalFilename: string, feedback?: any }
+        const uploadData = await response.json();
         if (!uploadData.url || typeof uploadData.originalFilename !== 'string') {
           throw new Error('Upload response did not include a URL or originalFilename.');
         }
@@ -213,15 +208,14 @@ export function UploadImage({
       // Update state with new image data
       setCurrentImages(prevImages => {
         const updatedImages = isThumbnail 
-          ? newlyUploadedItems // For thumbnail, it's always a fresh set (of one)
-          : [...prevImages, ...newlyUploadedItems]; // For gallery, append new ones
+          ? newlyUploadedItems
+          : [...prevImages, ...newlyUploadedItems];
         
-        // Ensure maxImages constraint for gallery
         const finalImages = (!isThumbnail && updatedImages.length > maxImages)
           ? updatedImages.slice(0, maxImages)
           : updatedImages;
 
-        // Use setTimeout to avoid setState during render warning
+        // Use flushSync to ensure state is updated before calling onChange
         setTimeout(() => {
           onChange(isThumbnail ? (finalImages[0] ?? null) : finalImages);
         }, 0);
@@ -241,7 +235,7 @@ export function UploadImage({
         setProgress(0);
       }, 800);
     }
-  }, [currentImages, isThumbnail, maxImages, entityType, entityId, onChange, stats, useClientProcessing]);
+  }, [currentImages, isThumbnail, maxImages, entityType, entityId, useClientProcessing, onChange]);
   
   // Handle dropping files
   const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
@@ -309,8 +303,8 @@ export function UploadImage({
       <div className="mb-1 flex items-center justify-between">
         <label className="text-sm font-medium text-gray-700">
           {label || (isThumbnail 
-            ? "Thumbnail Image (max 80KB)" 
-            : `Product Images (max ${maxImages} images, each max 120KB)`)}
+            ? "Ultra Small Thumbnail (max 30KB)" 
+            : `Ultra Small Images (max ${maxImages} images, each max 30KB)`)}
         </label>
         
         {!isThumbnail && currentImages.length > 0 && (
@@ -329,9 +323,8 @@ export function UploadImage({
                 <Image 
                   src={image.url!} 
                   alt={image.originalFilename || `Uploaded image ${index + 1}`}
-                  layout="fill"
-                  objectFit="cover"
-                  className="transition-transform duration-300 group-hover:scale-110"
+                  fill
+                  className="object-cover transition-transform duration-300 group-hover:scale-110"
                 />
               )}
               
@@ -347,7 +340,7 @@ export function UploadImage({
               {/* Show compression stats */}
               {showInfo && image.url && typeof image.url === 'string' && stats[image.url] && (() => {
                 const statEntry = stats[image.url];
-                if (!statEntry) return null; // Extra check for TypeScript
+                if (!statEntry) return null;
                 return (
                   <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 p-1 text-center text-xs text-white">
                     {statEntry.originalSize}KB → {statEntry.compressedSize}KB 
@@ -405,12 +398,12 @@ export function UploadImage({
                 </svg>
               </div>
               <p className="mb-1 text-sm text-gray-600">
-                Drag & drop {isThumbnail ? 'thumbnail' : 'images'} here, or click to select
+                Drag & drop {isThumbnail ? 'ultra small thumbnail' : 'ultra small images'} here, or click to select
               </p>
               <p className="text-xs text-gray-500">
                 {useClientProcessing 
-                  ? 'Images will be optimized before upload' 
-                  : 'Images will be converted to WebP format'}
+                  ? 'Images will be optimized to 30KB before upload' 
+                  : 'Images will be converted to WebP format (30KB max)'}
               </p>
             </div>
           )}
@@ -426,6 +419,4 @@ export function UploadImage({
       )}
     </div>
   );
-}
-
-export default UploadImage;
+} 
