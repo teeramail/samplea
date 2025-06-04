@@ -130,7 +130,7 @@ const getRegionPageData = unstable_cache(
   },
   ['region-page-data'],
   {
-    revalidate: getRevalidateSeconds(),
+    revalidate: 60, // Reduced to 60 seconds for testing (was using getRevalidateSeconds())
     tags: ['region-page'],
   }
 );

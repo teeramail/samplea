@@ -25,7 +25,7 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
         ),
       );
     },
-    orderBy: (events, { desc }) => [desc(events.date)],
+    orderBy: (events, { asc }) => [asc(events.date)],
     with: {
       venue: true,
       region: true,
@@ -50,7 +50,7 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
           ),
         );
       },
-      orderBy: (events, { desc }) => [desc(events.date)],
+      orderBy: (events, { asc }) => [asc(events.date)],
       with: {
         venue: true,
         region: true,

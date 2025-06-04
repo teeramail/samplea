@@ -125,7 +125,7 @@ export default async function Home() {
       // Upcoming events - direct DB query
       db.query.events.findMany({
         limit: 3,
-        orderBy: [desc(events.date)],
+        orderBy: [asc(events.date)],
         where: and(
           eq(events.status, 'SCHEDULED'),
           // Only future events - using SQL expression for date comparison
