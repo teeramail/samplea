@@ -1,9 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
-import { regions } from "~/server/db/schema";
+import { regions, events } from "~/server/db/schema";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
-import { eq } from "drizzle-orm";
+import { eq, and, gte } from "drizzle-orm";
 
 // Helper function to generate a URL-friendly slug from a name
 const generateSlug = (name: string): string => {
@@ -25,11 +25,34 @@ const regionSchema = z.object({
 
 export async function GET() {
   try {
-    const allRegions = await db.query.regions.findMany({
-      orderBy: (regions, { asc }) => [asc(regions.name)],
-    });
+    // Get current date for filtering future events
+    const now = new Date();
+    const todayAtMidnightUTC = new Date(now);
+    todayAtMidnightUTC.setUTCHours(0, 0, 0, 0);
 
-    return NextResponse.json(allRegions);
+    // Get all regions that have upcoming scheduled events
+    const regionsWithEvents = await db
+      .selectDistinct({
+        id: regions.id,
+        name: regions.name,
+        slug: regions.slug,
+        description: regions.description,
+        imageUrls: regions.imageUrls,
+        primaryImageIndex: regions.primaryImageIndex,
+        createdAt: regions.createdAt,
+        updatedAt: regions.updatedAt,
+      })
+      .from(regions)
+      .innerJoin(events, eq(events.regionId, regions.id))
+      .where(
+        and(
+          gte(events.date, todayAtMidnightUTC), // Only future events
+          eq(events.status, 'SCHEDULED') // Only scheduled events
+        )
+      )
+      .orderBy(regions.name);
+
+    return NextResponse.json(regionsWithEvents);
   } catch (error) {
     console.error("Error fetching regions:", error);
     return NextResponse.json(

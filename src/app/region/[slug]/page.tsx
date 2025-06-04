@@ -74,7 +74,8 @@ async function getRegionEvents(regionId: string) {
       },
       where: and(
         eq(events.regionId, regionId),
-        gte(events.date, todayAtMidnightUTC) // Filter by today and future dates
+        gte(events.date, todayAtMidnightUTC), // Filter by today and future dates
+        eq(events.status, 'SCHEDULED') // Only show scheduled events
       ),
       orderBy: [asc(events.date)], // Sort by nearest upcoming events first
       limit: 8, // Limit to 8 events
