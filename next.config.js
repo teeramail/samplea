@@ -20,7 +20,7 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
-    domains: ['upload.wikimedia.org', 'www.paypalobjects.com', 'sgp1.digitaloceanspaces.com']
+    domains: ['upload.wikimedia.org', 'www.paypalobjects.com', 'sgp1.digitaloceanspaces.com', 'images.unsplash.com']
   },
   // Handle Node.js specific modules during client-side rendering
   webpack: (config, { isServer }) => {
