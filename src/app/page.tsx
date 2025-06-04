@@ -8,7 +8,7 @@ import { MapPinIcon, BuildingLibraryIcon } from "@heroicons/react/24/outline";
 import { api } from "~/trpc/server";
 import { db } from "~/server/db";
 import { desc, eq, and, sql } from "drizzle-orm";
-import { venues, events, fighters, trainingCourses, posts } from "~/server/db/schema";
+import { venues, events, fighters, trainingCourses, posts, products } from "~/server/db/schema";
 // Import the type helper from the correct location
 import type { RouterOutputs } from "~/trpc/react";
 // Import Next.js config
@@ -419,7 +419,7 @@ export default async function Home() {
         <section className="mt-16 w-full max-w-5xl">
           <div className="mb-6 flex items-center justify-between">
             <h2 className="text-3xl font-bold">Featured Merchandise</h2>
-            <Link href="#" className="text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]">
+            <Link href="/products" className="text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]">
               View All Products &rarr;
             </Link>
           </div>

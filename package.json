@@ -12,6 +12,7 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx src/server/db/seed-script.ts",
+    "db:seed-products": "tsx src/scripts/seed-products.ts",
     "db:migrate-payment-fields": "tsx drizzle/payment_fields_migration.ts",
     "db:validate": "tsx src/scripts/db-schema-validator.ts",
     "db:update-schema-json": "tsx src/scripts/update-schema-json.ts",
