@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import Image from "next/image";
 import { api } from "~/trpc/react";
+import { UploadImage } from "~/components/ui/UploadImage";
+import { UploadUltraSmallImage } from "~/components/ui/UploadUltraSmallImage";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +30,6 @@ const eventSchema = z.object({
     (val) => (val === "" ? undefined : val),
     z.string().optional(),
   ),
-  imageUrl: z.string().optional(),
   venueId: z.string().min(1, "Please select a venue"),
   regionId: z.string().min(1, "Please select a region"),
   ticketTypes: z
@@ -38,13 +37,9 @@ const eventSchema = z.object({
     .min(1, "At least one ticket type is required"),
 });
 
-type EventFormData = Omit<
-  z.infer<typeof eventSchema>,
-  "thumbnailUrl" | "imageUrls" | "imageUrl"
->;
+type EventFormData = z.infer<typeof eventSchema>;
 
 // Define types for API responses
-// Simplified type with only the fields we need for the form
 type Venue = {
   id: string;
   name: string;
@@ -53,49 +48,10 @@ type Venue = {
   regionId: string;
 };
 
-// Simplified type with only the fields we need for the form
 type Region = {
   id: string;
   name: string;
 };
-
-// Type for the upload API response
-type UploadResponse = {
-  urls: string[];
-};
-
-// Upload Helper
-async function uploadFile(
-  file: File,
-  entityType: string,
-): Promise<string | null> {
-  const formData = new FormData();
-  formData.append("image", file);
-  formData.append("entityType", entityType);
-  try {
-    const response = await fetch("/api/upload", {
-      method: "POST",
-      body: formData,
-    });
-    if (!response.ok) {
-      console.error("Upload failed:", response.status, await response.text());
-      return null;
-    }
-    // Use type assertion here
-    const result = (await response.json()) as UploadResponse;
-    // Check result.urls directly now
-    if (result.urls && Array.isArray(result.urls) && result.urls.length > 0) {
-      // Use nullish coalescing operator to ensure null is returned if urls[0] is undefined
-      return result.urls[0] ?? null;
-    } else {
-      console.error("Upload API response error or no URLs returned:", result);
-      return null;
-    }
-  } catch (error) {
-    console.error("Upload fetch error:", error);
-    return null;
-  }
-}
 
 export default function CreateEventPage() {
   const router = useRouter();
@@ -106,13 +62,9 @@ export default function CreateEventPage() {
   const [isLoadingVenues, setIsLoadingVenues] = useState(true);
   const [isLoadingRegions, setIsLoadingRegions] = useState(true);
 
-  // Image State
-  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
-  const [imageFiles, setImageFiles] = useState<File[]>([]);
-  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-  const [thumbnailSize, setThumbnailSize] = useState<string>("");
-  const [imageSizes, setImageSizes] = useState<string[]>([]);
+  // Image State - using the shared upload components pattern
+  const [thumbnailUrl, setThumbnailUrl] = useState<string>("");
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
 
   const {
     register,
@@ -159,14 +111,12 @@ export default function CreateEventPage() {
   // Update state when data is loaded
   useEffect(() => {
     if (venuesData?.items) {
-      // Extract only the fields we need to avoid type mismatches
       const simplifiedVenues = venuesData.items.map(venue => ({
         id: venue.id,
         name: venue.name,
         address: venue.address,
         capacity: venue.capacity,
         regionId: venue.regionId,
-        // Include other fields as needed but only those that are actually used in the form
       }));
       
       setVenues(simplifiedVenues as Venue[]);
@@ -181,11 +131,9 @@ export default function CreateEventPage() {
 
   useEffect(() => {
     if (regionsData?.items) {
-      // Extract only the fields we need to avoid type mismatches
       const simplifiedRegions = regionsData.items.map(region => ({
         id: region.id,
         name: region.name,
-        // Include other fields as needed but only those that are actually used in the form
       }));
       
       setRegions(simplifiedRegions as Region[]);
@@ -210,95 +158,11 @@ export default function CreateEventPage() {
   // Filter venues based on selected region
   const filteredVenues = selectedRegionId
     ? venues.filter((venue) => venue.regionId === selectedRegionId)
-    : [];  // Show no venues if no region is selected
-
-  // File Handlers
-  const handleThumbnailChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Basic size check (optional, backend also checks)
-      if (file.size > 30 * 1024) {
-        alert(
-          `Thumbnail image size should not exceed 30KB. Current size: ${(file.size / 1024).toFixed(1)}KB`,
-        );
-        e.target.value = ""; // Clear input
-        return;
-      }
-      setThumbnailFile(file);
-      setThumbnailSize(`${(file.size / 1024).toFixed(1)}KB`);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setThumbnailPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    } else {
-      setThumbnailFile(null);
-      setThumbnailPreview(null);
-      setThumbnailSize("");
-    }
-  };
-
-  const handleImagesChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files ? Array.from(e.target.files) : [];
-
-    // Check each file individually against the 120KB limit
-    const oversizedFiles = files.filter((f) => f.size > 120 * 1024);
-
-    if (oversizedFiles.length > 0) {
-      // Clear the input to allow reselection
-      e.target.value = "";
-
-      // Show clear error message about individual file size limits
-      alert(
-        `Each image must be less than 120KB. The following images are too large: ${oversizedFiles.map((f) => `${f.name} (${(f.size / 1024).toFixed(1)}KB)`).join(", ")}`,
-      );
-
-      // Keep only valid files
-      const validFiles = files.filter((f) => f.size <= 120 * 1024);
-      setImageFiles(validFiles);
-    } else {
-      // All files are valid
-      setImageFiles(files);
-    }
-
-    // Clear old previews and sizes
-    setImagePreviews([]);
-    setImageSizes([]);
-
-    // Generate previews only for valid files
-    const validFilesForPreview = files.filter((f) => f.size <= 120 * 1024);
-
-    if (validFilesForPreview.length === 0) {
-      setImagePreviews([]);
-      setImageSizes([]);
-      return;
-    }
-
-    // Create previews and track sizes for valid files
-    const newPreviews: string[] = [];
-    const newSizes: string[] = validFilesForPreview.map(
-      (file) => `${(file.size / 1024).toFixed(1)}KB`,
-    );
-    setImageSizes(newSizes);
-
-    validFilesForPreview.forEach((file) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        newPreviews.push(reader.result as string);
-        if (newPreviews.length === validFilesForPreview.length) {
-          setImagePreviews(newPreviews);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
-  };
+    : [];
 
   const onSubmit = async (data: EventFormData) => {
     setIsLoading(true);
     setError("");
-
-    let uploadedThumbnailUrl: string | null = null;
-    const uploadedImageUrls: string[] = [];
 
     try {
       // Ensure date and startTime are valid before proceeding
@@ -307,19 +171,15 @@ export default function CreateEventPage() {
       }
 
       // Format date and time for backend
-      // Combine date and time correctly for reliable parsing
       const startDateTime = new Date(`${data.date}T${data.startTime}`);
 
       // Handle optional endTime
       let endDateTimeISO: string | null = null;
       if (data.endTime) {
-        // Check if endTime has a value
         const endDateTime = new Date(`${data.date}T${data.endTime}`);
-        // Check if the created end date is valid before converting
         if (!isNaN(endDateTime.getTime())) {
           endDateTimeISO = endDateTime.toISOString();
         } else {
-          // Handle cases where combining date and endTime results in an invalid date
           console.warn("Could not parse end time, sending null.");
         }
       }
@@ -329,23 +189,9 @@ export default function CreateEventPage() {
         throw new Error("Invalid Start Date/Time combination.");
       }
 
-      // Upload Images
-      if (thumbnailFile) {
-        uploadedThumbnailUrl = await uploadFile(thumbnailFile, "event");
-        if (!uploadedThumbnailUrl) throw new Error("Thumbnail upload failed.");
-      }
-      if (imageFiles.length > 0) {
-        const results = await Promise.all(
-          imageFiles.map((file) => uploadFile(file, "event")),
-        );
-        if (results.some((url) => url === null))
-          throw new Error("One or more event images failed to upload.");
-        uploadedImageUrls.push(...results.filter((url) => url !== null));
-      }
-
-      // --- Prepare Payload ---
+      // Prepare Payload
       const eventData = {
-        title: data.title, // Explicitly list fields from validated data
+        title: data.title,
         description: data.description,
         date: startDateTime.toISOString(),
         startTime: startDateTime.toISOString(),
@@ -353,11 +199,9 @@ export default function CreateEventPage() {
         venueId: data.venueId,
         regionId: data.regionId,
         ticketTypes: data.ticketTypes,
-        thumbnailUrl: uploadedThumbnailUrl,
-        imageUrls: uploadedImageUrls,
-        // Explicitly omit imageUrl if it was part of the original 'data' type somehow
+        thumbnailUrl: thumbnailUrl || null,
+        imageUrls: imageUrls,
       };
-      // delete (eventData as any).imageUrl; // Alternative if needed
 
       console.log("Submitting event data:", eventData);
 
@@ -370,7 +214,7 @@ export default function CreateEventPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({})); // Try to get error details
+        const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error ?? "Failed to create event");
       }
 
@@ -537,9 +381,7 @@ export default function CreateEventPage() {
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                 disabled={isLoadingRegions}
                 onChange={(e) => {
-                  // Manually set the value and trigger validation
                   setValue("regionId", e.target.value, { shouldValidate: true });
-                  // Reset venue selection when region changes
                   setValue("venueId", "", { shouldValidate: true });
                 }}
               >
@@ -597,110 +439,57 @@ export default function CreateEventPage() {
         </div>
 
         {/* Image Upload Section */}
-        <div className="mb-6 space-y-4 rounded-md bg-gray-50 p-4">
+        <div className="mb-6 space-y-6 rounded-md bg-gray-50 p-4">
           <h2 className="mb-4 text-xl font-semibold">Images</h2>
+          
+          {/* Thumbnail Upload */}
           <div>
-            <label
-              htmlFor="thumbnail"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Thumbnail Image (for listings)
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Thumbnail Image
               <span className="ml-1 text-xs text-gray-500">
-                (Max size: 30KB)
+                (Max 30KB, WebP format, only 1 image)
               </span>
             </label>
-            <input
-              id="thumbnail"
-              type="file"
-              accept="image/*"
-              onChange={handleThumbnailChange}
-              className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100"
+            <UploadUltraSmallImage
+              type="thumbnail"
+              value={thumbnailUrl ? thumbnailUrl : undefined}
+              onChange={(data) => {
+                if (data && !Array.isArray(data)) {
+                  setThumbnailUrl(data.url);
+                } else if (Array.isArray(data) && data.length > 0) {
+                  setThumbnailUrl(data[0]?.url || "");
+                } else {
+                  setThumbnailUrl("");
+                }
+              }}
+              entityType="event"
+              maxImages={1}
             />
-            {thumbnailPreview && (
-              <div className="mt-2">
-                <div className="mb-1 flex items-center">
-                  <span className="mr-2 text-xs text-gray-500">
-                    Current size: {thumbnailSize}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setThumbnailFile(null);
-                      setThumbnailPreview(null);
-                      setThumbnailSize("");
-                    }}
-                    className="text-xs text-red-500 hover:text-red-700"
-                  >
-                    Remove
-                  </button>
-                </div>
-                <Image
-                  src={thumbnailPreview}
-                  alt="Thumbnail preview"
-                  width={100}
-                  height={75}
-                  className="rounded-md object-cover"
-                />
-              </div>
-            )}
           </div>
+
+          {/* Gallery Images Upload */}
           <div>
-            <label
-              htmlFor="images"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Event Images (Multiple allowed)
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Event Images
               <span className="ml-1 text-xs text-gray-500">
-                (Max size: 120KB per image)
+                (Max 120KB per image, WebP format, up to 8 images)
               </span>
             </label>
-            <input
-              id="images"
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleImagesChange}
-              className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100"
+            <UploadImage
+              type="images"
+              value={imageUrls.length > 0 ? imageUrls : undefined}
+              onChange={(data) => {
+                if (Array.isArray(data)) {
+                  setImageUrls(data.map(item => item.url));
+                } else if (data && !Array.isArray(data)) {
+                  setImageUrls([data.url]);
+                } else {
+                  setImageUrls([]);
+                }
+              }}
+              entityType="event"
+              maxImages={8}
             />
-            {imagePreviews.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-4">
-                {imagePreviews.map((preview, index) => (
-                  <div key={index} className="relative">
-                    <div className="mb-1 flex items-center">
-                      <span className="mr-2 text-xs text-gray-500">
-                        Size: {imageSizes[index]}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const newFiles = [...imageFiles];
-                          newFiles.splice(index, 1);
-                          setImageFiles(newFiles);
-
-                          const newPreviews = [...imagePreviews];
-                          newPreviews.splice(index, 1);
-                          setImagePreviews(newPreviews);
-
-                          const newSizes = [...imageSizes];
-                          newSizes.splice(index, 1);
-                          setImageSizes(newSizes);
-                        }}
-                        className="text-xs text-red-500 hover:text-red-700"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                    <Image
-                      src={preview}
-                      alt={`Event image preview ${index + 1}`}
-                      width={100}
-                      height={75}
-                      className="rounded-md object-cover"
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
 

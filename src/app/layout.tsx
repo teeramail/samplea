@@ -10,6 +10,7 @@ import { ClientLayout } from "./_components/ClientLayout";
 import { RegionsNav } from "./_components/RegionsNav";
 import { TRPCReactProvider } from "~/trpc/react";
 import ChatWidgetWrapper from "~/components/ChatWidgetWrapper";
+import MobileBottomNav from "~/components/MobileBottomNav";
 
 export const metadata: Metadata = {
   title: "ThaiBoxingHub",
@@ -28,8 +29,9 @@ export default function RootLayout({
             <ClientLayout>
               <Navbar />
               <RegionsNav />
-              <div className="flex-grow">{children}</div>
+              <div className="flex-grow pb-16 md:pb-0">{children}</div>
               <Footer />
+              <MobileBottomNav />
               <ChatWidgetWrapper />
             </ClientLayout>
           </ThemeProvider>

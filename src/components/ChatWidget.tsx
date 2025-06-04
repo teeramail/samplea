@@ -21,8 +21,11 @@ export default function ChatWidget() {
 
     // Configure Tawk.to to not automatically show the chat box
     window.Tawk_API.onLoad = function () {
-      // Hide the chat window but keep the widget/bubble visible
-      window.Tawk_API.hideWidget();
+      // Hide the chat window by default on mobile to avoid conflicts with our bottom nav
+      const isMobile = window.innerWidth < 768;
+      if (isMobile) {
+        window.Tawk_API.hideWidget();
+      }
     };
 
     // Create and append the Tawk.to script using the exact code provided
