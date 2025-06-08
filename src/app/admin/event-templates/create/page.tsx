@@ -106,6 +106,9 @@ export default function CreateEventTemplatePage() {
   const [thumbnailImage, setThumbnailImage] = useState<UploadedUltraSmallImageData | undefined>(undefined);
   const [templateImages, setTemplateImages] = useState<UploadedImageData[]>([]);
 
+  // tRPC mutation hook - must be at top level of component
+  const createTemplateMutation = api.eventTemplate.create.useMutation();
+
   const {
     register,
     handleSubmit,
@@ -203,8 +206,7 @@ export default function CreateEventTemplatePage() {
       };
 
       // Create the event template using tRPC
-      const createTemplate = api.eventTemplate.create.useMutation();
-      await createTemplate.mutateAsync(templateData);
+      await createTemplateMutation.mutateAsync(templateData);
 
       // Redirect to the event templates list page
       router.push("/admin/event-templates");
@@ -767,10 +769,10 @@ export default function CreateEventTemplatePage() {
           </Link>
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || createTemplateMutation.isPending}
             className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
           >
-            {isSubmitting ? "Creating..." : "Create Template"}
+            {isSubmitting || createTemplateMutation.isPending ? "Creating..." : "Create Template"}
           </button>
         </div>
       </form>

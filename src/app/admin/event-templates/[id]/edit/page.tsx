@@ -9,6 +9,8 @@ import { useRouter } from "next/navigation";
 import { api } from "~/trpc/react";
 import React from "react";
 import Image from "next/image";
+import { UploadImage, type UploadedImageData } from "~/components/ui/UploadImage";
+import { UploadUltraSmallImage, type UploadedUltraSmallImageData } from "~/components/ui/UploadUltraSmallImage";
 
 // Define Zod schema for validation
 const eventTemplateTicketSchema = z.object({
@@ -51,6 +53,7 @@ const eventTemplateSchema = z.object({
   ),
   isActive: z.boolean().default(true),
   thumbnailUrl: z.string().optional().nullable(),
+  imageUrls: z.array(z.string().url()).max(8).optional(),
   templateTickets: z
     .array(eventTemplateTicketSchema)
     .min(1, "Add at least one ticket type"),
@@ -168,11 +171,35 @@ export default function EditEventTemplatePage({ params }: PageProps) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   
-  // Image State
-  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
-  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
-  const [thumbnailSize, setThumbnailSize] = useState<string>("");
-  const [existingThumbnailUrl, setExistingThumbnailUrl] = useState<string | null>(null);
+  // Upload states using our modern upload components
+  const [thumbnailImage, setThumbnailImage] = useState<UploadedUltraSmallImageData | undefined>(undefined);
+  const [templateImages, setTemplateImages] = useState<UploadedImageData[]>([]);
+
+  // tRPC mutation hook
+  const updateTemplateMutation = api.eventTemplate.update.useMutation();
+
+  // Handle thumbnail upload change
+  const handleThumbnailChange = (data: UploadedUltraSmallImageData | UploadedUltraSmallImageData[] | null) => {
+    if (data && !Array.isArray(data)) {
+      setThumbnailImage(data);
+      setValue("thumbnailUrl", data.url);
+    } else {
+      setThumbnailImage(undefined);
+      setValue("thumbnailUrl", "");
+    }
+  };
+
+  // Handle template images upload change
+  const handleTemplateImagesChange = (data: UploadedImageData | UploadedImageData[] | null) => {
+    if (data) {
+      const imagesArray = Array.isArray(data) ? data : [data];
+      setTemplateImages(imagesArray);
+      setValue("imageUrls", imagesArray.map(img => img.url));
+    } else {
+      setTemplateImages([]);
+      setValue("imageUrls", []);
+    }
+  };
 
   const {
     register,
@@ -231,9 +258,6 @@ export default function EditEventTemplatePage({ params }: PageProps) {
     onSuccess: () => {
       setSuccessMessage("Event template updated successfully!");
       setIsSaving(false);
-      
-      // Reset the thumbnailFile state
-      setThumbnailFile(null);
       
       // Wait a moment and then redirect
       setTimeout(() => {
@@ -338,11 +362,23 @@ export default function EditEventTemplatePage({ params }: PageProps) {
         // Set the form value
         setValue("thumbnailUrl", thumbnailValue);
         
-        // If there's a valid thumbnail URL, set the preview
+        // If there's a valid thumbnail URL, set the upload component
         if (thumbnailValue) {
-          setThumbnailPreview(thumbnailValue);
-          setExistingThumbnailUrl(thumbnailValue);
+          setThumbnailImage({
+            url: thumbnailValue,
+            originalFilename: 'existing-thumbnail.jpg'
+          });
         }
+      }
+
+      // Handle existing image URLs
+      if (templateData.imageUrls && Array.isArray(templateData.imageUrls)) {
+        const existingImages = templateData.imageUrls.map((url, index) => ({
+          url,
+          originalFilename: `existing-image-${index + 1}.jpg`
+        }));
+        setTemplateImages(existingImages);
+        setValue("imageUrls", templateData.imageUrls);
       }
       
       // Set template tickets if available
@@ -424,31 +460,7 @@ export default function EditEventTemplatePage({ params }: PageProps) {
     }
   }, [selectedRegionId, setValue, watch, allVenues]);
 
-  // File Handlers
-  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Basic size check (optional, backend also checks)
-      if (file.size > 30 * 1024) {
-        alert(
-          `Thumbnail image size should not exceed 30KB. Current size: ${(file.size / 1024).toFixed(1)}KB`,
-        );
-        e.target.value = ""; // Clear input
-        return;
-      }
-      setThumbnailFile(file);
-      setThumbnailSize(`${(file.size / 1024).toFixed(1)}KB`);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setThumbnailPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    } else {
-      setThumbnailFile(null);
-      setThumbnailPreview(existingThumbnailUrl);
-      setThumbnailSize("");
-    }
-  };
+
 
   const onSubmit: SubmitHandler<EventTemplateFormData> = async (data) => {
     setIsSaving(true);
@@ -545,14 +557,8 @@ export default function EditEventTemplatePage({ params }: PageProps) {
         }
       }
 
-      // Handle thumbnail upload if there's a new file
-      let thumbnailUrl = data.thumbnailUrl;
-      if (thumbnailFile) {
-        const uploadedUrl = await uploadFile(thumbnailFile, "eventTemplate");
-        if (uploadedUrl) {
-          thumbnailUrl = uploadedUrl;
-        }
-      }
+      // Use the thumbnail URL from the upload component
+      const thumbnailUrl = data.thumbnailUrl || thumbnailImage?.url || "";
       
       // Prepare form data for API
       const formattedData = {
@@ -567,6 +573,7 @@ export default function EditEventTemplatePage({ params }: PageProps) {
         defaultStartTime: formattedStartTime,
         defaultEndTime: formattedEndTime,
         thumbnailUrl,
+        imageUrls: templateImages.map(img => img.url),
         // Format ticket data
         templateTickets: data.templateTickets.map(ticket => ({
           ...ticket,
@@ -576,7 +583,7 @@ export default function EditEventTemplatePage({ params }: PageProps) {
       };
 
       // Update the template
-      await updateTemplate.mutateAsync(formattedData);
+      await updateTemplateMutation.mutateAsync(formattedData);
     } catch (error) {
       console.error("Error in form submission:", error);
       setSubmitError(
@@ -684,34 +691,45 @@ export default function EditEventTemplatePage({ params }: PageProps) {
               </label>
             </div>
             
-            {/* Thumbnail Upload */}
+            {/* Template Images */}
             <div className="md:col-span-2">
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Thumbnail Image (Optional, max 30KB)
-              </label>
-              <div className="mt-1 flex items-center space-x-4">
-                {thumbnailPreview && (
-                  <div className="relative h-24 w-24 overflow-hidden rounded-md border border-gray-300">
-                    <Image
-                      src={thumbnailPreview}
-                      alt="Thumbnail preview"
-                      fill
-                      style={{ objectFit: "cover" }}
-                    />
-                  </div>
-                )}
-                <div>
-                  <input
-                    type="file"
-                    accept="image/*"
+              <div className="rounded-lg border bg-gray-50 p-6">
+                <h3 className="mb-4 text-lg font-semibold text-gray-900">Event Template Images</h3>
+                
+                {/* Thumbnail Upload - Ultra Small (30KB) */}
+                <div className="mb-6">
+                  <h4 className="mb-2 text-md font-medium text-gray-800">Thumbnail</h4>
+                  <p className="mb-4 text-sm text-gray-600">
+                    Upload a thumbnail image that will be automatically compressed to 30KB or less. 
+                    This ensures fast loading times in template listings.
+                  </p>
+                  <UploadUltraSmallImage
+                    type="thumbnail"
+                    entityType="event-templates"
+                    entityId={id}
+                    value={thumbnailImage}
                     onChange={handleThumbnailChange}
-                    className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-indigo-700 hover:file:bg-indigo-100"
+                    helpText="Recommended size: 400x300px. Will be compressed to 30KB automatically."
+                    showInfo={true}
                   />
-                  {thumbnailSize && (
-                    <p className="mt-1 text-xs text-gray-500">
-                      Size: {thumbnailSize}
-                    </p>
-                  )}
+                </div>
+
+                {/* Additional Images Upload */}
+                <div>
+                  <h4 className="mb-2 text-md font-medium text-gray-800">Additional Images</h4>
+                  <p className="mb-4 text-sm text-gray-600">
+                    Upload up to 8 additional images for this event template. These will be compressed to 250KB each.
+                  </p>
+                  <UploadImage
+                    type="images"
+                    entityType="event-templates"
+                    entityId={id}
+                    value={templateImages}
+                    onChange={handleTemplateImagesChange}
+                    maxImages={8}
+                    helpText="Recommended size: 800x600px. Will be compressed to 250KB automatically."
+                    showInfo={true}
+                  />
                 </div>
               </div>
             </div>

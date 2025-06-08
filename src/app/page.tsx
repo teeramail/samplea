@@ -24,65 +24,7 @@ const formatDate = (date: Date | string | null | undefined) => {
   return formatDateInThaiTimezone(dateObj);
 };
 
-// Function to get upcoming events for Koh Samui region
-async function getKohSamuiEvents() {
-  try {
-    // Find Koh Samui region
-    const kohSamuiRegion = await db.query.regions.findFirst({
-      where: eq(regions.slug, "koh-samui"),
-    });
 
-    if (!kohSamuiRegion) {
-      console.log("Koh Samui region not found");
-      return [];
-    }
-
-    // Get current date time
-    const now = new Date();
-    
-    // Create a date object at midnight today in UTC
-    const todayAtMidnightUTC = new Date(now);
-    todayAtMidnightUTC.setUTCHours(0, 0, 0, 0);
-    
-    const kohSamuiEvents = await db.query.events.findMany({
-      columns: {
-        id: true,
-        title: true,
-        date: true,
-        thumbnailUrl: true,
-      },
-      with: {
-        venue: { columns: { name: true } },
-        region: { columns: { name: true } },
-      },
-      where: and(
-        eq(events.regionId, kohSamuiRegion.id),
-        gte(events.date, todayAtMidnightUTC),
-        eq(events.status, 'SCHEDULED')
-      ),
-      orderBy: [asc(events.date)],
-      limit: 6, // Limit to 6 events for the homepage
-    });
-    
-    // Extra validation layer - filter out any past events
-    const validEvents = kohSamuiEvents
-      .filter(event => {
-        const eventDate = new Date(event.date);
-        const convertedDate = convertToChristianEra(eventDate);
-        return convertedDate >= now;
-      })
-      .sort((a, b) => {
-        const dateA = convertToChristianEra(new Date(a.date)).getTime();
-        const dateB = convertToChristianEra(new Date(b.date)).getTime();
-        return dateA - dateB;
-      });
-    
-    return validEvents;
-  } catch (error) {
-    console.error("Error fetching Koh Samui events:", error);
-    return [];
-  }
-}
 
 // Define types for the fetched data
 type EventType = RouterOutputs["event"]["getUpcoming"][number];
@@ -123,7 +65,7 @@ export default async function Home() {
 
   // Fetch all data directly from the database in parallel
   // This ensures we get fresh data during development
-  const [upcomingEventsData, featuredFightersData, featuredCoursesData, featuredPostsData, recommendedVenues, kohSamuiEventsData] =
+  const [upcomingEventsData, featuredFightersData, featuredCoursesData, featuredPostsData, recommendedVenues] =
     await Promise.all([
       // Upcoming events - direct DB query
       db.query.events.findMany({
@@ -186,9 +128,6 @@ export default async function Home() {
           },
         },
       }),
-
-      // Koh Samui events - new addition
-      getKohSamuiEvents(),
     ]);
 
   // Process venues to include their types
@@ -202,7 +141,6 @@ export default async function Home() {
   const featuredFighters = featuredFightersData;
   const featuredCourses = featuredCoursesData;
   const featuredPosts = featuredPostsData;
-  const kohSamuiEvents = kohSamuiEventsData;
   
   // Check if we have venues to display
   const hasVenues = venuesWithTypes.length > 0;
@@ -221,80 +159,7 @@ export default async function Home() {
           fighters.
         </p>
 
-        {/* Koh Samui Upcoming Events Section */}
-        {kohSamuiEvents.length > 0 && (
-          <section className="mt-8 w-full max-w-5xl">
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-3xl font-bold">
-                Upcoming Events in <span className="text-[hsl(280,100%,70%)]">Koh Samui</span>
-              </h2>
-              <Link
-                href="/region/koh-samui"
-                className="text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]"
-              >
-                View All Koh Samui Events &rarr;
-              </Link>
-            </div>
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-              {kohSamuiEvents.slice(0, 3).map((event) => (
-                <Link
-                  key={event.id}
-                  href={`/events/${event.id}`}
-                  className="group block overflow-hidden rounded-lg bg-white/10 shadow-lg transition-colors hover:bg-white/20"
-                >
-                  <div className="relative h-48 w-full bg-white/5">
-                    {event.thumbnailUrl ? (
-                      <Image
-                        src={event.thumbnailUrl}
-                        alt={`${event.title} thumbnail`}
-                        fill
-                        className="object-cover"
-                        unoptimized
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-white/10 text-gray-400">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-16 w-16"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={1}
-                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                          />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-5">
-                    <div className="mb-2 text-sm text-[hsl(280,100%,70%)]">
-                      {formatDate(event.date)}
-                    </div>
-                    <h3 className="mb-3 text-xl font-bold transition-colors group-hover:text-[hsl(280,100%,70%)]">
-                      {event.title}
-                    </h3>
-                    {event.venue && (
-                      <div className="mb-1 flex items-center text-sm text-gray-300">
-                        <BuildingLibraryIcon className="mr-1 h-4 w-4 shrink-0" />{" "}
-                        {event.venue.name}
-                      </div>
-                    )}
-                    {event.region && (
-                      <div className="flex items-center text-sm text-gray-300">
-                        <MapPinIcon className="mr-1 h-4 w-4 shrink-0" />{" "}
-                        {event.region.name}
-                      </div>
-                    )}
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
+
 
         {/* Upcoming Events Section */}
         <section className="mt-8 w-full max-w-5xl">
