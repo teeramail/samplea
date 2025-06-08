@@ -14,11 +14,14 @@ import type { RouterOutputs } from "~/trpc/react";
 // Import Next.js config
 import { logCacheConfig } from "./config";
 import { convertToChristianEra, parseAndConvertDate } from "~/lib/dateUtils";
+import { formatDateInThaiTimezone } from "~/lib/timezoneUtils";
 
 // Helper function (consider moving to a utils file)
 const formatDate = (date: Date | string | null | undefined) => {
   if (!date) return "";
-  return format(new Date(date), "MMM dd, yyyy");
+  // Use Thailand timezone formatting for consistency
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  return formatDateInThaiTimezone(dateObj);
 };
 
 // Function to get upcoming events for Koh Samui region

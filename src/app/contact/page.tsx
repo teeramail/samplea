@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import WhatsAppBusinessInfo from "~/components/WhatsAppBusinessInfo";
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -54,6 +55,11 @@ export default function ContactPage() {
           We'd love to hear from you. Fill out the form below and we'll get back
           to you as soon as possible.
         </p>
+
+        {/* WhatsApp Business Information Section */}
+        <div className="mb-10">
+          <WhatsAppBusinessInfo />
+        </div>
 
         <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
           <div className="md:col-span-2">

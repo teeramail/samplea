@@ -7,6 +7,7 @@ import { z } from "zod";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { use } from "react";
+import TimezoneInfo from "~/components/TimezoneInfo";
 
 // Define schema for ticket type
 const ticketTypeSchema = z.object({
@@ -261,8 +262,20 @@ export default function EditEventPage({
 
   return (
     <div className="rounded-lg bg-white p-6 shadow-md">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-800">Edit Event</h1>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold">Edit Event</h1>
+        <p className="mt-2 text-gray-600">
+          Update event details and ticket types. All changes will be saved
+          immediately.
+        </p>
+      </div>
+
+              {/* Timezone Information */}
+        <div className="mb-6">
+          <TimezoneInfo showForEditing={true} />
+        </div>
+
+        <div className="mb-6 flex items-center justify-between">
         <Link
           href={`/admin/events/${id}`}
           className="rounded-md bg-gray-500 px-4 py-2 text-white hover:bg-gray-600"

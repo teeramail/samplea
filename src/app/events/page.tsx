@@ -2,6 +2,7 @@ import Link from "next/link";
 import { db } from "~/server/db";
 import { events, regions } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
+import { formatDateInThaiTimezone, formatTimeInThaiTimezone } from "~/lib/timezoneUtils";
 
 type EventsPageProps = {
   searchParams: Promise<{ region?: string }>;
@@ -9,7 +10,22 @@ type EventsPageProps = {
 
 export default async function EventsPage({ searchParams }: EventsPageProps) {
   const resolvedParams = await searchParams;
-  const { region: regionId } = resolvedParams;
+  const { region: regionSlug } = resolvedParams;
+
+  // Convert region slug to region ID if provided
+  let regionId: string | null = null;
+  let activeRegionName = "";
+  
+  if (regionSlug) {
+    const region = await db.query.regions.findFirst({
+      where: eq(regions.slug, regionSlug),
+    });
+    
+    if (region) {
+      regionId = region.id;
+      activeRegionName = region.name;
+    }
+  }
 
   // Query builder for events
   let query = db.query.events.findMany({
@@ -61,30 +77,14 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
   // Execute query
   const eventsList = await query;
 
-  // Get the region name if a filter is active
-  let activeRegionName = "";
-  if (regionId) {
-    const region = await db.query.regions.findFirst({
-      where: eq(regions.id, regionId),
-    });
-    if (region) {
-      activeRegionName = region.name;
-    }
-  }
+  // Note: activeRegionName is already set above when we found the region
 
   const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    return formatDateInThaiTimezone(date);
   };
 
   const formatTime = (time: Date) => {
-    return new Date(time).toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    return formatTimeInThaiTimezone(time);
   };
 
   return (
@@ -100,6 +100,13 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
           Showing Muay Thai events in the {activeRegionName} region
         </p>
       )}
+
+      {/* Timezone Information */}
+      <div className="mb-6 rounded-lg bg-blue-50 border border-blue-200 p-4">
+        <p className="text-sm text-blue-800">
+          <strong>Note:</strong> All event times are displayed in Thailand Time (GMT+7)
+        </p>
+      </div>
 
       <div className="grid grid-cols-1 gap-6">
         {eventsList.length > 0 ? (

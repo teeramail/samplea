@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ChatBubbleLeftRightIcon } from "@heroicons/react/24/outline";
-import { contactConfig } from "~/config/contact";
+import WhatsAppBusinessWidget from "./WhatsAppBusinessWidget";
 
 declare global {
   interface Window {
@@ -25,11 +25,6 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
 export default function MobileBottomNav() {
   const [isVisible, setIsVisible] = useState(true);
 
-  const handleWhatsAppClick = () => {
-    const whatsappUrl = `https://wa.me/${contactConfig.whatsapp.phoneNumber}?text=${encodeURIComponent(contactConfig.whatsapp.defaultMessage)}`;
-    window.open(whatsappUrl, "_blank");
-  };
-
   const handleChatClick = () => {
     // Show the Tawk.to chat widget
     if (window.Tawk_API && window.Tawk_API.showWidget) {
@@ -46,16 +41,13 @@ export default function MobileBottomNav() {
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 bg-white shadow-lg border-t border-gray-200 md:hidden">
       <div className="flex h-16">
-        {/* WhatsApp Button */}
-        <button
-          onClick={handleWhatsAppClick}
-          className="flex flex-1 items-center justify-center bg-green-500 text-white transition-colors hover:bg-green-600 active:bg-green-700"
-        >
-          <div className="flex flex-col items-center space-y-1">
-            <WhatsAppIcon className="h-6 w-6" />
-            <span className="text-xs font-medium">WhatsApp</span>
-          </div>
-        </button>
+        {/* WhatsApp Business Button with Department Routing */}
+        <div className="flex-1">
+          <WhatsAppBusinessWidget 
+            showDepartments={true}
+            className="h-full w-full rounded-none"
+          />
+        </div>
         
         {/* Chat Button */}
         <button

@@ -4,6 +4,7 @@ import { db } from "~/server/db";
 import { events } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
 import Image from "next/image";
+import { formatDateInThaiTimezone, formatTimeRangeInThaiTimezone, getUserTimezoneInfo } from "~/lib/timezoneUtils";
 
 export default async function EventDetailPage({
   params,
@@ -26,15 +27,11 @@ export default async function EventDetailPage({
   }
 
   const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString();
+    return formatDateInThaiTimezone(date);
   };
 
-  const formatTime = (time: Date | null) => {
-    if (!time) return "N/A";
-    return new Date(time).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  const formatTimeRange = (startTime: Date | null, endTime: Date | null) => {
+    return formatTimeRangeInThaiTimezone(startTime, endTime);
   };
 
   // Function to determine event status based on date
@@ -77,6 +74,23 @@ export default async function EventDetailPage({
         </div>
       </div>
 
+      {/* Timezone Information Banner */}
+      <div className="mb-6 rounded-lg bg-blue-50 border border-blue-200 p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-blue-900">Timezone Information</h3>
+            <p className="text-sm text-blue-700">
+              All event times are displayed in <strong>Thailand Time (GMT+7)</strong>
+            </p>
+          </div>
+          <div className="text-right">
+            <div className="text-xs text-blue-600">
+              Your timezone: {typeof window !== 'undefined' ? getUserTimezoneInfo().timezone : 'Loading...'}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
         <div className="md:col-span-2">
           <div className="rounded-lg bg-gray-50 p-4">
@@ -87,8 +101,11 @@ export default async function EventDetailPage({
             </div>
             <div className="mb-2 flex items-center">
               <span className="w-24 font-medium text-gray-700">Time:</span>
-              <span>
-                {formatTime(event.startTime)} - {formatTime(event.endTime)}
+              <span className="flex items-center">
+                {formatTimeRange(event.startTime, event.endTime)}
+                <span className="ml-2 text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded">
+                  Thailand Time (GMT+7)
+                </span>
               </span>
             </div>
             <div className="mb-2 flex items-center">

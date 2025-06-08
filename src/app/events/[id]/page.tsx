@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "~/server/db";
 import { eq } from "drizzle-orm";
 import { events } from "~/server/db/schema";
+import { formatDateInThaiTimezone, formatTimeRangeInThaiTimezone } from "~/lib/timezoneUtils";
 import TicketSelection from "./TicketSelection";
 
 export default async function EventDetailPage({
@@ -29,19 +30,11 @@ export default async function EventDetailPage({
 
   const formatDate = (date: Date | null) => {
     if (!date) return "N/A";
-    return new Date(date).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    return formatDateInThaiTimezone(date);
   };
 
-  const formatTime = (time: Date | null) => {
-    if (!time) return "N/A";
-    return new Date(time).toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  const formatTimeRange = (startTime: Date | null, endTime: Date | null) => {
+    return formatTimeRangeInThaiTimezone(startTime, endTime);
   };
 
   const getEventStatus = (eventDate: Date | null) => {
@@ -70,6 +63,13 @@ export default async function EventDetailPage({
             Event Details
           </h1>
 
+          {/* Timezone Information */}
+          <div className="mb-6 rounded-lg bg-blue-50 border border-blue-200 p-4">
+            <p className="text-sm text-blue-800">
+              <strong>Note:</strong> All event times are displayed in Thailand Time (GMT+7)
+            </p>
+          </div>
+
           <div className="mb-6 rounded-lg bg-gray-50 p-4">
             <h2 className="mb-4 text-xl font-semibold">{event.title}</h2>
 
@@ -80,8 +80,11 @@ export default async function EventDetailPage({
 
             <div className="mb-2 flex items-center">
               <span className="w-24 font-medium text-gray-700">Time:</span>
-              <span>
-                {formatTime(event.startTime)} - {formatTime(event.endTime)}
+              <span className="flex items-center">
+                {formatTimeRange(event.startTime, event.endTime)}
+                <span className="ml-2 text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded">
+                  Thailand Time
+                </span>
               </span>
             </div>
 
