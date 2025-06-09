@@ -2,6 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createId } from "@paralleldrive/cuid2";
 import { format } from "date-fns";
+import { sql } from "drizzle-orm";
 
 import {
   createTRPCRouter,
@@ -251,7 +252,8 @@ export const eventRouter = createTRPCRouter({
         let whereClause = undefined;
 
         if (query) {
-          whereClause = like(events.title, `%${query}%`);
+          // Case-insensitive search using SQL LOWER function
+          whereClause = sql`LOWER(${events.title}) LIKE LOWER(${`%${query}%`})`;
         }
 
         // Count total events for pagination

@@ -21,43 +21,55 @@ export const categoryRouter = createTRPCRouter({
       const { page, limit, sortField, sortDirection, search } = input;
       const offset = (page - 1) * limit;
 
-      // Build query conditions
-      let query = ctx.db.select().from(categories);
+      // Build where conditions
+      const whereConditions = [];
       
       // Add search condition if provided
       if (search) {
-        query = query.where(like(categories.name, `%${search}%`));
+        // Case-insensitive search using SQL LOWER function
+        whereConditions.push(
+          sql`LOWER(${categories.name}) LIKE LOWER(${`%${search}%`})`
+        );
       }
 
-      // Add sorting
+      const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
+
+      // Build order by
+      let orderBy;
       if (sortDirection === "asc") {
         if (sortField === "name") {
-          query = query.orderBy(categories.name);
+          orderBy = categories.name;
         } else if (sortField === "createdAt") {
-          query = query.orderBy(categories.createdAt);
+          orderBy = categories.createdAt;
+        } else {
+          orderBy = categories.name; // default
         }
       } else {
         if (sortField === "name") {
-          query = query.orderBy(desc(categories.name));
+          orderBy = desc(categories.name);
         } else if (sortField === "createdAt") {
-          query = query.orderBy(desc(categories.createdAt));
+          orderBy = desc(categories.createdAt);
+        } else {
+          orderBy = desc(categories.name); // default
         }
       }
 
       // Execute count query
-      let countQuery = ctx.db
+      const countResult = await ctx.db
         .select({ count: sql<number>`count(*)` })
-        .from(categories);
+        .from(categories)
+        .where(whereClause);
       
-      if (search) {
-        countQuery = countQuery.where(like(categories.name, `%${search}%`));
-      }
-      
-      const countResult = await countQuery;
       const count = countResult[0]?.count ?? 0;
 
       // Execute main query with pagination
-      const items = await query.limit(limit).offset(offset);
+      const items = await ctx.db
+        .select()
+        .from(categories)
+        .where(whereClause)
+        .orderBy(orderBy!)
+        .limit(limit)
+        .offset(offset);
 
       return {
         items,

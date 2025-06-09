@@ -46,7 +46,10 @@ export const eventTemplateRouter = createTRPCRouter({
       const whereConditions = [];
 
       if (query) {
-        whereConditions.push(like(eventTemplates.templateName, `%${query}%`));
+        // Case-insensitive search using SQL LOWER function
+        whereConditions.push(
+          sql`LOWER(${eventTemplates.templateName}) LIKE LOWER(${`%${query}%`})`
+        );
       }
 
       if (venueId) {

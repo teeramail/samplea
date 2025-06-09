@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { sql } from "drizzle-orm";
 
 import {
   createTRPCRouter,
@@ -228,11 +229,11 @@ export const venueRouter = createTRPCRouter({
           // Get all venue types related to Muay Thai and Kickboxing
           const allVenueTypes = await ctx.db.query.venueTypes.findMany({
             where: or(
-              like(venueTypes.name, "%muay thai%"),
-              like(venueTypes.name, "%kickboxing%"),
-              like(venueTypes.name, "%boxing%"),
-              like(venueTypes.name, "%gym%"),
-              like(venueTypes.name, "%stadium%"),
+              sql`LOWER(${venueTypes.name}) LIKE LOWER('%muay thai%')`,
+              sql`LOWER(${venueTypes.name}) LIKE LOWER('%kickboxing%')`,
+              sql`LOWER(${venueTypes.name}) LIKE LOWER('%boxing%')`,
+              sql`LOWER(${venueTypes.name}) LIKE LOWER('%gym%')`,
+              sql`LOWER(${venueTypes.name}) LIKE LOWER('%stadium%')`,
             ),
           });
           typeIds = allVenueTypes.map((type) => type.id);

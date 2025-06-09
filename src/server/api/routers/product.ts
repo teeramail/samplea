@@ -2,7 +2,7 @@ import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { db } from "~/server/db";
 import { products, categories } from "~/server/db/schema";
-import { eq, desc, asc, like, and, or, count } from "drizzle-orm";
+import { eq, desc, asc, like, and, or, count, sql } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 
 export const productRouter = createTRPCRouter({
@@ -48,8 +48,8 @@ export const productRouter = createTRPCRouter({
       if (search) {
         whereConditions.push(
           or(
-            like(products.name, `%${search}%`),
-            like(products.description || '', `%${search}%`)
+            sql`LOWER(${products.name}) LIKE LOWER(${`%${search}%`})`,
+            sql`LOWER(${products.description} || '') LIKE LOWER(${`%${search}%`})`
           )
         );
       }
