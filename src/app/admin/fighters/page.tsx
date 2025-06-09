@@ -13,6 +13,7 @@ type FighterType = {
   record: string | null;
   thumbnailUrl: string | null;
   imageUrl: string | null;
+  imageUrls: string[] | null;
   country: string | null;
   isFeatured: boolean;
   createdAt: Date;

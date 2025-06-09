@@ -19,6 +19,7 @@ const createFighterSchema = z.object({
   country: z.string().optional(),
   thumbnailUrl: z.string().url().optional(),
   imageUrl: z.string().url().optional(),
+  imageUrls: z.array(z.string().url()).max(8).optional(),
   isFeatured: z.boolean().default(false),
 });
 
@@ -31,6 +32,7 @@ const updateFighterSchema = z.object({
   country: z.string().optional(),
   thumbnailUrl: z.string().url().optional(),
   imageUrl: z.string().url().optional(),
+  imageUrls: z.array(z.string().url()).max(8).optional(),
   isFeatured: z.boolean().optional(),
 });
 
@@ -99,6 +101,7 @@ export const fighterRouter = createTRPCRouter({
             country: input.country,
             thumbnailUrl: input.thumbnailUrl,
             imageUrl: input.imageUrl,
+            imageUrls: input.imageUrls,
             isFeatured: input.isFeatured,
             createdAt: now,
             updatedAt: now,

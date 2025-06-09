@@ -16,6 +16,7 @@ const fighterSchema = z.object({
   country: z.string().optional(),
   thumbnailUrl: z.string().url().optional(),
   imageUrl: z.string().url().optional(),
+  imageUrls: z.array(z.string().url()).max(8).optional(),
   isFeatured: z.boolean().default(false),
 });
 
@@ -62,12 +63,13 @@ export default function CreateFighterPage() {
     country: "",
     thumbnailUrl: "",
     imageUrl: "",
+    imageUrls: [],
     isFeatured: false,
   });
   
   // New state for uploaded images using our components
   const [thumbnailImage, setThumbnailImage] = useState<UploadedUltraSmallImageData | undefined>(undefined);
-  const [fighterImage, setFighterImage] = useState<UploadedImageData | undefined>(undefined);
+  const [fighterImages, setFighterImages] = useState<UploadedImageData[]>([]);
   
   const [errors, setErrors] = useState<Record<string, string | null>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -110,15 +112,20 @@ export default function CreateFighterPage() {
     }
   };
 
-  // Handle fighter image upload change
-  const handleFighterImageChange = (data: UploadedImageData | UploadedImageData[] | null) => {
-    if (data && !Array.isArray(data)) {
-      setFighterImage(data);
-      setFormData(prev => ({ ...prev, imageUrl: data.url }));
-      setErrors(prev => ({ ...prev, image: null }));
+  // Handle fighter images upload change (multiple images)
+  const handleFighterImagesChange = (data: UploadedImageData | UploadedImageData[] | null) => {
+    if (data) {
+      const imagesArray = Array.isArray(data) ? data : [data];
+      setFighterImages(imagesArray);
+      setFormData(prev => ({ 
+        ...prev, 
+        imageUrls: imagesArray.map(img => img.url),
+        imageUrl: imagesArray.length > 0 ? imagesArray[0]!.url : "" // Set first image as primary for backward compatibility
+      }));
+      setErrors(prev => ({ ...prev, images: null }));
     } else {
-      setFighterImage(undefined);
-      setFormData(prev => ({ ...prev, imageUrl: "" }));
+      setFighterImages([]);
+      setFormData(prev => ({ ...prev, imageUrls: [], imageUrl: "" }));
     }
   };
 
@@ -132,7 +139,8 @@ export default function CreateFighterPage() {
       const validatedData = fighterSchema.parse({
         ...formData,
         thumbnailUrl: thumbnailImage?.url || "",
-        imageUrl: fighterImage?.url || "",
+        imageUrls: fighterImages.map(img => img.url),
+        imageUrl: fighterImages.length > 0 ? fighterImages[0]!.url : "",
       });
       
       // Submit to API
@@ -269,51 +277,47 @@ export default function CreateFighterPage() {
           )}
         </div>
 
-        {/* Fighter Images Upload */}
+        {/* Fighter Thumbnail Upload */}
+        <div className="rounded-lg border bg-gray-50 p-6">
+          <h3 className="mb-4 text-lg font-semibold text-gray-900">Fighter Thumbnail</h3>
+          <p className="mb-4 text-sm text-gray-600">
+            Upload a thumbnail image that will be automatically compressed to 30KB or less. 
+            This ensures fast loading times in fighter listings.
+          </p>
+          <UploadUltraSmallImage
+            type="thumbnail"
+            entityType="fighters"
+            value={thumbnailImage}
+            onChange={handleThumbnailChange}
+            label="Fighter Thumbnail (auto-compressed to 30KB)"
+            helpText="Recommended: Square images work best for thumbnails"
+            showInfo={true}
+          />
+          {errors.thumbnail && (
+            <p className="mt-1 text-sm text-red-600">{errors.thumbnail}</p>
+          )}
+        </div>
+
+        {/* Fighter Images Upload - Multiple Images (up to 8) */}
         <div className="rounded-lg border bg-gray-50 p-6">
           <h3 className="mb-4 text-lg font-semibold text-gray-900">Fighter Images</h3>
-          
-          {/* Thumbnail Upload - Ultra Small (30KB) */}
-          <div className="mb-6">
-            <h4 className="mb-2 text-md font-medium text-gray-800">Fighter Thumbnail</h4>
-            <p className="mb-4 text-sm text-gray-600">
-              Upload a thumbnail image that will be automatically compressed to 30KB or less. 
-              This ensures fast loading times in fighter listings.
-            </p>
-            <UploadUltraSmallImage
-              type="thumbnail"
-              entityType="fighters"
-              value={thumbnailImage}
-              onChange={handleThumbnailChange}
-              label="Fighter Thumbnail (auto-compressed to 30KB)"
-              helpText="Recommended: Square images work best for thumbnails"
-              showInfo={true}
-            />
-            {errors.thumbnail && (
-              <p className="mt-1 text-sm text-red-600">{errors.thumbnail}</p>
-            )}
-          </div>
-
-          {/* Fighter Image Upload - Regular (120KB) */}
-          <div>
-            <h4 className="mb-2 text-md font-medium text-gray-800">Fighter Profile Image</h4>
-            <p className="mb-4 text-sm text-gray-600">
-              Upload a fighter profile image that will be automatically compressed to 120KB or less. 
-              This image will be used in detailed fighter profiles.
-            </p>
-            <UploadImage
-              type="thumbnail"
-              entityType="fighters"
-              value={fighterImage}
-              onChange={handleFighterImageChange}
-              label="Fighter Profile Image (auto-compressed to 120KB)"
-              helpText="Recommended: Portrait orientation works best for fighter images"
-              showInfo={true}
-            />
-            {errors.image && (
-              <p className="mt-1 text-sm text-red-600">{errors.image}</p>
-            )}
-          </div>
+          <p className="mb-4 text-sm text-gray-600">
+            Upload fighter images that will be automatically compressed to 120KB or less. 
+            You can upload up to 8 images for your fighter gallery.
+          </p>
+          <UploadImage
+            type="images"
+            entityType="fighters"
+            value={fighterImages}
+            onChange={handleFighterImagesChange}
+            maxImages={8}
+            label="Fighter Gallery Images (auto-compressed to 120KB each)"
+            helpText="Upload multiple images to showcase your fighter from different angles"
+            showInfo={true}
+          />
+          {errors.images && (
+            <p className="mt-1 text-sm text-red-600">{errors.images}</p>
+          )}
         </div>
 
         {/* Featured Fighter */}
@@ -335,7 +339,7 @@ export default function CreateFighterPage() {
         </div>
 
         {/* Image Summary */}
-        {(thumbnailImage || fighterImage) && (
+        {(thumbnailImage || fighterImages.length > 0) && (
           <div className="rounded-lg border bg-blue-50 p-4">
             <h4 className="mb-2 font-semibold text-blue-900">Upload Summary</h4>
             <div className="grid grid-cols-1 gap-2 text-sm md:grid-cols-2">
@@ -348,11 +352,11 @@ export default function CreateFighterPage() {
                 )}
               </div>
               <div>
-                <span className="font-medium">Profile Image:</span>{" "}
-                {fighterImage ? (
-                  <span className="text-green-600">✓ Uploaded (120KB max)</span>
+                <span className="font-medium">Gallery Images:</span>{" "}
+                {fighterImages.length > 0 ? (
+                  <span className="text-green-600">✓ {fighterImages.length} image(s) (120KB max each)</span>
                 ) : (
-                  <span className="text-gray-500">Not uploaded</span>
+                  <span className="text-gray-500">No images uploaded</span>
                 )}
               </div>
             </div>

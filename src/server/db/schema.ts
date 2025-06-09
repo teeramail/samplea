@@ -202,7 +202,8 @@ export const fighters = createTable("Fighter", {
   weightClass: text("weightClass"),
   record: text("record"),
   thumbnailUrl: text("thumbnailUrl"), // Add thumbnailUrl field for 30KB compressed thumbnails
-  imageUrl: text("imageUrl"),
+  imageUrl: text("imageUrl"), // Keep for backward compatibility
+  imageUrls: text("imageUrls").array(), // Array of image URLs for gallery (up to 8 images)
   country: text("country"),
   isFeatured: boolean("isFeatured").notNull().default(false), // Added featured flag
   createdAt: timestamp("createdAt", { withTimezone: true })
