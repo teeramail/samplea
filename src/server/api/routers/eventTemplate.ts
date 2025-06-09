@@ -176,6 +176,9 @@ export const eventTemplateRouter = createTRPCRouter({
         regionId: z.string().min(1),
         defaultTitleFormat: z.string().min(1),
         defaultDescription: z.string().optional(),
+        // Image fields
+        thumbnailUrl: z.string().optional(),
+        imageUrls: z.array(z.string().url()).max(8).optional(),
         // Recurrence fields
         recurrenceType: z.enum(["none", "weekly", "monthly"]).default("none"),
         recurringDaysOfWeek: z.array(z.number().min(0).max(6)).optional(),
@@ -231,6 +234,9 @@ export const eventTemplateRouter = createTRPCRouter({
         regionId: templateData.regionId,
         defaultTitleFormat: templateData.defaultTitleFormat,
         defaultDescription: templateData.defaultDescription,
+        // Add image fields
+        thumbnailUrl: templateData.thumbnailUrl || null,
+        imageUrls: templateData.imageUrls || [],
         recurrenceType: templateData.recurrenceType,
         // Store recurringDaysOfWeek as an actual array, not a JSON string
         recurringDaysOfWeek: ensureNumberArray(templateData.recurringDaysOfWeek),
@@ -271,6 +277,9 @@ export const eventTemplateRouter = createTRPCRouter({
         regionId: z.string().min(1),
         defaultTitleFormat: z.string().min(1),
         defaultDescription: z.string().optional(),
+        // Image fields
+        thumbnailUrl: z.string().optional(),
+        imageUrls: z.array(z.string().url()).max(8).optional(),
         // Recurrence fields
         recurrenceType: z.enum(["none", "weekly", "monthly"]).default("none"),
         recurringDaysOfWeek: z.array(z.number().min(0).max(6)).optional(),
@@ -323,6 +332,9 @@ export const eventTemplateRouter = createTRPCRouter({
         regionId: templateData.regionId,
         defaultTitleFormat: templateData.defaultTitleFormat,
         defaultDescription: templateData.defaultDescription,
+        // Add image fields
+        thumbnailUrl: templateData.thumbnailUrl || null,
+        imageUrls: templateData.imageUrls || [],
         recurrenceType: templateData.recurrenceType,
         // Store recurringDaysOfWeek as an actual array, using the helper function
         recurringDaysOfWeek: ensureNumberArray(templateData.recurringDaysOfWeek),

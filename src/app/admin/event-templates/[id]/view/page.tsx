@@ -158,6 +158,48 @@ export default function ViewEventTemplatePage({ params }: PageProps) {
       <div className="overflow-hidden rounded-lg bg-white shadow">
         <div className="px-4 py-5 sm:p-6">
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            {/* Event Template Thumbnail */}
+            {template.thumbnailUrl && (
+              <div className="md:col-span-2">
+                <h3 className="text-lg font-medium leading-6 text-gray-900">
+                  Event Template Thumbnail
+                </h3>
+                <div className="mt-4">
+                  <div className="relative h-64 w-full overflow-hidden rounded-lg">
+                    <Image
+                      src={template.thumbnailUrl}
+                      alt={`${template.templateName} thumbnail`}
+                      fill
+                      style={{ objectFit: 'cover' }}
+                      className="rounded-lg"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Event Template Images */}
+            {template.imageUrls && template.imageUrls.length > 0 && (
+              <div className="md:col-span-2">
+                <h3 className="text-lg font-medium leading-6 text-gray-900">
+                  Event Template Images
+                </h3>
+                <div className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+                  {template.imageUrls.map((imageUrl, index) => (
+                    <div key={index} className="relative h-48 overflow-hidden rounded-lg">
+                      <Image
+                        src={imageUrl}
+                        alt={`${template.templateName} image ${index + 1}`}
+                        fill
+                        style={{ objectFit: 'cover' }}
+                        className="rounded-lg"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Thumbnail Image - if venue has one, show it */}
             {template.venue?.thumbnailUrl && (
               <div className="md:col-span-2">
