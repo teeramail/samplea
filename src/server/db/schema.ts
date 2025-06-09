@@ -201,6 +201,7 @@ export const fighters = createTable("Fighter", {
   nickname: text("nickname"),
   weightClass: text("weightClass"),
   record: text("record"),
+  thumbnailUrl: text("thumbnailUrl"), // Add thumbnailUrl field for 30KB compressed thumbnails
   imageUrl: text("imageUrl"),
   country: text("country"),
   isFeatured: boolean("isFeatured").notNull().default(false), // Added featured flag

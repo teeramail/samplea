@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { api } from "~/trpc/react";
 
 // Explicit fighter type definition
@@ -10,6 +11,7 @@ type FighterType = {
   nickname: string | null;
   weightClass: string | null;
   record: string | null;
+  thumbnailUrl: string | null;
   imageUrl: string | null;
   country: string | null;
   isFeatured: boolean;
@@ -20,39 +22,32 @@ type FighterType = {
 // Define the possible response shape from the fighters list query
 type FightersResponse = FighterType[];
 
-// Explicitly type the TRPC query result to prevent unsafe member access
-/* 
-const useFighterListQuery = () =>
-  api.fighter.list.useQuery() as {
-    data: FightersResponse | undefined;
-    isLoading: boolean;
-    error: unknown;
-    refetch: () => void;
-  };
-*/
-
-// Simple Toggle Switch Component
-function ToggleSwitch({
-  enabled,
-  onChange,
-}: {
+// ToggleSwitch component
+type ToggleSwitchProps = {
   enabled: boolean;
-  onChange: (enabled: boolean) => void;
-}) {
+  onChange: () => void;
+  disabled?: boolean;
+};
+
+function ToggleSwitch({ enabled, onChange, disabled = false }: ToggleSwitchProps) {
   return (
     <button
       type="button"
       className={`${
-        enabled ? "bg-indigo-600" : "bg-gray-200"
-      } relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2`}
+        enabled ? 'bg-blue-600' : 'bg-gray-200'
+      } relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+        disabled ? 'opacity-50 cursor-not-allowed' : ''
+      }`}
       role="switch"
       aria-checked={enabled}
-      onClick={() => onChange(!enabled)}
+      onClick={disabled ? undefined : onChange}
+      disabled={disabled}
     >
+      <span className="sr-only">Toggle featured</span>
       <span
         aria-hidden="true"
         className={`${
-          enabled ? "translate-x-5" : "translate-x-0"
+          enabled ? 'translate-x-5' : 'translate-x-0'
         } pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out`}
       />
     </button>
@@ -72,7 +67,6 @@ export default function AdminFightersPage() {
   const toggleFeaturedMutation = api.fighter.toggleFeatured.useMutation({
     onSuccess: () => {
       void refetch(); // Refetch the list after successful update
-      // Optionally, display a success message
     },
     onError: (err: unknown) => {
       const errorMessage =
@@ -80,7 +74,20 @@ export default function AdminFightersPage() {
           ? String((err as { message: unknown }).message)
           : "Unknown error";
       console.error("Failed to update featured status:", errorMessage);
-      // Optionally, display an error message
+    },
+  });
+
+  // Delete fighter mutation
+  const deleteFighter = api.fighter.delete.useMutation({
+    onSuccess: () => {
+      void refetch();
+    },
+    onError: (err: unknown) => {
+      const errorMessage =
+        typeof err === "object" && err !== null && "message" in err
+          ? String((err as { message: unknown }).message)
+          : "Unknown error";
+      console.error("Failed to delete fighter:", errorMessage);
     },
   });
 
@@ -89,6 +96,12 @@ export default function AdminFightersPage() {
       id: fighter.id,
       isFeatured: !fighter.isFeatured,
     });
+  };
+
+  const handleDelete = (id: string) => {
+    if (window.confirm("Are you sure you want to delete this fighter?")) {
+      deleteFighter.mutate({ id });
+    }
   };
 
   // Check loading/error states first
@@ -115,7 +128,7 @@ export default function AdminFightersPage() {
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">Manage Fighters</h1>
         <Link
-          href="/admin/fighters/new"
+          href="/admin/fighters/create"
           className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
         >
           Add New Fighter
@@ -130,13 +143,31 @@ export default function AdminFightersPage() {
                 scope="col"
                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
               >
+                Image
+              </th>
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+              >
                 Name
               </th>
               <th
                 scope="col"
                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
               >
+                Weight Class
+              </th>
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+              >
                 Record
+              </th>
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+              >
+                Country
               </th>
               <th
                 scope="col"
@@ -154,17 +185,47 @@ export default function AdminFightersPage() {
           </thead>
           <tbody className="divide-y divide-gray-200 bg-white">
             {fighters.map((fighter) => (
-              <tr key={fighter.id}>
-                <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
-                  {fighter.name}
+              <tr key={fighter.id} className="hover:bg-gray-50">
+                <td className="whitespace-nowrap px-6 py-4">
+                  <div className="relative h-12 w-12">
+                    {fighter.thumbnailUrl || fighter.imageUrl ? (
+                      <Image
+                        src={fighter.thumbnailUrl || fighter.imageUrl || ""}
+                        alt={fighter.name}
+                        fill
+                        className="object-cover rounded-md"
+                      />
+                    ) : (
+                      <div className="h-12 w-12 bg-gray-200 rounded-md flex items-center justify-center">
+                        <span className="text-xs text-gray-500">No image</span>
+                      </div>
+                    )}
+                  </div>
+                </td>
+                <td className="whitespace-nowrap px-6 py-4">
+                  <div className="text-sm font-medium text-gray-900">
+                    {fighter.name}
+                  </div>
+                  {fighter.nickname && (
+                    <div className="text-sm text-gray-500">
+                      "{fighter.nickname}"
+                    </div>
+                  )}
+                </td>
+                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                  {fighter.weightClass ?? "N/A"}
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                   {fighter.record ?? "N/A"}
+                </td>
+                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                  {fighter.country ?? "N/A"}
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 text-center text-sm text-gray-500">
                   <ToggleSwitch
                     enabled={fighter.isFeatured}
                     onChange={() => handleToggleFeatured(fighter)}
+                    disabled={toggleFeaturedMutation.isPending}
                   />
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
@@ -174,7 +235,13 @@ export default function AdminFightersPage() {
                   >
                     Edit
                   </Link>
-                  {/* Add delete button/logic here if needed */}
+                  <button
+                    onClick={() => handleDelete(fighter.id)}
+                    className="text-red-600 hover:text-red-900"
+                    disabled={deleteFighter.isPending}
+                  >
+                    Delete
+                  </button>
                 </td>
               </tr>
             ))}

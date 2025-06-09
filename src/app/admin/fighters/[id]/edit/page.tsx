@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "~/trpc/react";
 import { z } from "zod";
 import { UploadImage, type UploadedImageData } from "~/components/ui/UploadImage";
 import { UploadUltraSmallImage, type UploadedUltraSmallImageData } from "~/components/ui/UploadUltraSmallImage";
+import { useParams } from "next/navigation";
 
 // Define the schema for fighter validation
 const fighterSchema = z.object({
@@ -52,8 +53,11 @@ const COUNTRIES = [
   "Egypt", "Morocco", "South Africa", "Nigeria", "Ghana", "Kenya", "Other"
 ];
 
-export default function CreateFighterPage() {
+export default function EditFighterPage() {
   const router = useRouter();
+  const params = useParams();
+  const id = params?.id as string;
+  
   const [formData, setFormData] = useState<FighterFormData>({
     name: "",
     nickname: "",
@@ -65,17 +69,18 @@ export default function CreateFighterPage() {
     isFeatured: false,
   });
   
-  // New state for uploaded images using our components
   const [thumbnailImage, setThumbnailImage] = useState<UploadedUltraSmallImageData | undefined>(undefined);
   const [fighterImage, setFighterImage] = useState<UploadedImageData | undefined>(undefined);
-  
   const [errors, setErrors] = useState<Record<string, string | null>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Create fighter mutation
-  const createFighter = api.fighter.create.useMutation({
-    onSuccess: (data) => {
-      setIsSubmitting(false);
+  // Fetch fighter data
+  const { data: fighter, isLoading: isFighterLoading } = api.fighter.getById.useQuery({ id });
+  
+  // Update mutation
+  const updateFighter = api.fighter.update.useMutation({
+    onSuccess: () => {
       router.push("/admin/fighters");
       router.refresh();
     },
@@ -84,6 +89,48 @@ export default function CreateFighterPage() {
       setErrors({ form: error.message });
     },
   });
+  
+  // Delete mutation
+  const deleteFighter = api.fighter.delete.useMutation({
+    onSuccess: () => {
+      router.push("/admin/fighters");
+      router.refresh();
+    },
+  });
+
+  // Load fighter data into form
+  useEffect(() => {
+    if (fighter && !isFighterLoading) {
+      setFormData({
+        name: fighter.name,
+        nickname: fighter.nickname || "",
+        weightClass: fighter.weightClass || "",
+        record: fighter.record || "",
+        country: fighter.country || "",
+                  thumbnailUrl: (fighter as any).thumbnailUrl || "",
+        imageUrl: fighter.imageUrl || "",
+        isFeatured: fighter.isFeatured,
+      });
+      
+      // Set existing thumbnail if available
+      if ((fighter as any).thumbnailUrl) {
+        setThumbnailImage({
+          url: (fighter as any).thumbnailUrl,
+          originalFilename: "Existing fighter thumbnail"
+        });
+      }
+      
+      // Set existing image if available
+      if (fighter.imageUrl) {
+        setFighterImage({
+          url: fighter.imageUrl,
+          originalFilename: "Existing fighter image"
+        });
+      }
+      
+      setIsLoading(false);
+    }
+  }, [fighter, isFighterLoading]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -128,7 +175,7 @@ export default function CreateFighterPage() {
     setErrors({});
 
     try {
-      // Validate the form data - images are already uploaded!
+      // Validate the form data
       const validatedData = fighterSchema.parse({
         ...formData,
         thumbnailUrl: thumbnailImage?.url || "",
@@ -136,7 +183,10 @@ export default function CreateFighterPage() {
       });
       
       // Submit to API
-      createFighter.mutate(validatedData);
+      updateFighter.mutate({
+        id,
+        ...validatedData,
+      });
     } catch (error) {
       setIsSubmitting(false);
       
@@ -155,9 +205,28 @@ export default function CreateFighterPage() {
     }
   };
 
+  const handleDelete = () => {
+    if (window.confirm("Are you sure you want to delete this fighter?")) {
+      deleteFighter.mutate({ id });
+    }
+  };
+
+  if (isLoading || isFighterLoading) {
+    return <div className="flex justify-center p-8">Loading fighter data...</div>;
+  }
+
   return (
-    <div className="mx-auto max-w-4xl">
-      <h1 className="mb-6 text-2xl font-bold">Add New Fighter</h1>
+    <div className="mx-auto max-w-4xl p-4">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Edit Fighter</h1>
+        <button
+          type="button"
+          onClick={handleDelete}
+          className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+        >
+          Delete Fighter
+        </button>
+      </div>
 
       {errors.form && (
         <div className="mb-4 rounded-md bg-red-50 p-4 text-red-600">
@@ -363,7 +432,7 @@ export default function CreateFighterPage() {
         <div className="flex justify-end space-x-3">
           <button
             type="button"
-            onClick={() => router.push("/admin/fighters")}
+            onClick={() => router.back()}
             className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             Cancel
@@ -373,10 +442,10 @@ export default function CreateFighterPage() {
             disabled={isSubmitting}
             className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
           >
-            {isSubmitting ? "Creating..." : "Create Fighter"}
+            {isSubmitting ? "Updating..." : "Update Fighter"}
           </button>
         </div>
       </form>
     </div>
   );
-}
+} 
