@@ -15,7 +15,9 @@ import { eq } from "drizzle-orm";
 const createInstructorSchema = z.object({
   name: z.string().min(1, "Name is required"),
   bio: z.string().optional(),
-  imageUrl: z.string().url().optional().nullable(),
+  imageUrl: z.string().url().optional().nullable(), // Keep for backward compatibility
+  thumbnailUrl: z.string().url().optional().nullable(),
+  imageUrls: z.array(z.string().url()).max(8).optional(),
   expertise: z.array(z.string()).optional(),
   userId: z.string().optional().nullable(), // Optional link to an existing user
 });
@@ -25,7 +27,9 @@ const updateInstructorSchema = z.object({
   id: z.string(),
   name: z.string().min(1, "Name is required").optional(),
   bio: z.string().optional(),
-  imageUrl: z.string().url().optional().nullable(),
+  imageUrl: z.string().url().optional().nullable(), // Keep for backward compatibility
+  thumbnailUrl: z.string().url().optional().nullable(),
+  imageUrls: z.array(z.string().url()).max(8).optional(),
   expertise: z.array(z.string()).optional(),
   userId: z.string().optional().nullable(),
 });
@@ -43,6 +47,8 @@ export const instructorRouter = createTRPCRouter({
           id: newId,
           ...input,
           imageUrl: input.imageUrl ?? null,
+          thumbnailUrl: input.thumbnailUrl ?? null,
+          imageUrls: input.imageUrls ?? [],
           bio: input.bio ?? null,
           expertise: input.expertise ?? [],
           userId: input.userId ?? null,
@@ -70,6 +76,10 @@ export const instructorRouter = createTRPCRouter({
       if (updateData.bio !== undefined) dataToUpdate.bio = updateData.bio;
       if (updateData.imageUrl !== undefined)
         dataToUpdate.imageUrl = updateData.imageUrl;
+      if (updateData.thumbnailUrl !== undefined)
+        dataToUpdate.thumbnailUrl = updateData.thumbnailUrl;
+      if (updateData.imageUrls !== undefined)
+        dataToUpdate.imageUrls = updateData.imageUrls;
       if (updateData.expertise !== undefined)
         dataToUpdate.expertise = updateData.expertise;
       if (updateData.userId !== undefined)

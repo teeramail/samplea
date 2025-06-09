@@ -242,7 +242,9 @@ export const instructors = createTable("Instructor", {
     .$defaultFn(() => createId()),
   name: text("name").notNull(),
   bio: text("bio"),
-  imageUrl: text("imageUrl"),
+  imageUrl: text("imageUrl"), // Keep for backward compatibility
+  thumbnailUrl: text("thumbnailUrl"), // 30KB compressed thumbnail
+  imageUrls: text("imageUrls").array(), // Array of gallery images (up to 8 images, 120KB each)
   expertise: text("expertise").array(), // Array of strings like ["Clinch", "Kicks"]
   userId: text("userId").references(() => users.id, { onDelete: "set null" }), // Optional link to a user account
   createdAt: timestamp("createdAt", { withTimezone: true })
