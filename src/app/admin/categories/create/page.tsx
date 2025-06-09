@@ -112,120 +112,103 @@ export default function CreateCategoryPage() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Create New Category</h1>
-        <Link
-          href="/admin/categories"
-          className="rounded bg-gray-500 px-4 py-2 text-white hover:bg-gray-600"
-        >
-          Back to Categories
-        </Link>
-      </div>
+    <div className="mx-auto max-w-4xl">
+      <h1 className="mb-6 text-2xl font-bold">Create New Category</h1>
 
       {submitError && (
-        <div className="mb-4 rounded-md bg-red-50 p-4">
-          <p className="text-sm text-red-600">{submitError}</p>
+        <div className="mb-4 rounded-md bg-red-50 p-4 text-red-600">
+          {submitError}
         </div>
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Basic Information */}
-        <div className="rounded-lg border bg-white p-6">
-          <h2 className="mb-4 text-lg font-semibold">Basic Information</h2>
-          
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Category Name *
-              </label>
-              <input
-                {...register("name")}
-                onChange={handleNameChange}
-                type="text"
-                placeholder="e.g., Training Equipment"
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
-              />
-              {errors.name && (
-                <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                URL Slug *
-              </label>
-              <input
-                {...register("slug")}
-                type="text"
-                placeholder="e.g., training-equipment"
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
-              />
-              {errors.slug && (
-                <p className="mt-1 text-sm text-red-600">{errors.slug.message}</p>
-              )}
-              <p className="mt-1 text-xs text-gray-500">
-                Used in URLs. Auto-generated from name, but you can customize it.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
             <label className="block text-sm font-medium text-gray-700">
-              Description
+              Category Name *
             </label>
-            <textarea
-              {...register("description")}
-              rows={4}
-              placeholder="Describe this category..."
+            <input
+              {...register("name")}
+              onChange={handleNameChange}
+              type="text"
+              placeholder="e.g., Training Equipment"
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
             />
-            {errors.description && (
-              <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>
+            {errors.name && (
+              <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
             )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              URL Slug *
+            </label>
+            <input
+              {...register("slug")}
+              type="text"
+              placeholder="e.g., training-equipment"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+            />
+            {errors.slug && (
+              <p className="mt-1 text-sm text-red-600">{errors.slug.message}</p>
+            )}
+            <p className="mt-1 text-xs text-gray-500">
+              Used in URLs. Auto-generated from name, but you can customize it.
+            </p>
           </div>
         </div>
 
-        {/* Category Images */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Description
+          </label>
+          <textarea
+            {...register("description")}
+            rows={4}
+            placeholder="Describe this category..."
+            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+          />
+          {errors.description && (
+            <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>
+          )}
+        </div>
+
+        {/* Thumbnail Upload - Ultra Small (30KB) */}
+        <div className="rounded-lg border bg-gray-50 p-6">
+          <h3 className="mb-4 text-lg font-semibold text-gray-900">Category Thumbnail</h3>
+          <p className="mb-4 text-sm text-gray-600">
+            Upload a thumbnail image that will be automatically compressed to 30KB or less. 
+            This ensures fast loading times in category listings.
+          </p>
+          <UploadUltraSmallImage
+            type="thumbnail"
+            entityType="categories"
+            value={thumbnailImage}
+            onChange={handleThumbnailChange}
+            label="Category Thumbnail (auto-compressed to 30KB)"
+            helpText="Recommended: Square images work best for thumbnails"
+            showInfo={true}
+          />
+        </div>
+
+        {/* Category Images Upload - Regular (120KB) */}
         <div className="rounded-lg border bg-gray-50 p-6">
           <h3 className="mb-4 text-lg font-semibold text-gray-900">Category Images</h3>
-          
-          {/* Thumbnail Upload - Ultra Small (30KB) */}
-          <div className="mb-6">
-            <h4 className="mb-2 text-md font-medium text-gray-800">Thumbnail</h4>
-            <p className="mb-4 text-sm text-gray-600">
-              Upload a thumbnail image that will be automatically compressed to 30KB or less. 
-              This ensures fast loading times in category listings.
-            </p>
-            <UploadUltraSmallImage
-              type="thumbnail"
-              entityType="categories"
-              value={thumbnailImage}
-              onChange={handleThumbnailChange}
-              label="Category Thumbnail (auto-compressed to 30KB)"
-              helpText="Recommended: Square images work best for thumbnails"
-              showInfo={true}
-            />
-          </div>
-
-          {/* Category Images Upload - Regular (120KB) */}
-          <div>
-            <h4 className="mb-2 text-md font-medium text-gray-800">Gallery Images</h4>
-            <p className="mb-4 text-sm text-gray-600">
-              Upload category images that will be automatically compressed to 120KB or less. 
-              You can upload up to 8 images to showcase your category.
-            </p>
-            <UploadImage
-              type="images"
-              entityType="categories"
-              value={categoryImages}
-              onChange={handleCategoryImagesChange}
-              maxImages={8}
-              label="Category Gallery Images (auto-compressed to 120KB each)"
-              helpText="Upload multiple images to showcase your category"
-              showInfo={true}
-            />
-          </div>
+          <p className="mb-4 text-sm text-gray-600">
+            Upload category images that will be automatically compressed to 120KB or less. 
+            You can upload up to 8 images to showcase your category.
+          </p>
+          <UploadImage
+            type="images"
+            entityType="categories"
+            value={categoryImages}
+            onChange={handleCategoryImagesChange}
+            maxImages={8}
+            label="Category Gallery Images (auto-compressed to 120KB each)"
+            helpText="Upload multiple images to showcase your category"
+            showInfo={true}
+          />
         </div>
 
         {/* Image Summary */}
@@ -253,14 +236,15 @@ export default function CreateCategoryPage() {
           </div>
         )}
 
-        {/* Submit Button */}
+        {/* Submit Buttons */}
         <div className="flex justify-end space-x-3">
-          <Link
-            href="/admin/categories"
+          <button
+            type="button"
+            onClick={() => router.back()}
             className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             Cancel
-          </Link>
+          </button>
           <button
             type="submit"
             disabled={isLoading}

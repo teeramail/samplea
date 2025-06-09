@@ -78,6 +78,11 @@ const navItems = [
   { name: "Categories", group: "categories" },
   { name: "All Categories", href: "/admin/categories", group: "categories" },
   { name: "Create Category", href: "/admin/categories/create", group: "categories" },
+
+  { name: "Reports", group: "reports" },
+  { name: "Business Dashboard", href: "/admin/reports", group: "reports" },
+  { name: "Revenue Analysis", href: "/admin/reports/revenue", group: "reports" },
+  { name: "Booking Analytics", href: "/admin/reports/bookings", group: "reports" },
 ];
 
 // Top navigation sections for quick access to content management
@@ -87,9 +92,11 @@ const topNavSections = [
   { name: "Venues", href: "/admin/venues", icon: "🏢" },
   { name: "Fighters", href: "/admin/fighters", icon: "🥊" },
   { name: "Courses", href: "/admin/courses", icon: "📚" },
+  { name: "Enrollments", href: "/admin/enrollments", icon: "📝" },
   { name: "Blog", href: "/admin/posts", icon: "📰" },
   { name: "Products", href: "/admin/products", icon: "🛍️" },
   { name: "Categories", href: "/admin/categories", icon: "🏷️" },
+  { name: "Reports", href: "/admin/reports", icon: "📊" },
 ];
 
 // Featured content sections for quick access

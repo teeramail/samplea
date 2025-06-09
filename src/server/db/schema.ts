@@ -32,6 +32,33 @@ export const recurrenceTypeEnum = pgEnum('recurrence_type', ['none', 'weekly', '
 // Define Enums if desired (Example for post status)
 // export const postStatusEnum = pgEnum('post_status', ['DRAFT', 'PUBLISHED', 'ARCHIVED']);
 
+// Define Enums for status fields to ensure data consistency
+
+export const courseEnrollmentStatusEnum = pgEnum("course_enrollment_status", [
+  "PENDING_PAYMENT",
+  "CONFIRMED",
+  "CANCELLED",
+  "COMPLETED",
+  "AWAITING_CONFIRMATION",
+]);
+
+export const bookingStatusEnum = pgEnum("booking_status", [
+  "PENDING",
+  "CONFIRMED",
+  "CANCELLED",
+  "COMPLETED",
+  "PAYMENT_FAILED",
+]);
+
+export const eventStatusEnum = pgEnum("event_status", [
+  "SCHEDULED",
+  "CANCELLED",
+  "COMPLETED",
+  "POSTPONED",
+]);
+
+console.log("Database schema loaded");
+
 // Add regions table
 export const regions = createTable("Region", {
   id: text("id")
@@ -135,31 +162,13 @@ export const venueToVenueTypes = createTable(
   }),
 );
 
-export const events = createTable("Event", {
+// NEW Event Categories Table for universal booking system (moved before events)
+export const eventCategories = createTable("EventCategory", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => createId()),
-  title: text("title").notNull(),
+  name: text("name").notNull().unique(),
   description: text("description"),
-  date: timestamp("date", { withTimezone: true }).notNull(),
-  startTime: timestamp("startTime", { withTimezone: true }).notNull(),
-  endTime: timestamp("endTime", { withTimezone: true }),
-  imageUrl: text("imageUrl"),
-  thumbnailUrl: text("thumbnailUrl"),
-  imageUrls: text("imageUrls").array(),
-  usesDefaultPoster: boolean("usesDefaultPoster").default(true).notNull(),
-  venueId: text("venueId").references(() => venues.id, {
-    onDelete: "set null",
-  }), // Allow null if venue deleted
-  regionId: text("regionId").references(() => regions.id, {
-    onDelete: "set null",
-  }), // Allow null if region deleted
-  status: text("status").default("SCHEDULED").notNull(), // Consider pgEnum
-  // SEO Fields
-  metaTitle: text("metaTitle"),
-  metaDescription: text("metaDescription"),
-  keywords: text("keywords").array(),
-  // Timestamps
   createdAt: timestamp("createdAt", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
@@ -169,7 +178,35 @@ export const events = createTable("Event", {
     .$onUpdate(() => new Date()),
 });
 
-// Add EventTicket table for seat types and pricing
+export const events = createTable("Event", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  title: text("title").notNull(),
+  description: text("description"),
+  date: timestamp("date", { withTimezone: true }).notNull(),
+  startTime: timestamp("startTime", { withTimezone: true }).notNull(),
+  endTime: timestamp("endTime", { withTimezone: true }),
+  thumbnailUrl: text("thumbnailUrl"),
+  imageUrls: text("imageUrls").array(),
+  venueId: text("venueId").references(() => venues.id, { onDelete: "set null" }),
+  regionId: text("regionId").references(() => regions.id, {
+    onDelete: "restrict",
+  }),
+  status: eventStatusEnum("status").default("SCHEDULED").notNull(),
+  categoryId: text("categoryId").references(() => eventCategories.id, {
+    onDelete: "set null",
+  }),
+  createdAt: timestamp("createdAt", { withTimezone: true })
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true })
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+// EventTicket table to store ticket types and pricing for an event
 export const eventTickets = createTable("EventTicket", {
   id: text("id")
     .primaryKey()
@@ -235,8 +272,8 @@ export const users = createTable("User", {
     .$onUpdate(() => new Date()),
 });
 
-// NEW Instructor Table
-export const instructors = createTable("Instructor", {
+// NEW Instructor Table  
+export const instructor = createTable("Instructor", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => createId()),
@@ -275,7 +312,7 @@ export const trainingCourses = createTable("TrainingCourse", {
   regionId: text("regionId")
     .references(() => regions.id, { onDelete: "restrict" })
     .notNull(), // Course belongs to a region
-  instructorId: text("instructorId").references(() => instructors.id, {
+  instructorId: text("instructorId").references(() => instructor.id, {
     onDelete: "set null",
   }), // Link to instructor
   thumbnailUrl: text("thumbnailUrl"), // Add thumbnailUrl field for 30KB compressed thumbnails
@@ -384,7 +421,13 @@ export const bookings = createTable("Booking", {
     .references(() => events.id, { onDelete: "cascade" })
     .notNull(), // Cascade delete if event deleted
   totalAmount: doublePrecision("totalAmount").notNull(),
-  paymentStatus: text("paymentStatus").notNull().default("PENDING"), // Consider pgEnum
+  paymentStatus: bookingStatusEnum("paymentStatus").default("PENDING").notNull(),
+
+  // Flexible JSONB field to store booking-specific data
+  // e.g., for restaurant: { "guests": 4, "notes": "window seat" }
+  // e.g., for boat trip: { "pickupPoint": "pier_a" }
+  metadata: jsonb("metadata"),
+
   paymentOrderNo: text("paymentOrderNo"), // Track ChillPay order number
 
   // Add ChillPay payment related fields
@@ -449,7 +492,9 @@ export const courseEnrollments = createTable("CourseEnrollment", {
     .references(() => trainingCourses.id, { onDelete: "cascade" })
     .notNull(), // Cascade delete if course deleted
   pricePaid: doublePrecision("pricePaid").notNull(),
-  status: text("status").notNull().default("PENDING_PAYMENT"), // e.g., CONFIRMED, CANCELLED - consider pgEnum
+  status: courseEnrollmentStatusEnum("status")
+    .default("PENDING_PAYMENT")
+    .notNull(), // e.g., CONFIRMED, CANCELLED - consider pgEnum
   enrollmentDate: timestamp("enrollmentDate", { withTimezone: false })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
@@ -664,9 +709,21 @@ export const venueToVenueTypesRelations = relations(
 export const eventsRelations = relations(events, ({ one, many }) => ({
   venue: one(venues, { fields: [events.venueId], references: [venues.id] }),
   region: one(regions, { fields: [events.regionId], references: [regions.id] }),
-  eventTickets: many(eventTickets), // Changed from tickets to eventTickets
+  category: one(eventCategories, {
+    fields: [events.categoryId],
+    references: [eventCategories.id],
+  }),
+  eventTickets: many(eventTickets),
   bookings: many(bookings),
+  tickets: many(tickets),
 }));
+
+export const eventCategoriesRelations = relations(
+  eventCategories,
+  ({ many }) => ({
+    events: many(events),
+  }),
+);
 
 export const eventTicketsRelations = relations(
   eventTickets,
@@ -725,8 +782,8 @@ export const eventTemplateTicketsRelations = relations(
   }),
 );
 
-export const instructorsRelations = relations(instructors, ({ one, many }) => ({
-  user: one(users, { fields: [instructors.userId], references: [users.id] }),
+export const instructorRelations = relations(instructor, ({ one, many }) => ({
+user: one(users, { fields: [instructor.userId], references: [users.id] }),
   trainingCourses: many(trainingCourses),
 }));
 
@@ -741,9 +798,9 @@ export const trainingCoursesRelations = relations(
       fields: [trainingCourses.regionId],
       references: [regions.id],
     }),
-    instructor: one(instructors, {
-      fields: [trainingCourses.instructorId],
-      references: [instructors.id],
+      instructor: one(instructor, {
+    fields: [trainingCourses.instructorId],
+    references: [instructor.id],
     }),
     enrollments: many(courseEnrollments),
   }),
@@ -777,9 +834,9 @@ export const usersRelations = relations(users, ({ one, many }) => ({
     fields: [users.id],
     references: [customers.userId],
   }),
-  instructorProfile: one(instructors, {
+  instructorProfile: one(instructor, {
     fields: [users.id],
-    references: [instructors.userId],
+    references: [instructor.userId],
   }),
   posts: many(posts), // <-- ADDED posts relation (authored posts)
 }));
@@ -846,3 +903,6 @@ export const accountsRelations = relations(accounts, ({ one }) => ({
 export const sessionsRelations = relations(sessions, ({ one }) => ({
   user: one(users, { fields: [sessions.userId], references: [users.id] }),
 }));
+
+// Add alias for plural export (API routes expect 'instructors')
+export const instructors = instructor;

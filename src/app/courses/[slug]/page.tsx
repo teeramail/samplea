@@ -82,15 +82,14 @@ export default async function CourseDetailPage(props: PageProps) {
           {/* Price and Enroll Button */}
           <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
             <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
-              ${course.price.toFixed(2)}
+              ฿{course.price.toLocaleString()}
             </p>
-            <button
+            <Link
+              href={`/courses/checkout?courseId=${course.id}&title=${encodeURIComponent(course.title)}&price=${course.price}`}
               className="rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white shadow transition duration-300 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
-              // onClick={() => { /* Handle enrollment click */ }}
-              // Add Link to checkout page later: <Link href={`/checkout/course/${course.id}`}>Enroll Now</Link>
             >
               Enroll Now
-            </button>
+            </Link>
           </div>
 
           {/* Course Details Section */}

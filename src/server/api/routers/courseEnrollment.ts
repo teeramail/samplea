@@ -16,6 +16,19 @@ import { eq, and, desc, sql, ne } from "drizzle-orm";
 // Input schema for creating an enrollment
 const createEnrollmentSchema = z.object({
   courseId: z.string(),
+  courseTitle: z.string().optional(), // Add for checkout flow
+  // Customer information for enrollment
+  customerName: z.string(),
+  customerEmail: z.string().email(),
+  customerPhone: z.string(),
+  customerAddress: z.string().optional(),
+  emergencyContactName: z.string().optional(),
+  emergencyContactPhone: z.string().optional(),
+  medicalConditions: z.string().optional(),
+  experienceLevel: z.string().optional(),
+  paymentMethod: z.string(),
+  pricePaid: z.number(),
+  notes: z.string().optional(),
   // Temporary fields for guest/dev enrollment without login
   guestName: z.string().optional(),
   guestEmail: z.string().email().optional(),
@@ -26,63 +39,47 @@ export const courseEnrollmentRouter = createTRPCRouter({
   create: publicProcedure
     .input(createEnrollmentSchema)
     .mutation(async ({ ctx, input }) => {
-      // --- TEMPORARY USER/CUSTOMER HANDLING ---
-      // Remove this section when authentication is added
+      // --- UPDATED CUSTOMER HANDLING ---
       let customerId: string;
       let customerName: string;
       let customerEmail: string;
 
-      // In development without auth, use guest details if provided, otherwise use placeholders
-      if (input.guestEmail && input.guestName) {
-        // Try to find existing customer by email (useful for testing guest checkout)
-        const customer = await ctx.db.query.customers.findFirst({
-          where: eq(customers.email, input.guestEmail),
-        });
-        if (!customer) {
-          customerId = nanoid();
-          customerName = input.guestName;
-          customerEmail = input.guestEmail;
-          await ctx.db.insert(customers).values({
-            id: customerId,
-            userId: null, // No user logged in
+      // Use provided customer information from the form
+      customerName = input.customerName;
+      customerEmail = input.customerEmail;
+
+      // Try to find existing customer by email
+      const existingCustomer = await ctx.db.query.customers.findFirst({
+        where: eq(customers.email, customerEmail),
+      });
+
+      if (existingCustomer) {
+        customerId = existingCustomer.id;
+        // Update customer info if needed
+        await ctx.db
+          .update(customers)
+          .set({
             name: customerName,
-            email: customerEmail,
-          });
-        } else {
-          customerId = customer.id;
-          customerName = customer.name; // Use existing name
-          customerEmail = customer.email;
-        }
+            updatedAt: new Date(),
+          })
+          .where(eq(customers.id, existingCustomer.id));
       } else {
-        // Fallback placeholder if no guest details provided
-        console.warn(
-          "Creating enrollment with placeholder customer details. Add guestName and guestEmail to input or implement authentication.",
-        );
-        customerId = "dev_customer_placeholder";
-        customerName = "Dev User";
-        customerEmail = "dev@example.com";
-        // Ensure placeholder customer exists (or handle potential errors)
-        const existingPlaceholder = await ctx.db.query.customers.findFirst({
-          where: eq(customers.id, customerId),
+        // Create new customer
+        customerId = nanoid();
+        await ctx.db.insert(customers).values({
+          id: customerId,
+          userId: null, // No user logged in
+          name: customerName,
+          email: customerEmail,
         });
-        if (!existingPlaceholder) {
-          await ctx.db
-            .insert(customers)
-            .values({
-              id: customerId,
-              name: customerName,
-              email: customerEmail,
-              userId: null,
-            });
-        }
       }
-      // --- END TEMPORARY HANDLING ---
+      // --- END UPDATED HANDLING ---
 
       // Fetch Course (remains the same)
       const course = await ctx.db.query.trainingCourses.findFirst({
         where: and(
           eq(trainingCourses.id, input.courseId),
-          eq(trainingCourses.isActive, true), // Ensure course is active
+          eq(trainingCourses.isActive, true),
         ),
         columns: { id: true, title: true, capacity: true, price: true },
       });
@@ -94,19 +91,15 @@ export const courseEnrollmentRouter = createTRPCRouter({
         });
       }
 
-      // Check if already enrolled (remains the same)
-      const existingEnrollment = await ctx.db.query.courseEnrollments.findFirst(
-        {
-          where: and(
-            eq(courseEnrollments.customerId, customerId),
-            eq(courseEnrollments.courseId, input.courseId),
-            // Optional: check for non-cancelled status if re-enrollment is allowed after cancelling
-            ne(courseEnrollments.status, "CANCELLED"), // Example: prevent re-enrollment unless cancelled
-          ),
-        },
-      );
+      // Check if already enrolled
+      const existingEnrollment = await ctx.db.query.courseEnrollments.findFirst({
+        where: and(
+          eq(courseEnrollments.customerId, customerId),
+          eq(courseEnrollments.courseId, input.courseId),
+          ne(courseEnrollments.status, "CANCELLED"),
+        ),
+      });
 
-      // Only throw conflict if status is NOT cancelled (or pending payment perhaps)
       if (existingEnrollment && existingEnrollment.status !== "CANCELLED") {
         throw new TRPCError({
           code: "CONFLICT",
@@ -114,7 +107,7 @@ export const courseEnrollmentRouter = createTRPCRouter({
         });
       }
 
-      // Check capacity (remains the same, ensure `sql` is imported)
+      // Check capacity
       if (course.capacity !== null) {
         const enrollmentCountResult = await ctx.db
           .select({ count: sql<number>`count(*)::int` })
@@ -122,8 +115,7 @@ export const courseEnrollmentRouter = createTRPCRouter({
           .where(
             and(
               eq(courseEnrollments.courseId, input.courseId),
-              // Consider which statuses count towards capacity (e.g., not PENDING_PAYMENT or CANCELLED)
-              eq(courseEnrollments.status, "CONFIRMED"), // Only count confirmed enrollments towards capacity
+              eq(courseEnrollments.status, "CONFIRMED"),
             ),
           );
         const enrollmentCount = enrollmentCountResult[0]?.count ?? 0;
@@ -135,22 +127,35 @@ export const courseEnrollmentRouter = createTRPCRouter({
         }
       }
 
-      // Create the enrollment record (use derived customer details)
+      // Create the enrollment record with only existing fields
       const enrollmentId = nanoid();
       try {
         await ctx.db.insert(courseEnrollments).values({
           id: enrollmentId,
-          customerId: customerId, // Use derived/placeholder customerId
+          customerId: customerId,
           courseId: input.courseId,
-          pricePaid: course.price,
-          status: "PENDING_PAYMENT",
+          pricePaid: input.pricePaid,
+          status: "AWAITING_CONFIRMATION",
           enrollmentDate: new Date(),
           startDate: null,
-          // Snapshot data using derived/placeholder details
-          courseTitleSnapshot: course.title,
+          courseTitleSnapshot: input.courseTitle || course.title,
           customerNameSnapshot: customerName,
           customerEmailSnapshot: customerEmail,
         });
+
+        // For now, store additional enrollment details in the customer notes or a separate system
+        // TODO: Add additional fields to courseEnrollments table in a future migration
+        console.log("Additional enrollment info:", {
+          phone: input.customerPhone,
+          address: input.customerAddress,
+          emergencyContact: input.emergencyContactName,
+          emergencyPhone: input.emergencyContactPhone,
+          medicalConditions: input.medicalConditions,
+          experienceLevel: input.experienceLevel,
+          paymentMethod: input.paymentMethod,
+          notes: input.notes,
+        });
+
       } catch (error) {
         console.error("Failed to create course enrollment:", error);
         throw new TRPCError({
@@ -159,30 +164,69 @@ export const courseEnrollmentRouter = createTRPCRouter({
         });
       }
 
-      return { enrollmentId: enrollmentId };
+      return { id: enrollmentId };
+    }),
+
+  // Get enrollment by ID
+  getById: publicProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const enrollment = await ctx.db.query.courseEnrollments.findFirst({
+        where: eq(courseEnrollments.id, input.id),
+      });
+
+      if (!enrollment) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Enrollment not found.",
+        });
+      }
+
+      return enrollment;
+    }),
+
+  // List all enrollments (for admin)
+  listAll: publicProcedure.query(async ({ ctx }) => {
+    const enrollments = await ctx.db.query.courseEnrollments.findMany({
+      orderBy: [desc(courseEnrollments.createdAt)],
+      limit: 100,
+    });
+    return enrollments;
+  }),
+
+  // Update enrollment status (for admin)
+  updateStatus: publicProcedure
+    .input(z.object({ 
+      id: z.string(),
+      status: z.enum(["PENDING_PAYMENT", "CONFIRMED", "CANCELLED", "COMPLETED", "AWAITING_CONFIRMATION"])
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const updatedEnrollment = await ctx.db
+        .update(courseEnrollments)
+        .set({ 
+          status: input.status,
+          updatedAt: new Date(),
+        })
+        .where(eq(courseEnrollments.id, input.id))
+        .returning();
+
+      if (!updatedEnrollment[0]) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Enrollment not found.",
+        });
+      }
+
+      return updatedEnrollment[0];
     }),
 
   // WARNING: Using publicProcedure for development. Change back to protectedProcedure later.
-  // This might not show anything useful without a logged-in user concept.
   listMyEnrollments: publicProcedure.query(async ({ ctx }) => {
     // --- TEMPORARY HANDLING ---
-    // Without a session, we can't get the current user's enrollments.
-    // Returning empty array for now. Replace with actual logic later.
     console.warn(
       "listMyEnrollments called without authentication. Returning empty array.",
     );
     return [] as Array<never>;
     // --- END TEMPORARY HANDLING ---
-
-    /* // Original logic (requires protectedProcedure and ctx.session)
-      const userId = ctx.session.user.id;
-      const customer = await ctx.db.query.customers.findFirst({ where: eq(customers.userId, userId), columns: { id: true } });
-      if (!customer) { return []; }
-      const enrollments = await ctx.db.query.courseEnrollments.findMany({ ... });
-      return enrollments.map(e => ({ ... }));
-      */
   }),
-
-  // getById: protectedProcedure ...
-  // cancel: protectedProcedure ...
 });
