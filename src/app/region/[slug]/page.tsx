@@ -211,7 +211,7 @@ export default async function RegionPage({ params }: RegionPageProps) {
                         alt={`${event.title} thumbnail`}
                         fill
                         className="object-cover"
-                        unoptimized
+                        sizes="(max-width: 768px) 100vw, 33vw"
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center bg-white/10 text-gray-400">

@@ -4,7 +4,27 @@ import { db } from "~/server/db";
 import { eq } from "drizzle-orm";
 import { events } from "~/server/db/schema";
 import { formatDateInThaiTimezone, formatTimeRangeInThaiTimezone } from "~/lib/timezoneUtils";
+import { unstable_cache } from 'next/cache';
 import TicketSelection from "./TicketSelection";
+
+// Cache the event data for 5 minutes
+const getEventById = unstable_cache(
+  async (id: string) => {
+    return await db.query.events.findFirst({
+      where: eq(events.id, id),
+      with: {
+        venue: true,
+        region: true,
+        eventTickets: true,
+      },
+    });
+  },
+  ['event-detail'],
+  {
+    revalidate: 300, // 5 minutes
+    tags: ['events']
+  }
+);
 
 export default async function EventDetailPage({
   params,
@@ -13,14 +33,7 @@ export default async function EventDetailPage({
 }) {
   const { id } = await params;
 
-  const event = await db.query.events.findFirst({
-    where: eq(events.id, id),
-    with: {
-      venue: true,
-      region: true,
-      eventTickets: true,
-    },
-  });
+  const event = await getEventById(id);
 
   if (!event) {
     return notFound();

@@ -15,58 +15,12 @@ import type { RouterOutputs } from "~/trpc/react";
 import { logCacheConfig } from "./config";
 import { convertToChristianEra, parseAndConvertDate } from "~/lib/dateUtils";
 import { formatDateInThaiTimezone } from "~/lib/timezoneUtils";
+import { unstable_cache } from 'next/cache';
 
-// Helper function (consider moving to a utils file)
-const formatDate = (date: Date | string | null | undefined) => {
-  if (!date) return "";
-  // Use Thailand timezone formatting for consistency
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
-  return formatDateInThaiTimezone(dateObj);
-};
-
-
-
-// Define types for the fetched data
-type EventType = RouterOutputs["event"]["getUpcoming"][number];
-type FighterType = RouterOutputs["fighter"]["getFeatured"][number];
-type CourseType = RouterOutputs["trainingCourse"]["getFeatured"][number];
-type VenueType = RouterOutputs["venue"]["getFeatured"][number];
-type PostType = RouterOutputs["post"]["getFeatured"][number];
-
-// Define types for venue with types
-interface VenueWithTypes extends VenueType {
-  venueTypes: Array<{
-    id: string;
-    name: string;
-    description: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-  }>;
-  primaryType?: {
-    id: string;
-    name: string;
-    description: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-  };
-}
-
-interface VenuesByTypeResponse {
-  venues: VenueWithTypes[];
-  groupedVenues: Record<string, VenueWithTypes[]>;
-}
-
-// Next.js configuration is now in a separate file: src/app/config.ts
-// This ensures proper handling of dynamic configuration
-
-export default async function Home() {
-  // Log cache configuration on server
-  logCacheConfig();
-
-  // Fetch all data directly from the database in parallel
-  // This ensures we get fresh data during development
-  const [upcomingEventsData, featuredFightersData, featuredCoursesData, featuredPostsData, recommendedVenues] =
-    await Promise.all([
+// Cache the homepage data for better performance
+const getHomepageData = unstable_cache(
+  async () => {
+    return await Promise.all([
       // Upcoming events - direct DB query
       db.query.events.findMany({
         limit: 3,
@@ -129,6 +83,63 @@ export default async function Home() {
         },
       }),
     ]);
+  },
+  ['homepage-data'],
+  {
+    revalidate: 300, // 5 minutes
+    tags: ['homepage', 'events', 'fighters', 'courses', 'posts', 'venues']
+  }
+);
+
+// Helper function (consider moving to a utils file)
+const formatDate = (date: Date | string | null | undefined) => {
+  if (!date) return "";
+  // Use Thailand timezone formatting for consistency
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  return formatDateInThaiTimezone(dateObj);
+};
+
+
+
+// Define types for the fetched data
+type EventType = RouterOutputs["event"]["getUpcoming"][number];
+type FighterType = RouterOutputs["fighter"]["getFeatured"][number];
+type CourseType = RouterOutputs["trainingCourse"]["getFeatured"][number];
+type VenueType = RouterOutputs["venue"]["getFeatured"][number];
+type PostType = RouterOutputs["post"]["getFeatured"][number];
+
+// Define types for venue with types
+interface VenueWithTypes extends VenueType {
+  venueTypes: Array<{
+    id: string;
+    name: string;
+    description: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
+  primaryType?: {
+    id: string;
+    name: string;
+    description: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+}
+
+interface VenuesByTypeResponse {
+  venues: VenueWithTypes[];
+  groupedVenues: Record<string, VenueWithTypes[]>;
+}
+
+// Next.js configuration is now in a separate file: src/app/config.ts
+// This ensures proper handling of dynamic configuration
+
+export default async function Home() {
+  // Log cache configuration on server
+  logCacheConfig();
+
+  // Fetch all data using cached function for better performance
+  const [upcomingEventsData, featuredFightersData, featuredCoursesData, featuredPostsData, recommendedVenues] = await getHomepageData();
 
   // Process venues to include their types
   const venuesWithTypes = recommendedVenues.map((venue) => ({
@@ -180,6 +191,7 @@ export default async function Home() {
                   key={event.id}
                   href={`/events/${event.id}`}
                   className="group block overflow-hidden rounded-lg bg-white/10 shadow-lg transition-colors hover:bg-white/20"
+                  prefetch={true}
                 >
                   <div className="relative h-48 w-full bg-white/5">
                     {event.thumbnailUrl ? (
@@ -188,7 +200,8 @@ export default async function Home() {
                         alt={`${event.title} thumbnail`}
                         fill
                         className="object-cover"
-                        unoptimized
+                        priority={true}
+                        sizes="(max-width: 768px) 100vw, 33vw"
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center bg-white/10 text-gray-400">
