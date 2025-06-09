@@ -73,15 +73,11 @@ export const eventTemplateRouter = createTRPCRouter({
         const direction = sortDirection === "asc" ? asc : desc;
 
         // Map sortField to the corresponding column
+        // Note: We can only sort by direct columns of eventTemplates table
+        // Relational sorting (venueName, regionName) will be handled on the frontend
         switch (sortField) {
           case "templateName":
             orderBy = direction(eventTemplates.templateName);
-            break;
-          case "venueName":
-            orderBy = direction(venues.name);
-            break;
-          case "regionName":
-            orderBy = direction(regions.name);
             break;
           case "isActive":
             orderBy = direction(eventTemplates.isActive);
@@ -89,12 +85,21 @@ export const eventTemplateRouter = createTRPCRouter({
           case "createdAt":
             orderBy = direction(eventTemplates.createdAt);
             break;
+          case "updatedAt":
+            orderBy = direction(eventTemplates.updatedAt);
+            break;
+          case "venueName":
+          case "regionName":
+            // For relational fields, we'll sort on the frontend
+            // Default to updatedAt for now
+            orderBy = desc(eventTemplates.updatedAt);
+            break;
           default:
-            orderBy = direction(eventTemplates.createdAt);
+            orderBy = desc(eventTemplates.updatedAt);
         }
       } else {
-        // Default sort by created date
-        orderBy = desc(eventTemplates.createdAt);
+        // Default sort by updated date
+        orderBy = desc(eventTemplates.updatedAt);
       }
 
       // Count total items for pagination

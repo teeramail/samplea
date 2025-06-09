@@ -32,6 +32,29 @@ export default function EventTemplatesListPage() {
     query: searchQuery ?? undefined,
   });
 
+  // Sort templates on the frontend for relational fields
+  const sortedTemplates = templatesData?.items ? [...templatesData.items].sort((a, b) => {
+    if (sortField === "venueName") {
+      const aValue = a.venue?.name ?? "";
+      const bValue = b.venue?.name ?? "";
+      const comparison = aValue.localeCompare(bValue);
+      return sortDirection === "asc" ? comparison : -comparison;
+    }
+    if (sortField === "regionName") {
+      const aValue = a.region?.name ?? "";
+      const bValue = b.region?.name ?? "";
+      const comparison = aValue.localeCompare(bValue);
+      return sortDirection === "asc" ? comparison : -comparison;
+    }
+    // For other fields, the backend already sorted them
+    return 0;
+  }) : [];
+
+  // Use sorted templates if we're sorting by relational fields, otherwise use original data
+  const displayTemplates = (sortField === "venueName" || sortField === "regionName") 
+    ? sortedTemplates 
+    : templatesData?.items ?? [];
+
   // Handle sort click
   const handleSort = (field: string) => {
     if (sortField === field) {
@@ -202,8 +225,8 @@ export default function EventTemplatesListPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
-                {templatesData?.items.length ? (
-                  templatesData.items.map((template) => (
+                {displayTemplates.length ? (
+                  displayTemplates.map((template) => (
                     <tr
                       key={template.id}
                       className="cursor-pointer hover:bg-gray-50"
@@ -287,7 +310,7 @@ export default function EventTemplatesListPage() {
         )}
 
         {/* Pagination */}
-        {templatesData && templatesData.items.length > 0 && (
+        {templatesData && displayTemplates.length > 0 && (
           <div className="mt-4 flex items-center justify-between">
             <div className="text-sm text-gray-500">
               Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
