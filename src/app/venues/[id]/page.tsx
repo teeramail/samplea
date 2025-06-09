@@ -22,7 +22,7 @@ export default async function VenueDetailPage({
 }) {
   const { id } = await params;
 
-  // Fetch venue with all related data
+  // Fetch venue with all related data (excluding events for now)
   const venue = await db.query.venues.findFirst({
     where: eq(venues.id, id),
     with: {
@@ -30,17 +30,6 @@ export default async function VenueDetailPage({
       venueTypes: {
         with: {
           venueType: true,
-        },
-      },
-      events: {
-        where: (events) => {
-          const now = new Date();
-          return gt(events.date, now);
-        },
-        orderBy: (events, { asc }) => [asc(events.date)],
-        limit: 6,
-        with: {
-          region: true,
         },
       },
       trainingCourses: {
@@ -57,6 +46,23 @@ export default async function VenueDetailPage({
   if (!venue) {
     return notFound();
   }
+
+  // Fetch upcoming events in the same region as this venue
+  const regionalEvents = await db.query.events.findMany({
+    where: (events) => {
+      const now = new Date();
+      return and(
+        eq(events.regionId, venue.regionId),
+        gt(events.date, now)
+      );
+    },
+    orderBy: (events, { asc }) => [asc(events.date)],
+    limit: 6,
+    with: {
+      venue: true,
+      region: true,
+    },
+  });
 
   const formatDate = (date: Date) => {
     return format(new Date(date), "MMM dd, yyyy");
@@ -214,7 +220,9 @@ export default async function VenueDetailPage({
             {/* Upcoming Events */}
             <section className="mb-8 rounded-lg bg-white/10 p-6">
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-2xl font-bold">Upcoming Events</h2>
+                <h2 className="text-2xl font-bold">
+                  Upcoming Events in {venue.region?.name || 'Region'}
+                </h2>
                 <Link
                   href="/events"
                   className="text-[hsl(280,100%,70%)] hover:text-[hsl(280,100%,80%)]"
@@ -223,9 +231,9 @@ export default async function VenueDetailPage({
                 </Link>
               </div>
 
-              {venue.events && venue.events.length > 0 ? (
+              {regionalEvents && regionalEvents.length > 0 ? (
                 <div className="space-y-4">
-                  {venue.events.map((event) => (
+                  {regionalEvents.map((event) => (
                     <Link
                       key={event.id}
                       href={`/events/${event.id}`}
@@ -250,6 +258,12 @@ export default async function VenueDetailPage({
                               <ClockIcon className="mr-1 h-4 w-4" />
                               {formatTime(event.startTime)}
                             </div>
+                            {event.venue && (
+                              <div className="flex items-center">
+                                <BuildingLibraryIcon className="mr-1 h-4 w-4" />
+                                {event.venue.name}
+                              </div>
+                            )}
                           </div>
                         </div>
                         {event.thumbnailUrl && (
@@ -268,7 +282,7 @@ export default async function VenueDetailPage({
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-400">No upcoming events at this venue.</p>
+                <p className="text-gray-400">No upcoming events in this region.</p>
               )}
             </section>
           </div>
