@@ -289,10 +289,16 @@ export default function EditVenuePage() {
     setSelectedVenueTypes(newSelectedIds);
     setValue("venueTypeIds", newSelectedIds, { shouldValidate: true });
 
-    // If the primary venue type is unselected, reset it
+    // Handle primary venue type logic
     if (!newSelectedIds.includes(primaryVenueType)) {
-      setPrimaryVenueType("");
-      setValue("primaryVenueTypeId", "");
+      // If the current primary venue type is no longer selected, reset it
+      const newPrimaryType = newSelectedIds.length > 0 ? newSelectedIds[0]! : "";
+      setPrimaryVenueType(newPrimaryType);
+      setValue("primaryVenueTypeId", newPrimaryType);
+    } else if (newSelectedIds.length === 1 && !primaryVenueType) {
+      // If this is the first venue type selected and no primary is set, make it primary
+      setPrimaryVenueType(typeId);
+      setValue("primaryVenueTypeId", typeId);
     }
   };
 
@@ -837,6 +843,7 @@ export default function EditVenuePage() {
                     onChange={handlePrimaryVenueTypeChange}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                   >
+                    <option value="">Select primary venue type</option>
                     {selectedVenueTypes.map((typeId) => (
                       <option key={typeId} value={typeId}>
                         {venueTypes.find((t) => t.id === typeId)?.name ??
