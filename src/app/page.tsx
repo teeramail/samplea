@@ -17,9 +17,9 @@ import { convertToChristianEra, parseAndConvertDate } from "~/lib/dateUtils";
 import { formatDateInThaiTimezone } from "~/lib/timezoneUtils";
 import { unstable_cache } from 'next/cache';
 
-// Cache the homepage data for better performance
-const getHomepageData = unstable_cache(
-  async () => {
+// Helper function to get homepage data with error handling
+const getHomepageData = async () => {
+  try {
     return await Promise.all([
       // Upcoming events - direct DB query
       db.query.events.findMany({
@@ -83,13 +83,12 @@ const getHomepageData = unstable_cache(
         },
       }),
     ]);
-  },
-  ['homepage-data'],
-  {
-    revalidate: 300, // 5 minutes
-    tags: ['homepage', 'events', 'fighters', 'courses', 'posts', 'venues']
+  } catch (error) {
+    console.error('Database connection error:', error);
+    // Return empty arrays if database is not available
+    return [[], [], [], [], []];
   }
-);
+};
 
 // Helper function (consider moving to a utils file)
 const formatDate = (date: Date | string | null | undefined) => {
@@ -130,6 +129,9 @@ interface VenuesByTypeResponse {
   venues: VenueWithTypes[];
   groupedVenues: Record<string, VenueWithTypes[]>;
 }
+
+// Force dynamic rendering to avoid build-time database connection issues
+export const dynamic = 'force-dynamic';
 
 // Next.js configuration is now in a separate file: src/app/config.ts
 // This ensures proper handling of dynamic configuration
