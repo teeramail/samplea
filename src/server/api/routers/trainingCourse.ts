@@ -191,13 +191,20 @@ export const trainingCourseRouter = createTRPCRouter({
           instructorId: z.string().optional(),
           limit: z.number().min(1).max(100).default(20),
           cursor: z.string().nullish(),
+          includeInactive: z.boolean().default(false),
         })
         .optional(),
     )
     .query(async ({ ctx, input }) => {
       const limit = input?.limit ?? 20;
 
-      const whereConditions = [eq(trainingCourses.isActive, true)];
+      const whereConditions = [];
+      
+      // Only filter by isActive if includeInactive is false (default behavior for public)
+      if (!input?.includeInactive) {
+        whereConditions.push(eq(trainingCourses.isActive, true));
+      }
+      
       if (input?.regionId) {
         whereConditions.push(eq(trainingCourses.regionId, input.regionId));
       }
@@ -209,7 +216,7 @@ export const trainingCourseRouter = createTRPCRouter({
 
       try {
         const items = await ctx.db.query.trainingCourses.findMany({
-          where: and(...whereConditions),
+          where: whereConditions.length > 0 ? and(...whereConditions) : undefined,
           orderBy: [desc(trainingCourses.createdAt)],
           limit: limit + 1,
           with: {

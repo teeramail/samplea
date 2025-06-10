@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { api } from "~/trpc/react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 // import toast from "react-hot-toast"; // Optional
 
 // Define the type for a single course based on the router output
@@ -18,6 +18,9 @@ type CourseType = {
   instructor?: { name: string } | null;
   venue?: { name: string } | null;
 };
+
+type SortField = 'title' | 'region' | 'instructor' | 'price' | 'isActive' | 'isFeatured';
+type SortDirection = 'asc' | 'desc';
 
 // Mobile-friendly toggle switch
 function ToggleSwitch({
@@ -43,18 +46,65 @@ function ToggleSwitch({
   );
 }
 
+// Sortable table header component
+function SortableHeader({
+  field,
+  children,
+  sortField,
+  sortDirection,
+  onSort,
+}: {
+  field: SortField;
+  children: React.ReactNode;
+  sortField: SortField | null;
+  sortDirection: SortDirection;
+  onSort: (field: SortField) => void;
+}) {
+  const isActive = sortField === field;
+  
+  return (
+    <th
+      scope="col"
+      className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 cursor-pointer hover:bg-gray-100 select-none"
+      onClick={() => onSort(field)}
+    >
+      <div className="flex items-center space-x-1">
+        <span>{children}</span>
+        <div className="flex flex-col">
+          <svg 
+            className={`h-3 w-3 ${isActive && sortDirection === 'asc' ? 'text-gray-900' : 'text-gray-400'}`}
+            fill="currentColor" 
+            viewBox="0 0 20 20"
+          >
+            <path fillRule="evenodd" d="M14.77 12.79a.75.75 0 01-1.06-.02L10 8.832 6.29 12.77a.75.75 0 11-1.08-1.04l4.25-4.5a.75.75 0 011.08 0l4.25 4.5a.75.75 0 01-.02 1.06z" clipRule="evenodd" />
+          </svg>
+          <svg 
+            className={`h-3 w-3 -mt-1 ${isActive && sortDirection === 'desc' ? 'text-gray-900' : 'text-gray-400'}`}
+            fill="currentColor" 
+            viewBox="0 0 20 20"
+          >
+            <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+          </svg>
+        </div>
+      </div>
+    </th>
+  );
+}
+
 export default function AdminCoursesPage() {
-  // State for filtering
+  // State for filtering and sorting
   const [showFeaturedOnly, setShowFeaturedOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
-  // Fetch the list of training courses
+  // Fetch the list of training courses with includeInactive: true for admin
   const {
     data: coursesData,
     isLoading,
     error,
     refetch,
-  } = api.trainingCourse.list.useQuery();
+  } = api.trainingCourse.list.useQuery({ includeInactive: true });
 
   // Mutation for toggling the featured status
   const toggleFeaturedMutation = api.trainingCourse.toggleFeatured.useMutation({
@@ -76,18 +126,75 @@ export default function AdminCoursesPage() {
     });
   };
 
-  // Filter courses based on search and featured filter
-  const filterCourses = (courses: CourseType[]) => {
-    return courses.filter((course) => {
+  // Handle sorting
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // Filter and sort courses
+  const filteredAndSortedCourses = useMemo(() => {
+    const allCourses = coursesData?.items || [];
+    
+    // Filter courses
+    let filtered = allCourses.filter((course) => {
       const matchesSearch =
-        !searchQuery || course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        !searchQuery || 
+        course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (course.region?.name?.toLowerCase().includes(searchQuery.toLowerCase()));
 
       const matchesFeatured = !showFeaturedOnly || course.isFeatured;
 
       return matchesSearch && matchesFeatured;
     });
-  };
+
+    // Sort courses
+    if (sortField) {
+      filtered = [...filtered].sort((a, b) => {
+        let aValue: any;
+        let bValue: any;
+
+        switch (sortField) {
+          case 'title':
+            aValue = a.title.toLowerCase();
+            bValue = b.title.toLowerCase();
+            break;
+          case 'region':
+            aValue = a.region?.name?.toLowerCase() || '';
+            bValue = b.region?.name?.toLowerCase() || '';
+            break;
+          case 'instructor':
+            aValue = a.instructor?.name?.toLowerCase() || '';
+            bValue = b.instructor?.name?.toLowerCase() || '';
+            break;
+          case 'price':
+            aValue = a.price;
+            bValue = b.price;
+            break;
+          case 'isActive':
+            aValue = a.isActive ? 1 : 0;
+            bValue = b.isActive ? 1 : 0;
+            break;
+          case 'isFeatured':
+            aValue = a.isFeatured ? 1 : 0;
+            bValue = b.isFeatured ? 1 : 0;
+            break;
+          default:
+            return 0;
+        }
+
+        if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return filtered;
+  }, [coursesData?.items, searchQuery, showFeaturedOnly, sortField, sortDirection]);
 
   if (isLoading) return <div className="p-4">Loading courses...</div>;
   if (error)
@@ -99,7 +206,7 @@ export default function AdminCoursesPage() {
 
   // Adjust based on list procedure return type
   const allCourses = coursesData?.items || [];
-  const courses = filterCourses(allCourses);
+  const courses = filteredAndSortedCourses;
   const featuredCount = allCourses.filter((course) => course.isFeatured).length;
 
   return (
@@ -237,42 +344,54 @@ export default function AdminCoursesPage() {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+              <SortableHeader
+                field="title"
+                sortField={sortField}
+                sortDirection={sortDirection}
+                onSort={handleSort}
               >
                 Title
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+              </SortableHeader>
+              <SortableHeader
+                field="region"
+                sortField={sortField}
+                sortDirection={sortDirection}
+                onSort={handleSort}
               >
                 Region
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+              </SortableHeader>
+              <SortableHeader
+                field="instructor"
+                sortField={sortField}
+                sortDirection={sortDirection}
+                onSort={handleSort}
               >
                 Instructor
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+              </SortableHeader>
+              <SortableHeader
+                field="price"
+                sortField={sortField}
+                sortDirection={sortDirection}
+                onSort={handleSort}
               >
                 Price
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500"
+              </SortableHeader>
+              <SortableHeader
+                field="isActive"
+                sortField={sortField}
+                sortDirection={sortDirection}
+                onSort={handleSort}
               >
-                Active
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500"
+                <div className="text-center">Active</div>
+              </SortableHeader>
+              <SortableHeader
+                field="isFeatured"
+                sortField={sortField}
+                sortDirection={sortDirection}
+                onSort={handleSort}
               >
-                Featured
-              </th>
+                <div className="text-center">Featured</div>
+              </SortableHeader>
               <th
                 scope="col"
                 className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
