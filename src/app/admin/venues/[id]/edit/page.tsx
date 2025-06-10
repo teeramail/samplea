@@ -106,8 +106,9 @@ async function uploadFile(
       body: formData,
     });
     if (!response.ok) {
-      console.error("Upload failed:", response.status, await response.text());
-      return null;
+      const errorText = await response.text();
+      console.error("Upload failed:", response.status, errorText);
+      throw new Error(`Upload failed with status ${response.status}: ${errorText}`);
     }
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const result = (await response.json()) as UploadResponse;
@@ -115,11 +116,11 @@ async function uploadFile(
       return result.urls[0] ?? null;
     } else {
       console.error("Upload API response error or no URLs:", result);
-      return null;
+      throw new Error("Upload API returned no valid URLs");
     }
   } catch (error) {
     console.error("Upload fetch error:", error);
-    return null;
+    throw error;
   }
 }
 
@@ -357,28 +358,25 @@ export default function EditVenuePage() {
     try {
       // 1. Upload NEW Thumbnail (if selected)
       if (thumbnailFile) {
-        const uploadedUrl = await uploadFile(thumbnailFile, "venue");
-        if (!uploadedUrl) {
-          throw new Error("Failed to upload new thumbnail image.");
+        try {
+          const uploadedUrl = await uploadFile(thumbnailFile, "venue");
+          finalThumbnailUrl = uploadedUrl;
+        } catch (error) {
+          throw new Error(`Failed to upload new thumbnail image: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
-        finalThumbnailUrl = uploadedUrl;
       }
 
       // 2. Upload NEW Venue Images (if selected)
       if (imageFiles.length > 0) {
-        const uploadPromises = imageFiles.map((file) =>
-          uploadFile(file, "venue"),
-        );
-        const results = await Promise.all(uploadPromises);
-        if (results.some((url) => url === null)) {
-          const failedIndices = results
-            .map((url, index) => (url === null ? index + 1 : -1))
-            .filter((i) => i !== -1);
-          throw new Error(
-            `Failed to upload new venue image(s): #${failedIndices.join(", ")}.`,
+        try {
+          const uploadPromises = imageFiles.map((file) =>
+            uploadFile(file, "venue"),
           );
+          const results = await Promise.all(uploadPromises);
+          finalImageUrls = results.filter((url): url is string => url !== null);
+        } catch (error) {
+          throw new Error(`Failed to upload new venue images: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
-        finalImageUrls = results.filter((url): url is string => url !== null);
       }
 
       // 3. Prepare final data for venue update API
@@ -859,6 +857,57 @@ export default function EditVenuePage() {
                   {errors.venueTypeIds.message}
                 </p>
               )}
+            </div>
+          )}
+        </div>
+
+        {/* Venue Thumbnail Management */}
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700">
+            Current Venue Thumbnail
+          </label>
+          {currentThumbnailUrl ? (
+            <div className="mb-2">
+              <Image
+                src={currentThumbnailUrl}
+                alt="Current venue thumbnail"
+                width={120}
+                height={120}
+                className="rounded-md object-cover"
+              />
+            </div>
+          ) : (
+            <p className="mb-2 text-sm text-gray-500">
+              No current venue thumbnail.
+            </p>
+          )}
+          <label
+            htmlFor="thumbnail"
+            className="block text-sm font-medium text-gray-700"
+          >
+            {currentThumbnailUrl ? "Replace" : "Upload"} Venue Thumbnail
+          </label>
+          <input
+            id="thumbnail"
+            type="file"
+            accept="image/*"
+            onChange={handleThumbnailChange}
+            className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100"
+          />
+          {thumbnailPreview && (
+            <div className="mt-2">
+              <p className="text-sm font-medium text-gray-600">
+                New thumbnail preview:
+              </p>
+              <div className="mt-1">
+                <Image
+                  src={thumbnailPreview}
+                  alt="New venue thumbnail preview"
+                  width={120}
+                  height={120}
+                  className="rounded-md object-cover"
+                />
+              </div>
             </div>
           )}
         </div>
