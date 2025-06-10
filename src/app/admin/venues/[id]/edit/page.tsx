@@ -822,23 +822,20 @@ export default function EditVenuePage() {
               No venue types available. Please try refreshing the page.
             </div>
           ) : (
-                          <div>
-                <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3">
-                  {venueTypes.map((type) => {
-                    const isChecked = selectedVenueTypes.includes(type.id);
-                    console.log(`Venue type ${type.name} (${type.id}): checked = ${isChecked}, selectedVenueTypes =`, selectedVenueTypes);
-                    return (
-                      <div key={type.id} className="flex items-start">
-                        <div className="flex h-5 items-center">
-                          <input
-                            id={`type-${type.id}`}
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() => handleVenueTypeChange(type.id)}
-                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                          />
-                        </div>
-                        <div className="ml-3 text-sm">
+            <div>
+              <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3">
+                {venueTypes.map((type) => (
+                  <div key={type.id} className="flex items-start">
+                    <div className="flex h-5 items-center">
+                      <input
+                        id={`type-${type.id}`}
+                        type="checkbox"
+                        checked={selectedVenueTypes.includes(type.id)}
+                        onChange={() => handleVenueTypeChange(type.id)}
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div className="ml-3 text-sm">
                       <label
                         htmlFor={`type-${type.id}`}
                         className="font-medium text-gray-700"
