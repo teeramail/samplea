@@ -14,6 +14,7 @@ const fighterSchema = z.object({
   weightClass: z.string().optional(),
   record: z.string().optional(),
   country: z.string().optional(),
+  biography: z.string().optional(),
   thumbnailUrl: z.string().url().optional(),
   imageUrl: z.string().url().optional(),
   imageUrls: z.array(z.string().url()).max(8).optional(),
@@ -61,6 +62,7 @@ export default function CreateFighterPage() {
     weightClass: "",
     record: "",
     country: "",
+    biography: "",
     thumbnailUrl: "",
     imageUrl: "",
     imageUrls: [],
@@ -88,7 +90,7 @@ export default function CreateFighterPage() {
   });
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value, type } = e.target;
     
@@ -274,6 +276,27 @@ export default function CreateFighterPage() {
           </select>
           {errors.country && (
             <p className="mt-1 text-sm text-red-600">{errors.country}</p>
+          )}
+        </div>
+
+        {/* Biography */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Biography
+          </label>
+          <textarea
+            name="biography"
+            value={formData.biography}
+            onChange={handleChange}
+            rows={6}
+            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+            placeholder="Fighter's background, fighting style, achievements, training history, and personal story..."
+          />
+          <p className="mt-1 text-sm text-gray-500">
+            Tell the fighter's story - their background, fighting style, achievements, and journey to Muay Thai.
+          </p>
+          {errors.biography && (
+            <p className="mt-1 text-sm text-red-600">{errors.biography}</p>
           )}
         </div>
 

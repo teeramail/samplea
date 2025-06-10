@@ -238,6 +238,7 @@ export const fighters = createTable("Fighter", {
   nickname: text("nickname"),
   weightClass: text("weightClass"),
   record: text("record"),
+  biography: text("biography"), // Fighter's background story, achievements, fighting style
   thumbnailUrl: text("thumbnailUrl"), // Add thumbnailUrl field for 30KB compressed thumbnails
   imageUrl: text("imageUrl"), // Keep for backward compatibility
   imageUrls: text("imageUrls").array(), // Array of image URLs for gallery (up to 8 images)
