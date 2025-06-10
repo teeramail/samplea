@@ -72,6 +72,9 @@ export default function CreateCoursePage() {
       limit: 100,
     });
 
+  // Create course mutation - declare at component level
+  const createCourse = api.trainingCourse.create.useMutation();
+
   useEffect(() => {
     if (regionsData?.items) {
       setRegions(regionsData.items);
@@ -175,7 +178,6 @@ export default function CreateCoursePage() {
       };
 
       // Create course using tRPC
-      const createCourse = api.trainingCourse.create.useMutation();
       await createCourse.mutateAsync(courseData);
 
       // Redirect on success
