@@ -17,7 +17,10 @@ export const ticketRouter = createTRPCRouter({
         sortField: z.enum(["createdAt", "status", "eventTitle", "customerName"]).default("createdAt"),
         sortDirection: z.enum(["asc", "desc"]).default("desc"),
         query: z.string().optional(),
-        status: z.enum(["ACTIVE", "USED", "CANCELLED"]).optional(),
+        status: z.union([
+          z.enum(["ACTIVE", "USED", "CANCELLED"]),
+          z.literal("")
+        ]).optional(),
         eventId: z.string().optional(),
       }),
     )
@@ -37,7 +40,8 @@ export const ticketRouter = createTRPCRouter({
         );
       }
 
-      if (input.status) {
+      // Only filter by status if it is a valid value
+      if (input.status && input.status !== "") {
         whereConditions.push(eq(tickets.status, input.status));
       }
 
