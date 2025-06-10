@@ -5,8 +5,8 @@ import {
   createTRPCRouter,
   protectedProcedure,
   publicProcedure,
-} from "~/server/api/trpc";
-import { tickets, bookings, events, eventTickets, venues, regions, customers } from "~/server/db/schema";
+} from "../trpc";
+import { tickets, bookings, events, eventTickets, venues, regions, customers } from "../../db/schema";
 
 export const ticketRouter = createTRPCRouter({
   // List tickets with pagination and filtering
@@ -23,6 +23,7 @@ export const ticketRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
+      try {
       const offset = (input.page - 1) * input.limit;
 
       // Build where conditions
@@ -143,6 +144,15 @@ export const ticketRouter = createTRPCRouter({
         pageCount,
         currentPage: input.page,
       };
+      } catch (error) {
+        console.error("Error listing tickets:", error);
+        return {
+          items: [],
+          totalCount: 0,
+          pageCount: 0,
+          currentPage: input.page,
+        };
+      }
     }),
 
   // Get a single ticket by ID
@@ -235,23 +245,31 @@ export const ticketRouter = createTRPCRouter({
   // Get ticket statistics
   getStats: protectedProcedure
     .query(async ({ ctx }) => {
-      const stats = await ctx.db
-        .select({
-          status: tickets.status,
-          count: sql<number>`count(*)`,
-        })
-        .from(tickets)
-        .groupBy(tickets.status);
+      try {
+        const stats = await ctx.db
+          .select({
+            status: tickets.status,
+            count: sql<number>`count(*)`,
+          })
+          .from(tickets)
+          .groupBy(tickets.status);
 
-      const totalTickets = stats.reduce((sum, stat) => sum + stat.count, 0);
-      
-      return {
-        totalTickets,
-        byStatus: stats.reduce((acc, stat) => {
-          acc[stat.status] = stat.count;
-          return acc;
-        }, {} as Record<string, number>),
-      };
+        const totalTickets = stats.reduce((sum, stat) => sum + stat.count, 0);
+        
+        return {
+          totalTickets,
+          byStatus: stats.reduce((acc, stat) => {
+            acc[stat.status] = stat.count;
+            return acc;
+          }, {} as Record<string, number>),
+        };
+      } catch (error) {
+        console.error("Error getting ticket stats:", error);
+        return {
+          totalTickets: 0,
+          byStatus: {},
+        };
+      }
     }),
 
   // Get tickets for a specific event
