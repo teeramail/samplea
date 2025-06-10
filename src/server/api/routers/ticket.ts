@@ -3,14 +3,13 @@ import { and, eq, sql, desc, asc, like } from "drizzle-orm";
 
 import {
   createTRPCRouter,
-  protectedProcedure,
   publicProcedure,
 } from "../trpc";
 import { tickets, bookings, events, eventTickets, venues, regions, customers } from "../../db/schema";
 
 export const ticketRouter = createTRPCRouter({
   // List tickets with pagination and filtering
-  list: protectedProcedure
+  list: publicProcedure
     .input(
       z.object({
         page: z.number().min(1).default(1),
@@ -156,7 +155,7 @@ export const ticketRouter = createTRPCRouter({
     }),
 
   // Get a single ticket by ID
-  getById: protectedProcedure
+  getById: publicProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       const result = await ctx.db
@@ -222,7 +221,7 @@ export const ticketRouter = createTRPCRouter({
     }),
 
   // Update ticket status
-  updateStatus: protectedProcedure
+  updateStatus: publicProcedure
     .input(
       z.object({
         id: z.string(),
@@ -243,7 +242,7 @@ export const ticketRouter = createTRPCRouter({
     }),
 
   // Get ticket statistics
-  getStats: protectedProcedure
+  getStats: publicProcedure
     .query(async ({ ctx }) => {
       try {
         const stats = await ctx.db
@@ -273,7 +272,7 @@ export const ticketRouter = createTRPCRouter({
     }),
 
   // Get tickets for a specific event
-  getByEventId: protectedProcedure
+  getByEventId: publicProcedure
     .input(z.object({ 
       eventId: z.string(),
       status: z.enum(["ACTIVE", "USED", "CANCELLED"]).optional(),
