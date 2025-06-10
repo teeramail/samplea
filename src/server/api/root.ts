@@ -14,6 +14,7 @@ import { categoryRouter } from "~/server/api/routers/category";
 import { productToCategoryRouter } from "~/server/api/routers/productToCategory";
 import { testup2Router } from "~/server/api/routers/testup2";
 import { reportsRouter } from "~/server/api/routers/reports";
+import { ticketRouter } from "~/server/api/routers/ticket";
 
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
@@ -38,6 +39,7 @@ export const appRouter = createTRPCRouter({
   productToCategory: productToCategoryRouter,
   testup2: testup2Router,
   reports: reportsRouter,
+  ticket: ticketRouter,
 });
 
 // export type definition of API
