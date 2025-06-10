@@ -51,6 +51,11 @@ export async function GET(
       where: eq(venues.id, venueId),
       with: {
         region: true, // Include region data if needed for display
+        venueTypes: {
+          with: {
+            venueType: true,
+          },
+        },
       },
     });
 
@@ -58,7 +63,17 @@ export async function GET(
       return NextResponse.json({ error: "Venue not found" }, { status: 404 });
     }
 
-    return NextResponse.json(venue);
+    // Transform the venue types to match frontend expectations
+    const venueTypesData = venue.venueTypes?.map((vt) => vt.venueType) ?? [];
+    const primaryVenueType = venue.venueTypes?.find((vt) => vt.isPrimary);
+    
+    const transformedVenue = {
+      ...venue,
+      venueTypes: venueTypesData,
+      primaryVenueTypeId: primaryVenueType?.venueTypeId ?? null,
+    };
+
+    return NextResponse.json(transformedVenue);
   } catch (error) {
     const venueIdForError = (await params)?.id ?? "unknown";
     console.error(`Error fetching venue ${venueIdForError}:`, error);

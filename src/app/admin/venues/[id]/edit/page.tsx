@@ -88,17 +88,31 @@ type Region = {
 
 // Define type for the upload API response
 type UploadResponse = {
-  urls: string[];
+  url: string;
+  originalFilename: string;
+  feedback?: {
+    originalSize: number;
+    compressedSize: number;
+    width: number;
+    height: number;
+    format: string;
+    quality: number;
+    reduction: number;
+  };
 };
 
 // --- Actual upload function (copy from create page or import) ---
 async function uploadFile(
   file: File,
   entityType: string,
+  uploadType?: "thumbnail" | "images",
 ): Promise<string | null> {
   const formData = new FormData();
   formData.append("image", file);
   formData.append("entityType", entityType);
+  if (uploadType === "thumbnail") {
+    formData.append("type", "thumbnail");
+  }
 
   try {
     const response = await fetch("/api/upload", {
@@ -112,11 +126,11 @@ async function uploadFile(
     }
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const result = (await response.json()) as UploadResponse;
-    if (result.urls && Array.isArray(result.urls) && result.urls.length > 0) {
-      return result.urls[0] ?? null;
+    if (result.url && typeof result.url === 'string') {
+      return result.url;
     } else {
-      console.error("Upload API response error or no URLs:", result);
-      throw new Error("Upload API returned no valid URLs");
+      console.error("Upload API response error or no URL:", result);
+      throw new Error("Upload API returned no valid URL");
     }
   } catch (error) {
     console.error("Upload fetch error:", error);
@@ -242,6 +256,8 @@ export default function EditVenuePage() {
 
         // Extract venue type IDs from the fetched data
         const venueTypeIds = data.venueTypes?.map((vt) => vt.id) ?? [];
+        
+
 
         reset({
           name: data.name,
@@ -266,6 +282,9 @@ export default function EditVenuePage() {
         // This state is for rendering the checkboxes correctly
         setSelectedVenueTypes(venueTypeIds);
         setPrimaryVenueType(data.primaryVenueTypeId ?? "");
+        
+        console.log("Set selectedVenueTypes to:", venueTypeIds);
+        console.log("Set primaryVenueType to:", data.primaryVenueTypeId ?? "");
 
         // Set current images for display
         setCurrentThumbnailUrl(data.thumbnailUrl);
@@ -359,7 +378,7 @@ export default function EditVenuePage() {
       // 1. Upload NEW Thumbnail (if selected)
       if (thumbnailFile) {
         try {
-          const uploadedUrl = await uploadFile(thumbnailFile, "venue");
+          const uploadedUrl = await uploadFile(thumbnailFile, "venue", "thumbnail");
           finalThumbnailUrl = uploadedUrl;
         } catch (error) {
           throw new Error(`Failed to upload new thumbnail image: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -370,7 +389,7 @@ export default function EditVenuePage() {
       if (imageFiles.length > 0) {
         try {
           const uploadPromises = imageFiles.map((file) =>
-            uploadFile(file, "venue"),
+            uploadFile(file, "venue", "images"),
           );
           const results = await Promise.all(uploadPromises);
           finalImageUrls = results.filter((url): url is string => url !== null);
@@ -803,20 +822,23 @@ export default function EditVenuePage() {
               No venue types available. Please try refreshing the page.
             </div>
           ) : (
-            <div>
-              <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3">
-                {venueTypes.map((type) => (
-                  <div key={type.id} className="flex items-start">
-                    <div className="flex h-5 items-center">
-                      <input
-                        id={`type-${type.id}`}
-                        type="checkbox"
-                        checked={selectedVenueTypes.includes(type.id)}
-                        onChange={() => handleVenueTypeChange(type.id)}
-                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div className="ml-3 text-sm">
+                          <div>
+                <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3">
+                  {venueTypes.map((type) => {
+                    const isChecked = selectedVenueTypes.includes(type.id);
+                    console.log(`Venue type ${type.name} (${type.id}): checked = ${isChecked}, selectedVenueTypes =`, selectedVenueTypes);
+                    return (
+                      <div key={type.id} className="flex items-start">
+                        <div className="flex h-5 items-center">
+                          <input
+                            id={`type-${type.id}`}
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => handleVenueTypeChange(type.id)}
+                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div className="ml-3 text-sm">
                       <label
                         htmlFor={`type-${type.id}`}
                         className="font-medium text-gray-700"
