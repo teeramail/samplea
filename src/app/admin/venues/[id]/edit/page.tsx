@@ -126,7 +126,7 @@ async function uploadFile(
 export default function EditVenuePage() {
   const router = useRouter();
   const params = useParams();
-  const venueId = params.id as string;
+  const venueId = params?.id as string;
 
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
@@ -238,6 +238,10 @@ export default function EditVenuePage() {
           throw new Error("Failed to fetch venue data");
         }
         const data = (await response.json()) as FetchedVenueData;
+
+        // Extract venue type IDs from the fetched data
+        const venueTypeIds = data.venueTypes?.map((vt) => vt.id) ?? [];
+
         reset({
           name: data.name,
           address: data.address,
@@ -254,19 +258,15 @@ export default function EditVenuePage() {
             twitter: data.socialMediaLinks?.twitter ?? "",
             youtube: data.socialMediaLinks?.youtube ?? "",
           },
-          venueTypeIds: data.venueTypes?.map((vt) => vt.id) ?? [],
-          primaryVenueTypeId: data.primaryVenueType?.id ?? "",
+          venueTypeIds: venueTypeIds,
+          primaryVenueTypeId: data.primaryVenueTypeId ?? "",
         });
 
-        // Set venue types
-        if (data.venueTypes) {
-          const venueTypeIds = data.venueTypes.map((vt) => vt.id);
-          setSelectedVenueTypes(venueTypeIds);
-          const primaryTypeId =
-            data.primaryVenueType?.id ?? venueTypeIds[0] ?? "";
-          setPrimaryVenueType(primaryTypeId);
-        }
+        // This state is for rendering the checkboxes correctly
+        setSelectedVenueTypes(venueTypeIds);
+        setPrimaryVenueType(data.primaryVenueTypeId ?? "");
 
+        // Set current images for display
         setCurrentThumbnailUrl(data.thumbnailUrl);
         setCurrentImageUrls(data.imageUrls ?? []);
       } catch (err) {
@@ -281,30 +281,27 @@ export default function EditVenuePage() {
     void fetchVenue();
   }, [venueId, reset]);
 
-  // Handle venue type selection
   const handleVenueTypeChange = (typeId: string) => {
-    setSelectedVenueTypes((prev) => {
-      // If already selected, remove it
-      if (prev.includes(typeId)) {
-        // If this is also the primary type, reset primary type
-        if (primaryVenueType === typeId) {
-          const newTypes = prev.filter((id) => id !== typeId);
-          // Ensure we always have a string, not undefined
-          // Always set to a string value
-          setPrimaryVenueType(newTypes.length > 0 ? String(newTypes[0]) : "");
-        }
-        return prev.filter((id) => id !== typeId);
-      }
-      // Otherwise, add it
-      else {
-        const newTypes = [...prev, typeId];
-        // If this is the first type, make it primary
-        if (newTypes.length === 1) {
-          setPrimaryVenueType(typeId);
-        }
-        return newTypes;
-      }
-    });
+    const newSelectedIds = selectedVenueTypes.includes(typeId)
+      ? selectedVenueTypes.filter((id) => id !== typeId)
+      : [...selectedVenueTypes, typeId];
+
+    setSelectedVenueTypes(newSelectedIds);
+    setValue("venueTypeIds", newSelectedIds, { shouldValidate: true });
+
+    // If the primary venue type is unselected, reset it
+    if (!newSelectedIds.includes(primaryVenueType)) {
+      setPrimaryVenueType("");
+      setValue("primaryVenueTypeId", "");
+    }
+  };
+
+  const handlePrimaryVenueTypeChange = (
+    e: ChangeEvent<HTMLSelectElement>,
+  ) => {
+    const newPrimaryVenueType = e.target.value;
+    setPrimaryVenueType(newPrimaryVenueType);
+    setValue("primaryVenueTypeId", newPrimaryVenueType);
   };
 
   // --- File Handlers ---
@@ -347,10 +344,6 @@ export default function EditVenuePage() {
   const onSubmit = async (data: VenueFormData) => {
     setIsLoading(true);
     setError("");
-
-    // Update venue types from state
-    setValue("venueTypeIds", selectedVenueTypes);
-    setValue("primaryVenueTypeId", primaryVenueType);
 
     let finalThumbnailUrl = currentThumbnailUrl;
     let finalImageUrls = currentImageUrls;
@@ -841,7 +834,7 @@ export default function EditVenuePage() {
                   </label>
                   <select
                     value={primaryVenueType}
-                    onChange={(e) => setPrimaryVenueType(e.target.value)}
+                    onChange={handlePrimaryVenueTypeChange}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                   >
                     {selectedVenueTypes.map((typeId) => (
