@@ -2,18 +2,21 @@
 
 import { useRouter } from "next/navigation";
 import { api } from "~/trpc/react";
-import { useState } from "react";
+import { useState, use } from "react";
 import Link from "next/link";
 
 interface TicketDetailPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default function TicketDetailPage({ params }: TicketDetailPageProps) {
   const router = useRouter();
   const [isUpdating, setIsUpdating] = useState(false);
+  
+  // Unwrap params Promise using React.use()
+  const { id } = use(params);
 
   // Fetch ticket details
   const {
@@ -22,7 +25,7 @@ export default function TicketDetailPage({ params }: TicketDetailPageProps) {
     error,
     refetch,
   } = api.ticket.getById.useQuery({
-    id: params.id,
+    id: id,
   });
 
   // Update ticket status mutation
@@ -41,7 +44,7 @@ export default function TicketDetailPage({ params }: TicketDetailPageProps) {
   const handleStatusUpdate = async (newStatus: "ACTIVE" | "USED" | "CANCELLED") => {
     setIsUpdating(true);
     await updateStatusMutation.mutateAsync({
-      id: params.id,
+      id: id,
       status: newStatus,
     });
   };
@@ -251,14 +254,14 @@ export default function TicketDetailPage({ params }: TicketDetailPageProps) {
             <div>
               <label className="block text-sm font-medium text-gray-500">Start Time</label>
               <div className="text-sm text-gray-900">
-                {ticket.event?.startTime || "N/A"}
+                {ticket.event?.startTime ? formatDateTime(ticket.event.startTime) : "N/A"}
               </div>
             </div>
             
             <div>
               <label className="block text-sm font-medium text-gray-500">End Time</label>
               <div className="text-sm text-gray-900">
-                {ticket.event?.endTime || "N/A"}
+                {ticket.event?.endTime ? formatDateTime(ticket.event.endTime) : "N/A"}
               </div>
             </div>
             

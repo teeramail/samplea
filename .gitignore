@@ -14,6 +14,10 @@
 db.sqlite
 *.sqlite
 
+# drizzle
+/drizzle/
+*.backup.ts
+
 # next.js
 /.next/
 /out/
@@ -56,3 +60,24 @@ yarn-error.log*
 # Ignore secret-tracked files from Codeium Windsurf
 .codeium/
 
+# Added by Task Master AI
+# Logs
+logs
+*.log
+dev-debug.log
+# Dependency directories
+node_modules/
+# Environment variables
+.env
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+# OS specific
+# Task files
+tasks.json
+tasks/ 

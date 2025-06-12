@@ -1,165 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { realestateBlogCategories, realestateBlogPosts, realestateBillOfMaterials, realestateBomItem, realestateProduct, realestateCards, realestateCategory, realestateAgent, realestateOrder, realestateSubagent, realestateInventoryTransaction, realestateProductionOrder, realestateOrderItem, realestateCommission, user, session, region, venue, venueToVenueType, venueType, event, eventTicket, instructor, trainingCourse, category, product, productToCategory, customer, booking, ticket, courseEnrollment, eventTemplate, eventTemplateTicket, post, realestateProductCategory, account } from "./schema";
-
-export const realestateBlogCategoriesRelations = relations(realestateBlogCategories, ({one, many}) => ({
-	realestateBlogCategory: one(realestateBlogCategories, {
-		fields: [realestateBlogCategories.parentId],
-		references: [realestateBlogCategories.id],
-		relationName: "realestateBlogCategories_parentId_realestateBlogCategories_id"
-	}),
-	realestateBlogCategories: many(realestateBlogCategories, {
-		relationName: "realestateBlogCategories_parentId_realestateBlogCategories_id"
-	}),
-	realestateBlogPosts: many(realestateBlogPosts),
-}));
-
-export const realestateBlogPostsRelations = relations(realestateBlogPosts, ({one, many}) => ({
-	realestateBlogCategory: one(realestateBlogCategories, {
-		fields: [realestateBlogPosts.categoryId],
-		references: [realestateBlogCategories.id]
-	}),
-	realestateCards: many(realestateCards),
-}));
-
-export const realestateBomItemRelations = relations(realestateBomItem, ({one}) => ({
-	realestateBillOfMaterial: one(realestateBillOfMaterials, {
-		fields: [realestateBomItem.bomId],
-		references: [realestateBillOfMaterials.id]
-	}),
-	realestateProduct: one(realestateProduct, {
-		fields: [realestateBomItem.componentProductId],
-		references: [realestateProduct.id]
-	}),
-}));
-
-export const realestateBillOfMaterialsRelations = relations(realestateBillOfMaterials, ({one, many}) => ({
-	realestateBomItems: many(realestateBomItem),
-	realestateProduct: one(realestateProduct, {
-		fields: [realestateBillOfMaterials.finishedProductId],
-		references: [realestateProduct.id]
-	}),
-	realestateProductionOrders: many(realestateProductionOrder),
-}));
-
-export const realestateProductRelations = relations(realestateProduct, ({many}) => ({
-	realestateBomItems: many(realestateBomItem),
-	realestateInventoryTransactions: many(realestateInventoryTransaction),
-	realestateBillOfMaterials: many(realestateBillOfMaterials),
-	realestateOrderItems: many(realestateOrderItem),
-	realestateProductCategories: many(realestateProductCategory),
-}));
-
-export const realestateCardsRelations = relations(realestateCards, ({one}) => ({
-	realestateBlogPost: one(realestateBlogPosts, {
-		fields: [realestateCards.blogPostId],
-		references: [realestateBlogPosts.id]
-	}),
-}));
-
-export const realestateCategoryRelations = relations(realestateCategory, ({one, many}) => ({
-	realestateCategory: one(realestateCategory, {
-		fields: [realestateCategory.parentId],
-		references: [realestateCategory.id],
-		relationName: "realestateCategory_parentId_realestateCategory_id"
-	}),
-	realestateCategories: many(realestateCategory, {
-		relationName: "realestateCategory_parentId_realestateCategory_id"
-	}),
-	realestateProductCategories: many(realestateProductCategory),
-}));
-
-export const realestateOrderRelations = relations(realestateOrder, ({one, many}) => ({
-	realestateAgent: one(realestateAgent, {
-		fields: [realestateOrder.agentId],
-		references: [realestateAgent.id]
-	}),
-	realestateSubagent: one(realestateSubagent, {
-		fields: [realestateOrder.subagentId],
-		references: [realestateSubagent.id]
-	}),
-	realestateInventoryTransactions: many(realestateInventoryTransaction),
-	realestateOrderItems: many(realestateOrderItem),
-	realestateCommissions: many(realestateCommission),
-}));
-
-export const realestateAgentRelations = relations(realestateAgent, ({many}) => ({
-	realestateOrders: many(realestateOrder),
-	realestateSubagents: many(realestateSubagent),
-	realestateCommissions: many(realestateCommission),
-}));
-
-export const realestateSubagentRelations = relations(realestateSubagent, ({one, many}) => ({
-	realestateOrders: many(realestateOrder),
-	realestateAgent: one(realestateAgent, {
-		fields: [realestateSubagent.agentId],
-		references: [realestateAgent.id]
-	}),
-	realestateCommissions: many(realestateCommission),
-}));
-
-export const realestateInventoryTransactionRelations = relations(realestateInventoryTransaction, ({one}) => ({
-	realestateProduct: one(realestateProduct, {
-		fields: [realestateInventoryTransaction.productId],
-		references: [realestateProduct.id]
-	}),
-	realestateOrder: one(realestateOrder, {
-		fields: [realestateInventoryTransaction.orderId],
-		references: [realestateOrder.id]
-	}),
-	realestateProductionOrder: one(realestateProductionOrder, {
-		fields: [realestateInventoryTransaction.productionOrderId],
-		references: [realestateProductionOrder.id]
-	}),
-}));
-
-export const realestateProductionOrderRelations = relations(realestateProductionOrder, ({one, many}) => ({
-	realestateInventoryTransactions: many(realestateInventoryTransaction),
-	realestateBillOfMaterial: one(realestateBillOfMaterials, {
-		fields: [realestateProductionOrder.bomId],
-		references: [realestateBillOfMaterials.id]
-	}),
-}));
-
-export const realestateOrderItemRelations = relations(realestateOrderItem, ({one}) => ({
-	realestateOrder: one(realestateOrder, {
-		fields: [realestateOrderItem.orderId],
-		references: [realestateOrder.id]
-	}),
-	realestateProduct: one(realestateProduct, {
-		fields: [realestateOrderItem.productId],
-		references: [realestateProduct.id]
-	}),
-}));
-
-export const realestateCommissionRelations = relations(realestateCommission, ({one}) => ({
-	realestateOrder: one(realestateOrder, {
-		fields: [realestateCommission.orderId],
-		references: [realestateOrder.id]
-	}),
-	realestateAgent: one(realestateAgent, {
-		fields: [realestateCommission.agentId],
-		references: [realestateAgent.id]
-	}),
-	realestateSubagent: one(realestateSubagent, {
-		fields: [realestateCommission.subagentId],
-		references: [realestateSubagent.id]
-	}),
-}));
-
-export const sessionRelations = relations(session, ({one}) => ({
-	user: one(user, {
-		fields: [session.userId],
-		references: [user.id]
-	}),
-}));
-
-export const userRelations = relations(user, ({many}) => ({
-	sessions: many(session),
-	instructors: many(instructor),
-	customers: many(customer),
-	posts: many(post),
-	accounts: many(account),
-}));
+import { region, venue, venueToVenueType, venueType, event, eventCategory, eventTicket, instructor, trainingCourse, user, category, product, productToCategory, customer, booking, ticket, courseEnrollment, eventTemplate, eventTemplateTicket, post } from "./schema";
 
 export const venueRelations = relations(venue, ({one, many}) => ({
 	region: one(region, {
@@ -204,9 +44,17 @@ export const eventRelations = relations(event, ({one, many}) => ({
 		fields: [event.venueId],
 		references: [venue.id]
 	}),
+	eventCategory: one(eventCategory, {
+		fields: [event.categoryId],
+		references: [eventCategory.id]
+	}),
 	eventTickets: many(eventTicket),
 	bookings: many(booking),
 	tickets: many(ticket),
+}));
+
+export const eventCategoryRelations = relations(eventCategory, ({many}) => ({
+	events: many(event),
 }));
 
 export const eventTicketRelations = relations(eventTicket, ({one, many}) => ({
@@ -241,6 +89,12 @@ export const instructorRelations = relations(instructor, ({one, many}) => ({
 	}),
 }));
 
+export const userRelations = relations(user, ({many}) => ({
+	instructors: many(instructor),
+	customers: many(customer),
+	posts: many(post),
+}));
+
 export const productRelations = relations(product, ({one, many}) => ({
 	category: one(category, {
 		fields: [product.categoryId],
@@ -265,15 +119,6 @@ export const productToCategoryRelations = relations(productToCategory, ({one}) =
 	}),
 }));
 
-export const customerRelations = relations(customer, ({one, many}) => ({
-	user: one(user, {
-		fields: [customer.userId],
-		references: [user.id]
-	}),
-	bookings: many(booking),
-	courseEnrollments: many(courseEnrollment),
-}));
-
 export const bookingRelations = relations(booking, ({one, many}) => ({
 	customer: one(customer, {
 		fields: [booking.customerId],
@@ -284,6 +129,15 @@ export const bookingRelations = relations(booking, ({one, many}) => ({
 		references: [event.id]
 	}),
 	tickets: many(ticket),
+}));
+
+export const customerRelations = relations(customer, ({one, many}) => ({
+	bookings: many(booking),
+	user: one(user, {
+		fields: [customer.userId],
+		references: [user.id]
+	}),
+	courseEnrollments: many(courseEnrollment),
 }));
 
 export const ticketRelations = relations(ticket, ({one}) => ({
@@ -339,23 +193,5 @@ export const postRelations = relations(post, ({one}) => ({
 	region: one(region, {
 		fields: [post.regionId],
 		references: [region.id]
-	}),
-}));
-
-export const realestateProductCategoryRelations = relations(realestateProductCategory, ({one}) => ({
-	realestateProduct: one(realestateProduct, {
-		fields: [realestateProductCategory.productId],
-		references: [realestateProduct.id]
-	}),
-	realestateCategory: one(realestateCategory, {
-		fields: [realestateProductCategory.categoryId],
-		references: [realestateCategory.id]
-	}),
-}));
-
-export const accountRelations = relations(account, ({one}) => ({
-	user: one(user, {
-		fields: [account.userId],
-		references: [user.id]
 	}),
 }));

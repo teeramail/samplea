@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import { testup2Upload } from "~/server/db/schema/realestate"; // Using the test upload table from realestate schema
+import { uploads } from "~/server/db/schema"; // Using the uploads table from main schema
 import { eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 
@@ -15,12 +15,13 @@ export const testup2Router = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       try {
         // Insert the new upload record
-        await ctx.db.insert(testup2Upload).values({
+        await ctx.db.insert(uploads).values({
           id: crypto.randomUUID(),
-          image_url: input.imageUrl,
-          original_filename: input.originalFilename,
-          created_at: new Date(),
-          updated_at: new Date()
+          imageUrl: input.imageUrl,
+          originalFilename: input.originalFilename,
+          entityType: "testup2", // Mark this as a testup2 upload
+          createdAt: new Date(),
+          updatedAt: new Date()
         });
         
         // Return a formatted response
@@ -52,9 +53,10 @@ export const testup2Router = createTRPCRouter({
   //   .input(z.object({ limit: z.number().min(1).max(100).nullish(), cursor: z.string().nullish() }))
   //   .query(async ({ ctx, input }) => {
   //     const limit = input.limit ?? 50;
-  //     const items = await ctx.db.query.testup2Upload.findMany({
+  //     const items = await ctx.db.query.uploads.findMany({
   //       limit: limit + 1,
-  //       orderBy: (table, { desc }) => [desc(table.created_at)],
+  //       orderBy: (table, { desc }) => [desc(table.createdAt)],
+  //       where: eq(table.entityType, "testup2"),
   //     });
   //     
   //     let nextCursor: string | undefined = undefined;

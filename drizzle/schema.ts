@@ -1,4 +1,4 @@
-import { pgTable, foreignKey, unique, uuid, varchar, text, timestamp, numeric, boolean, integer, index, doublePrecision, jsonb, uniqueIndex, time, primaryKey, pgEnum } from "drizzle-orm/pg-core"
+import { pgTable, unique, text, timestamp, integer, foreignKey, doublePrecision, boolean, jsonb, uniqueIndex, index, time, pgEnum } from "drizzle-orm/pg-core"
   import { sql } from "drizzle-orm"
 
 export const orderStatus = pgEnum("order_status", ['pending', 'processing', 'completed', 'cancelled', 'refunded'])
@@ -7,360 +7,16 @@ export const status = pgEnum("status", ['pending', 'completed', 'cancelled', 'in
 
 
 
-export const realestateBlogCategories = pgTable("realestate_blog_categories", {
-	id: uuid("id").defaultRandom().primaryKey().notNull(),
-	name: varchar("name", { length: 100 }).notNull(),
-	slug: varchar("slug", { length: 100 }).notNull(),
-	description: text("description"),
-	parentId: uuid("parent_id"),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
-	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
-},
-(table) => {
-	return {
-		realestateBlogCategoriesParentIdRealestateBlogCategories: foreignKey({
-			columns: [table.parentId],
-			foreignColumns: [table.id],
-			name: "realestate_blog_categories_parent_id_realestate_blog_categories"
-		}),
-		realestateBlogCategoriesSlugUnique: unique("realestate_blog_categories_slug_unique").on(table.slug),
-	}
-});
-
-export const realestateAgent = pgTable("realestate_agent", {
-	id: uuid("id").defaultRandom().primaryKey().notNull(),
-	name: varchar("name", { length: 255 }).notNull(),
-	email: varchar("email", { length: 255 }).notNull(),
-	phone: varchar("phone", { length: 50 }),
-	address: text("address"),
-	commissionRate: numeric("commission_rate", { precision: 5, scale:  2 }).default('10.00'),
-	active: boolean("active").default(true),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
-	updatedAt: timestamp("updated_at", { mode: 'string' }),
-});
-
-export const realestateBlogPosts = pgTable("realestate_blog_posts", {
-	id: uuid("id").defaultRandom().primaryKey().notNull(),
-	title: varchar("title", { length: 255 }).notNull(),
-	slug: varchar("slug", { length: 255 }).notNull(),
-	customSeoTitle: varchar("custom_seo_title", { length: 255 }),
-	metaDescription: text("meta_description"),
-	excerpt: text("excerpt"),
-	coverImageUrl: varchar("cover_image_url", { length: 2048 }),
-	coverImageAlt: varchar("cover_image_alt", { length: 255 }),
-	images: text("images").array().default(["RAY"]),
-	imageAlts: text("image_alts").array().default(["RAY"]),
-	categoryId: uuid("category_id"),
-	tags: text("tags").array(),
-	authorId: uuid("author_id"),
-	status: varchar("status", { length: 50 }).default('draft').notNull(),
-	publishedAt: timestamp("published_at", { mode: 'string' }),
-	scheduledPublishAt: timestamp("scheduled_publish_at", { mode: 'string' }),
-	estimatedReadTimeMinutes: integer("estimated_read_time_minutes"),
-	viewCount: integer("view_count").default(0).notNull(),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
-	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
-	content: text("content"),
-},
-(table) => {
-	return {
-		realestateBlogPostsCategoryIdRealestateBlogCategoriesId: foreignKey({
-			columns: [table.categoryId],
-			foreignColumns: [realestateBlogCategories.id],
-			name: "realestate_blog_posts_category_id_realestate_blog_categories_id"
-		}),
-		realestateBlogPostsSlugUnique: unique("realestate_blog_posts_slug_unique").on(table.slug),
-	}
-});
-
-export const realestateBomItem = pgTable("realestate_bom_item", {
-	id: uuid("id").defaultRandom().primaryKey().notNull(),
-	bomId: uuid("bom_id").notNull(),
-	componentProductId: uuid("component_product_id").notNull(),
-	quantity: numeric("quantity").notNull(),
-	unit: varchar("unit", { length: 50 }),
-	notes: text("notes"),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
-},
-(table) => {
-	return {
-		realestateBomItemBomIdRealestateBillOfMaterialsIdFk: foreignKey({
-			columns: [table.bomId],
-			foreignColumns: [realestateBillOfMaterials.id],
-			name: "realestate_bom_item_bom_id_realestate_bill_of_materials_id_fk"
-		}),
-		realestateBomItemComponentProductIdRealestateProductId: foreignKey({
-			columns: [table.componentProductId],
-			foreignColumns: [realestateProduct.id],
-			name: "realestate_bom_item_component_product_id_realestate_product_id_"
-		}),
-	}
-});
-
-export const realestateCards = pgTable("realestate_cards", {
-	id: uuid("id").defaultRandom().primaryKey().notNull(),
-	blogPostId: uuid("blog_post_id").notNull(),
-	order: integer("order").default(0).notNull(),
-	title: varchar("title", { length: 255 }),
-	subtitle: varchar("subtitle", { length: 255 }),
-	textContent: text("text_content"),
-	caption: text("caption"),
-	contentType: varchar("content_type", { length: 50 }).default('text').notNull(),
-	imageUrl: varchar("image_url", { length: 2048 }),
-	imageAltText: varchar("image_alt_text", { length: 255 }),
-	cardThumbnailUrl: varchar("card_thumbnail_url", { length: 2048 }),
-	images: text("images").array().default(["RAY"]),
-	imageAlts: text("image_alts").array().default(["RAY"]),
-	videoUrl: varchar("video_url", { length: 2048 }),
-	layoutStyle: varchar("layout_style", { length: 50 }).default('standard'),
-	templateName: varchar("template_name", { length: 100 }),
-	ctaButtonText: varchar("cta_button_text", { length: 100 }),
-	ctaButtonUrl: varchar("cta_button_url", { length: 2048 }),
-	isHighlighted: boolean("is_highlighted").default(false),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
-	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
-	content: text("content"),
-},
-(table) => {
-	return {
-		realestateCardsBlogPostIdRealestateBlogPostsIdFk: foreignKey({
-			columns: [table.blogPostId],
-			foreignColumns: [realestateBlogPosts.id],
-			name: "realestate_cards_blog_post_id_realestate_blog_posts_id_fk"
-		}),
-	}
-});
-
-export const realestateCategory = pgTable("realestate_category", {
-	id: uuid("id").defaultRandom().primaryKey().notNull(),
-	name: varchar("name", { length: 100 }).notNull(),
-	description: text("description"),
-	slug: varchar("slug", { length: 100 }).notNull(),
-	parentId: uuid("parent_id"),
-	isActive: boolean("is_active").default(true),
-	displayOrder: integer("display_order").default(0),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
-	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
-},
-(table) => {
-	return {
-		realestateCategoryParentIdRealestateCategoryIdFk: foreignKey({
-			columns: [table.parentId],
-			foreignColumns: [table.id],
-			name: "realestate_category_parent_id_realestate_category_id_fk"
-		}),
-		realestateCategorySlugUnique: unique("realestate_category_slug_unique").on(table.slug),
-	}
-});
-
-export const realestateOrder = pgTable("realestate_order", {
-	id: uuid("id").defaultRandom().primaryKey().notNull(),
-	orderNumber: varchar("order_number", { length: 50 }).notNull(),
-	customerName: varchar("customer_name", { length: 255 }).notNull(),
-	customerEmail: varchar("customer_email", { length: 255 }),
-	customerPhone: varchar("customer_phone", { length: 50 }),
-	customerAddress: text("customer_address"),
-	totalAmount: numeric("total_amount", { precision: 10, scale:  2 }).notNull(),
-	agentId: uuid("agent_id"),
-	subagentId: uuid("subagent_id"),
-	source: varchar("source", { length: 20 }).default('web').notNull(),
-	status: orderStatus("status").default('pending').notNull(),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
-	updatedAt: timestamp("updated_at", { mode: 'string' }),
-},
-(table) => {
-	return {
-		realestateOrderAgentIdRealestateAgentIdFk: foreignKey({
-			columns: [table.agentId],
-			foreignColumns: [realestateAgent.id],
-			name: "realestate_order_agent_id_realestate_agent_id_fk"
-		}),
-		realestateOrderSubagentIdRealestateSubagentIdFk: foreignKey({
-			columns: [table.subagentId],
-			foreignColumns: [realestateSubagent.id],
-			name: "realestate_order_subagent_id_realestate_subagent_id_fk"
-		}),
-		realestateOrderOrderNumberUnique: unique("realestate_order_order_number_unique").on(table.orderNumber),
-	}
-});
-
-export const realestateInventoryTransaction = pgTable("realestate_inventory_transaction", {
-	id: uuid("id").defaultRandom().primaryKey().notNull(),
-	productId: uuid("product_id").notNull(),
-	orderId: uuid("order_id"),
-	productionOrderId: uuid("production_order_id"),
-	quantity: integer("quantity").notNull(),
-	type: varchar("type", { length: 20 }).notNull(),
-	notes: text("notes"),
-	referenceNumber: varchar("reference_number", { length: 100 }),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
-	createdBy: uuid("created_by"),
-},
-(table) => {
-	return {
-		realestateInventoryTransactionProductIdRealestateProduct: foreignKey({
-			columns: [table.productId],
-			foreignColumns: [realestateProduct.id],
-			name: "realestate_inventory_transaction_product_id_realestate_product_"
-		}),
-		realestateInventoryTransactionOrderIdRealestateOrderIdF: foreignKey({
-			columns: [table.orderId],
-			foreignColumns: [realestateOrder.id],
-			name: "realestate_inventory_transaction_order_id_realestate_order_id_f"
-		}),
-		realestateInventoryTransactionProductionOrderIdRealestate: foreignKey({
-			columns: [table.productionOrderId],
-			foreignColumns: [realestateProductionOrder.id],
-			name: "realestate_inventory_transaction_production_order_id_realestate"
-		}),
-	}
-});
-
-export const realestateBillOfMaterials = pgTable("realestate_bill_of_materials", {
-	id: uuid("id").defaultRandom().primaryKey().notNull(),
-	finishedProductId: uuid("finished_product_id").notNull(),
-	name: varchar("name", { length: 255 }).notNull(),
-	description: text("description"),
-	batchQuantity: integer("batch_quantity").default(1).notNull(),
-	active: boolean("active").default(true),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
-	updatedAt: timestamp("updated_at", { mode: 'string' }),
-},
-(table) => {
-	return {
-		realestateBillOfMaterialsFinishedProductIdRealestatePro: foreignKey({
-			columns: [table.finishedProductId],
-			foreignColumns: [realestateProduct.id],
-			name: "realestate_bill_of_materials_finished_product_id_realestate_pro"
-		}),
-	}
-});
-
-export const realestateProduct = pgTable("realestate_product", {
-	id: uuid("id").defaultRandom().primaryKey().notNull(),
-	name: varchar("name", { length: 255 }).notNull(),
-	description: text("description"),
-	sku: varchar("sku", { length: 50 }),
-	price: numeric("price", { precision: 10, scale:  2 }).notNull(),
-	cost: numeric("cost", { precision: 10, scale:  2 }),
-	stockQuantity: integer("stock_quantity").default(0).notNull(),
-	thumbnail: text("thumbnail"),
-	images: text("images").array(),
-	tags: text("tags").array(),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
-	updatedAt: timestamp("updated_at", { mode: 'string' }),
-},
-(table) => {
-	return {
-		realestateProductSkuUnique: unique("realestate_product_sku_unique").on(table.sku),
-	}
-});
-
-export const realestateOrderItem = pgTable("realestate_order_item", {
-	id: uuid("id").defaultRandom().primaryKey().notNull(),
-	orderId: uuid("order_id").notNull(),
-	productId: uuid("product_id").notNull(),
-	quantity: integer("quantity").default(1).notNull(),
-	price: numeric("price", { precision: 10, scale:  2 }).notNull(),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
-},
-(table) => {
-	return {
-		realestateOrderItemOrderIdRealestateOrderIdFk: foreignKey({
-			columns: [table.orderId],
-			foreignColumns: [realestateOrder.id],
-			name: "realestate_order_item_order_id_realestate_order_id_fk"
-		}),
-		realestateOrderItemProductIdRealestateProductIdFk: foreignKey({
-			columns: [table.productId],
-			foreignColumns: [realestateProduct.id],
-			name: "realestate_order_item_product_id_realestate_product_id_fk"
-		}),
-	}
-});
-
-export const realestateProductionOrder = pgTable("realestate_production_order", {
-	id: uuid("id").defaultRandom().primaryKey().notNull(),
-	productionNumber: varchar("production_number", { length: 50 }).notNull(),
-	bomId: uuid("bom_id").notNull(),
-	quantity: integer("quantity").default(1).notNull(),
-	status: status("status").default('planned').notNull(),
-	scheduledDate: timestamp("scheduled_date", { mode: 'string' }),
-	completionDate: timestamp("completion_date", { mode: 'string' }),
-	notes: text("notes"),
-	cost: numeric("cost", { precision: 10, scale:  2 }),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
-	updatedAt: timestamp("updated_at", { mode: 'string' }),
-},
-(table) => {
-	return {
-		realestateProductionOrderBomIdRealestateBillOfMaterials: foreignKey({
-			columns: [table.bomId],
-			foreignColumns: [realestateBillOfMaterials.id],
-			name: "realestate_production_order_bom_id_realestate_bill_of_materials"
-		}),
-		realestateProductionOrderProductionNumberUnique: unique("realestate_production_order_production_number_unique").on(table.productionNumber),
-	}
-});
-
-export const testup2Upload = pgTable("testup2_upload", {
+export const eventCategory = pgTable("EventCategory", {
 	id: text("id").primaryKey().notNull(),
-	imageUrl: text("image_url").notNull(),
-	originalFilename: text("original_filename").notNull(),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
-	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
-});
-
-export const realestateSubagent = pgTable("realestate_subagent", {
-	id: uuid("id").defaultRandom().primaryKey().notNull(),
-	agentId: uuid("agent_id").notNull(),
-	name: varchar("name", { length: 255 }).notNull(),
-	email: varchar("email", { length: 255 }).notNull(),
-	phone: varchar("phone", { length: 50 }),
-	address: text("address"),
-	commissionRate: numeric("commission_rate", { precision: 5, scale:  2 }).default('5.00'),
-	active: boolean("active").default(true),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
-	updatedAt: timestamp("updated_at", { mode: 'string' }),
+	name: text("name").notNull(),
+	description: text("description"),
+	createdAt: timestamp("createdAt", { withTimezone: true, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+	updatedAt: timestamp("updatedAt", { withTimezone: true, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 },
 (table) => {
 	return {
-		realestateSubagentAgentIdRealestateAgentIdFk: foreignKey({
-			columns: [table.agentId],
-			foreignColumns: [realestateAgent.id],
-			name: "realestate_subagent_agent_id_realestate_agent_id_fk"
-		}),
-	}
-});
-
-export const realestateCommission = pgTable("realestate_commission", {
-	id: uuid("id").defaultRandom().primaryKey().notNull(),
-	orderId: uuid("order_id").notNull(),
-	agentId: uuid("agent_id"),
-	subagentId: uuid("subagent_id"),
-	amount: numeric("amount", { precision: 10, scale:  2 }).notNull(),
-	status: status("status").default('pending').notNull(),
-	paymentDate: timestamp("payment_date", { mode: 'string' }),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
-	updatedAt: timestamp("updated_at", { mode: 'string' }),
-},
-(table) => {
-	return {
-		realestateCommissionOrderIdRealestateOrderIdFk: foreignKey({
-			columns: [table.orderId],
-			foreignColumns: [realestateOrder.id],
-			name: "realestate_commission_order_id_realestate_order_id_fk"
-		}),
-		realestateCommissionAgentIdRealestateAgentIdFk: foreignKey({
-			columns: [table.agentId],
-			foreignColumns: [realestateAgent.id],
-			name: "realestate_commission_agent_id_realestate_agent_id_fk"
-		}),
-		realestateCommissionSubagentIdRealestateSubagentIdFk: foreignKey({
-			columns: [table.subagentId],
-			foreignColumns: [realestateSubagent.id],
-			name: "realestate_commission_subagent_id_realestate_subagent_id_fk"
-		}),
+		eventCategoryNameKey: unique("EventCategory_name_key").on(table.name),
 	}
 });
 
@@ -384,26 +40,12 @@ export const region = pgTable("Region", {
 	}
 });
 
-export const session = pgTable("session", {
-	sessionToken: text("session_token").primaryKey().notNull(),
-	userId: text("user_id").notNull(),
-	expires: timestamp("expires", { withTimezone: true, mode: 'string' }).notNull(),
-},
-(table) => {
-	return {
-		userIdIdx: index("session_user_id_idx").using("btree", table.userId.asc().nullsLast()),
-		sessionUserIdUserIdFk: foreignKey({
-			columns: [table.userId],
-			foreignColumns: [user.id],
-			name: "session_user_id_User_id_fk"
-		}).onDelete("cascade"),
-	}
-});
-
-export const testup2Upload = pgTable("Testup2Upload", {
+export const upload = pgTable("Upload", {
 	id: text("id").primaryKey().notNull(),
 	imageUrl: text("image_url").notNull(),
 	originalFilename: text("original_filename").notNull(),
+	entityType: text("entity_type"),
+	entityId: text("entity_id"),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
@@ -483,6 +125,7 @@ export const fighter = pgTable("Fighter", {
 	isFeatured: boolean("isFeatured").default(false).notNull(),
 	thumbnailUrl: text("thumbnailUrl"),
 	imageUrls: text("imageUrls").array(),
+	biography: text("biography"),
 });
 
 export const event = pgTable("Event", {
@@ -492,8 +135,6 @@ export const event = pgTable("Event", {
 	date: timestamp("date", { withTimezone: true, mode: 'string' }).notNull(),
 	startTime: timestamp("startTime", { withTimezone: true, mode: 'string' }).notNull(),
 	endTime: timestamp("endTime", { withTimezone: true, mode: 'string' }),
-	imageUrl: text("imageUrl"),
-	usesDefaultPoster: boolean("usesDefaultPoster").default(true).notNull(),
 	venueId: text("venueId"),
 	regionId: text("regionId"),
 	createdAt: timestamp("createdAt", { withTimezone: true, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
@@ -501,9 +142,8 @@ export const event = pgTable("Event", {
 	status: text("status").default('SCHEDULED').notNull(),
 	thumbnailUrl: text("thumbnailUrl"),
 	imageUrls: text("imageUrls").array(),
-	metaTitle: text("metaTitle"),
-	metaDescription: text("metaDescription"),
-	keywords: text("keywords").array(),
+	categoryId: text("categoryId"),
+	isDeleted: boolean("isDeleted").default(false).notNull(),
 },
 (table) => {
 	return {
@@ -516,6 +156,11 @@ export const event = pgTable("Event", {
 			columns: [table.venueId],
 			foreignColumns: [venue.id],
 			name: "Event_venueId_Venue_id_fk"
+		}).onDelete("set null"),
+		eventCategoryIdFkey: foreignKey({
+			columns: [table.categoryId],
+			foreignColumns: [eventCategory.id],
+			name: "Event_categoryId_fkey"
 		}).onDelete("set null"),
 	}
 });
@@ -686,26 +331,6 @@ export const productToCategory = pgTable("ProductToCategory", {
 	}
 });
 
-export const customer = pgTable("Customer", {
-	id: text("id").primaryKey().notNull(),
-	userId: text("userId"),
-	name: text("name").notNull(),
-	email: text("email").notNull(),
-	phone: text("phone"),
-	createdAt: timestamp("createdAt", { withTimezone: true, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
-	updatedAt: timestamp("updatedAt", { withTimezone: true, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
-},
-(table) => {
-	return {
-		customerEmailIdx: index("customer_email_idx").using("btree", table.email.asc().nullsLast()),
-		customerUserIdUserIdFk: foreignKey({
-			columns: [table.userId],
-			foreignColumns: [user.id],
-			name: "Customer_userId_User_id_fk"
-		}).onDelete("set null"),
-	}
-});
-
 export const booking = pgTable("Booking", {
 	id: text("id").primaryKey().notNull(),
 	eventId: text("eventId").notNull(),
@@ -728,6 +353,7 @@ export const booking = pgTable("Booking", {
 	paymentBankRefCode: text("paymentBankRefCode"),
 	paymentDate: text("paymentDate"),
 	paymentMethod: text("paymentMethod"),
+	metadata: jsonb("metadata"),
 },
 (table) => {
 	return {
@@ -741,6 +367,26 @@ export const booking = pgTable("Booking", {
 			foreignColumns: [event.id],
 			name: "Booking_eventId_Event_id_fk"
 		}).onDelete("cascade"),
+	}
+});
+
+export const customer = pgTable("Customer", {
+	id: text("id").primaryKey().notNull(),
+	userId: text("userId"),
+	name: text("name").notNull(),
+	email: text("email").notNull(),
+	phone: text("phone"),
+	createdAt: timestamp("createdAt", { withTimezone: true, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+	updatedAt: timestamp("updatedAt", { withTimezone: true, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+},
+(table) => {
+	return {
+		customerEmailIdx: index("customer_email_idx").using("btree", table.email.asc().nullsLast()),
+		customerUserIdUserIdFk: foreignKey({
+			columns: [table.userId],
+			foreignColumns: [user.id],
+			name: "Customer_userId_User_id_fk"
+		}).onDelete("set null"),
 	}
 });
 
@@ -888,63 +534,5 @@ export const post = pgTable("Post", {
 			name: "Post_regionId_Region_id_fk"
 		}).onDelete("set null"),
 		postSlugUnique: unique("Post_slug_unique").on(table.slug),
-	}
-});
-
-export const realestateProductCategory = pgTable("realestate_product_category", {
-	productId: uuid("product_id").notNull(),
-	categoryId: uuid("category_id").notNull(),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
-},
-(table) => {
-	return {
-		realestateProductCategoryProductIdRealestateProductIdFk: foreignKey({
-			columns: [table.productId],
-			foreignColumns: [realestateProduct.id],
-			name: "realestate_product_category_product_id_realestate_product_id_fk"
-		}),
-		realestateProductCategoryCategoryIdRealestateCategoryId: foreignKey({
-			columns: [table.categoryId],
-			foreignColumns: [realestateCategory.id],
-			name: "realestate_product_category_category_id_realestate_category_id_"
-		}),
-		realestateProductCategoryProductIdCategoryIdPk: primaryKey({ columns: [table.productId, table.categoryId], name: "realestate_product_category_product_id_category_id_pk"}),
-	}
-});
-
-export const verificationToken = pgTable("verification_token", {
-	identifier: text("identifier").notNull(),
-	token: text("token").notNull(),
-	expires: timestamp("expires", { withTimezone: true, mode: 'string' }).notNull(),
-},
-(table) => {
-	return {
-		verificationTokenIdentifierTokenPk: primaryKey({ columns: [table.identifier, table.token], name: "verification_token_identifier_token_pk"}),
-		verificationTokenTokenUnique: unique("verification_token_token_unique").on(table.token),
-	}
-});
-
-export const account = pgTable("account", {
-	userId: text("user_id").notNull(),
-	type: text("type").notNull(),
-	provider: text("provider").notNull(),
-	providerAccountId: text("provider_account_id").notNull(),
-	refreshToken: text("refresh_token"),
-	accessToken: text("access_token"),
-	expiresAt: integer("expires_at"),
-	tokenType: text("token_type"),
-	scope: text("scope"),
-	idToken: text("id_token"),
-	sessionState: text("session_state"),
-},
-(table) => {
-	return {
-		userIdIdx: index("account_user_id_idx").using("btree", table.userId.asc().nullsLast()),
-		accountUserIdUserIdFk: foreignKey({
-			columns: [table.userId],
-			foreignColumns: [user.id],
-			name: "account_user_id_User_id_fk"
-		}).onDelete("cascade"),
-		accountProviderProviderAccountIdPk: primaryKey({ columns: [table.provider, table.providerAccountId], name: "account_provider_provider_account_id_pk"}),
 	}
 });

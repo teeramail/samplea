@@ -22,6 +22,7 @@ interface Event {
     name: string;
   } | null;
   updatedAt?: Date;
+  isDeleted?: boolean;
 }
 
 // Define the response type from the API
@@ -49,6 +50,7 @@ export default function EventsListPage() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [showDeleted, setShowDeleted] = useState(false); // New state for showing deleted events
 
   // Fetch the list of events with pagination
   const {
@@ -61,6 +63,31 @@ export default function EventsListPage() {
     sortField,
     sortDirection,
     query: searchQuery ?? undefined,
+    includeDeleted: showDeleted, // Include deleted events when toggle is on
+  });
+
+  // Get the query client for manual refetching
+  const utils = api.useUtils();
+
+  // Add mutations for hide/restore
+  const hideMutation = api.event.hide.useMutation({
+    onSuccess: () => {
+      // Refetch the events list after successful hide
+      void utils.event.list.invalidate();
+    },
+    onError: (error) => {
+      alert("Failed to hide event: " + error.message);
+    },
+  });
+
+  const restoreMutation = api.event.restore.useMutation({
+    onSuccess: () => {
+      // Refetch the events list after successful restore
+      void utils.event.list.invalidate();
+    },
+    onError: (error) => {
+      alert("Failed to restore event: " + error.message);
+    },
   });
 
   // Handle page change
@@ -191,6 +218,17 @@ export default function EventsListPage() {
               itemsPerPage={itemsPerPage}
               onItemsPerPageChange={handleItemsPerPageChange}
             />
+
+            {/* Show deleted toggle */}
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={showDeleted}
+                onChange={(e) => setShowDeleted(e.target.checked)}
+                className="mr-2 rounded border-gray-300 focus:ring-indigo-500"
+              />
+              <span className="text-sm text-gray-700">Show hidden events</span>
+            </label>
           </div>
         </div>
       </div>
@@ -225,7 +263,13 @@ export default function EventsListPage() {
                 scope="col"
                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
               >
-                Status
+                Event Status
+              </th>
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+              >
+                Visibility
               </th>
               <SortableHeader
                 label="Last Updated"
@@ -277,6 +321,17 @@ export default function EventsListPage() {
                         {status.label}
                       </span>
                     </td>
+                    <td className="whitespace-nowrap px-6 py-4">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                          event.isDeleted
+                            ? "bg-red-100 text-red-800"
+                            : "bg-green-100 text-green-800"
+                        }`}
+                      >
+                        {event.isDeleted ? "Hidden" : "Visible"}
+                      </span>
+                    </td>
                     <td className="whitespace-nowrap px-6 py-4 text-center text-sm text-gray-500">
                       {event.updatedAt
                         ? new Date(event.updatedAt).toLocaleDateString()
@@ -293,22 +348,41 @@ export default function EventsListPage() {
                       >
                         Edit
                       </Link>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (
-                            confirm(
-                              "Are you sure you want to delete this event? This action cannot be undone.",
-                            )
-                          ) {
-                            // TODO: Add delete mutation
-                            console.log(`Delete event ${event.id}`);
-                          }
-                        }}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        Delete
-                      </button>
+                      {event.isDeleted ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (
+                              confirm(
+                                "Are you sure you want to restore this event? It will become visible again.",
+                              )
+                            ) {
+                              restoreMutation.mutate({ id: event.id });
+                            }
+                          }}
+                          className="text-green-600 hover:text-green-900"
+                          disabled={restoreMutation.isPending}
+                        >
+                          {restoreMutation.isPending ? "Restoring..." : "Restore"}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (
+                              confirm(
+                                "Are you sure you want to hide this event? It will not show on any public pages but can be restored later.",
+                              )
+                            ) {
+                              hideMutation.mutate({ id: event.id });
+                            }
+                          }}
+                          className="text-red-600 hover:text-red-900"
+                          disabled={hideMutation.isPending}
+                        >
+                          {hideMutation.isPending ? "Hiding..." : "Hide"}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );
@@ -316,7 +390,7 @@ export default function EventsListPage() {
             ) : (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   className="px-6 py-4 text-center text-sm text-gray-500"
                 >
                   No events found. Click &quot;Add New Event&quot; to create

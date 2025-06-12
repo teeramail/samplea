@@ -197,6 +197,7 @@ export const eventRouter = createTRPCRouter({
         const upcomingEvents = await ctx.db.query.events.findMany({
           where: and(
             gte(events.date, new Date()), // Events from today onwards
+            eq(events.isDeleted, false), // Exclude deleted events
           ),
           orderBy: [asc(events.date)], // Sort by nearest upcoming events first
           limit: limit,
@@ -237,6 +238,7 @@ export const eventRouter = createTRPCRouter({
             .enum(["title", "date", "venue", "region", "updatedAt"])
             .default("updatedAt"),
           sortDirection: z.enum(["asc", "desc"]).default("desc"),
+          includeDeleted: z.boolean().default(false), // New parameter for admin
         })
         .optional(),
     )
@@ -247,13 +249,25 @@ export const eventRouter = createTRPCRouter({
       const query = input?.query;
       const sortField = input?.sortField ?? "updatedAt";
       const sortDirection = input?.sortDirection ?? "desc";
+      const includeDeleted = input?.includeDeleted ?? false;
 
       try {
         let whereClause = undefined;
+        const conditions = [];
+
+        // Always exclude deleted events unless explicitly requested (for admin)
+        if (!includeDeleted) {
+          conditions.push(eq(events.isDeleted, false));
+        }
 
         if (query) {
           // Case-insensitive search using SQL LOWER function
-          whereClause = sql`LOWER(${events.title}) LIKE LOWER(${`%${query}%`})`;
+          conditions.push(sql`LOWER(${events.title}) LIKE LOWER(${`%${query}%`})`);
+        }
+
+        // Combine conditions
+        if (conditions.length > 0) {
+          whereClause = conditions.length === 1 ? conditions[0] : and(...conditions);
         }
 
         // Count total events for pagination
@@ -320,7 +334,7 @@ export const eventRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       try {
         const event = await ctx.db.query.events.findFirst({
-          where: eq(events.id, input.id),
+          where: and(eq(events.id, input.id), eq(events.isDeleted, false)),
           with: {
             venue: true,
             region: true,
@@ -350,6 +364,7 @@ export const eventRouter = createTRPCRouter({
       const allEvents = await ctx.db
         .select({ id: events.id })
         .from(events)
+        .where(eq(events.isDeleted, false))
         .orderBy(desc(events.updatedAt));
 
       return allEvents.map((event) => event.id);
@@ -595,6 +610,48 @@ export const eventRouter = createTRPCRouter({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to generate events from templates",
+        });
+      }
+    }),
+
+  // Soft delete (hide) an event
+  hide: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // Update the event to set isDeleted = true
+        await ctx.db
+          .update(events)
+          .set({ isDeleted: true, updatedAt: new Date() })
+          .where(eq(events.id, input.id));
+
+        return { success: true };
+      } catch (error) {
+        console.error("Failed to hide event:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to hide event",
+        });
+      }
+    }),
+
+  // Restore (unhide) an event
+  restore: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // Update the event to set isDeleted = false
+        await ctx.db
+          .update(events)
+          .set({ isDeleted: false, updatedAt: new Date() })
+          .where(eq(events.id, input.id));
+
+        return { success: true };
+      } catch (error) {
+        console.error("Failed to restore event:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to restore event",
         });
       }
     }),

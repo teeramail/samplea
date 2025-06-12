@@ -24,6 +24,11 @@
     "db:manage": "tsx src/scripts/db-schema-manager.ts all",
     "db:fix-production": "npx drizzle-kit push",
     "db:fix-category": "tsx src/scripts/fix-category-table.ts",
+    "db:introspect": "npx drizzle-kit introspect",
+    "db:sync-check": "node scripts/compare_postgres_drizzle.js",
+    "db:backup-schema": "cp src/server/db/schema.ts src/server/db/schema.ts.backup",
+    "db:sync": "node scripts/schema_sync_helper.js",
+    "db:compare-json": "node scripts/final_corrected_compare.js",
     "timezone:analyze": "tsx src/scripts/fixTimezones.ts",
     "dev": "next dev --turbo -H 0.0.0.0",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
@@ -56,7 +61,7 @@
     "next": "^15.2.4",
     "next-auth": "5.0.0-beta.25",
     "nodemailer": "^6.10.0",
-    "pg": "^8.15.1",
+    "pg": "^8.16.0",
     "postgres": "^3.4.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -69,6 +74,7 @@
     "sharp": "^0.33.4",
     "slugify": "^1.6.6",
     "superjson": "^2.2.1",
+    "ts-node": "^10.9.2",
     "uuid": "^11.1.0",
     "zod": "^3.24.2"
   },
@@ -77,12 +83,13 @@
     "@types/eslint": "^8.56.10",
     "@types/node": "^20.14.10",
     "@types/nodemailer": "^6.4.17",
+    "@types/pg": "^8.15.4",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^8.30.1",
     "@typescript-eslint/parser": "^8.30.1",
-    "drizzle-kit": "^0.24.0",
+    "drizzle-kit": "^0.24.2",
     "eslint": "^8.57.1",
     "eslint-config-next": "^15.0.1",
     "eslint-plugin-drizzle": "^0.2.3",
@@ -91,7 +98,7 @@
     "prettier-plugin-tailwindcss": "^0.6.5",
     "tailwindcss": "^3.4.3",
     "tsx": "^4.19.3",
-    "typescript": "^5.5.3"
+    "typescript": "^5.8.3"
   },
   "ct3aMetadata": {
     "initVersion": "7.38.1"
