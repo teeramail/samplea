@@ -615,7 +615,7 @@ export const eventRouter = createTRPCRouter({
     }),
 
   // Soft delete (hide) an event
-  hide: protectedProcedure
+  hide: publicProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       try {
@@ -636,7 +636,7 @@ export const eventRouter = createTRPCRouter({
     }),
 
   // Restore (unhide) an event
-  restore: protectedProcedure
+  restore: publicProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       try {

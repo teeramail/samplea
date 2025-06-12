@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import Pagination from "~/components/admin/Pagination";
 import SortableHeader from "~/components/admin/SortableHeader";
 import PageSizeSelector from "~/components/admin/PageSizeSelector";
-
 // Define the interface for an event
 interface Event {
   id: string;

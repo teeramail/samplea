@@ -1,6 +1,7 @@
 import { pgTable, unique, text, timestamp, integer, foreignKey, doublePrecision, boolean, jsonb, uniqueIndex, index, time, pgEnum } from "drizzle-orm/pg-core"
   import { sql } from "drizzle-orm"
 
+export const eventStatus = pgEnum("event_status", ['SCHEDULED', 'CANCELLED', 'COMPLETED', 'POSTPONED'])
 export const orderStatus = pgEnum("order_status", ['pending', 'processing', 'completed', 'cancelled', 'refunded'])
 export const recurrenceType = pgEnum("recurrence_type", ['none', 'weekly', 'monthly'])
 export const status = pgEnum("status", ['pending', 'completed', 'cancelled', 'in-progress', 'review', 'deferred', 'planned'])
@@ -139,11 +140,11 @@ export const event = pgTable("Event", {
 	regionId: text("regionId"),
 	createdAt: timestamp("createdAt", { withTimezone: true, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp("updatedAt", { withTimezone: true, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
-	status: text("status").default('SCHEDULED').notNull(),
 	thumbnailUrl: text("thumbnailUrl"),
 	imageUrls: text("imageUrls").array(),
 	categoryId: text("categoryId"),
 	isDeleted: boolean("isDeleted").default(false).notNull(),
+	status: eventStatus("status").default('SCHEDULED').notNull(),
 },
 (table) => {
 	return {

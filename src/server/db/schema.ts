@@ -892,23 +892,7 @@ export const sessionsRelations = relations(sessions, ({ one }) => ({
   user: one(users, { fields: [sessions.userId], references: [users.id] }),
 }));
 
-// Simple upload tracking table (replaces the removed realestate testup2Upload)
-export const uploads = createTable("Upload", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => createId()),
-  imageUrl: text("image_url").notNull(),
-  originalFilename: text("original_filename").notNull(),
-  entityType: text("entity_type"), // Optional: track what this upload is for
-  entityId: text("entity_id"), // Optional: track which entity this upload belongs to
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .default(sql`CURRENT_TIMESTAMP`)
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .default(sql`CURRENT_TIMESTAMP`)
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
+// Upload table removed - not needed for the application
 
 // Add alias for plural export (API routes expect 'instructors')
 export const instructors = instructor;
