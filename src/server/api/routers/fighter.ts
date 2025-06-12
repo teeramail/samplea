@@ -8,7 +8,7 @@ import {
   // adminProcedure, // TODO
 } from "~/server/api/trpc";
 import { fighters } from "~/server/db/schema";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, asc, like, count, sql } from "drizzle-orm";
 
 // Input schemas for fighter operations
 const createFighterSchema = z.object({
@@ -39,8 +39,117 @@ const updateFighterSchema = z.object({
 });
 
 export const fighterRouter = createTRPCRouter({
-  // List all fighters
-  list: publicProcedure.query(async ({ ctx }) => {
+  // List all fighters with pagination, sorting, and search
+  list: publicProcedure
+    .input(
+      z
+        .object({
+          limit: z.number().min(1).max(100).default(10),
+          page: z.number().min(1).default(1),
+          query: z.string().optional(),
+          sortField: z
+            .enum(["name", "weightClass", "country", "record", "createdAt", "updatedAt"])
+            .default("createdAt"),
+          sortDirection: z.enum(["asc", "desc"]).default("desc"),
+          featuredOnly: z.boolean().default(false),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const limit = input?.limit ?? 10;
+      const page = input?.page ?? 1;
+      const offset = (page - 1) * limit;
+      const query = input?.query;
+      const sortField = input?.sortField ?? "createdAt";
+      const sortDirection = input?.sortDirection ?? "desc";
+      const featuredOnly = input?.featuredOnly ?? false;
+
+      try {
+        let whereClause = undefined;
+        const conditions = [];
+
+        // Filter by featured status if requested
+        if (featuredOnly) {
+          conditions.push(eq(fighters.isFeatured, true));
+        }
+
+        if (query) {
+          // Case-insensitive search on name, nickname, weightClass, and country
+          conditions.push(
+            sql`(
+              LOWER(${fighters.name}) LIKE LOWER(${`%${query}%`}) OR
+              LOWER(${fighters.nickname}) LIKE LOWER(${`%${query}%`}) OR
+              LOWER(${fighters.weightClass}) LIKE LOWER(${`%${query}%`}) OR
+              LOWER(${fighters.country}) LIKE LOWER(${`%${query}%`})
+            )`
+          );
+        }
+
+        // Combine conditions
+        if (conditions.length > 0) {
+          whereClause = conditions.length === 1 ? conditions[0] : and(...conditions);
+        }
+
+        // Count total fighters for pagination
+        const totalCount = await ctx.db
+          .select({ count: count() })
+          .from(fighters)
+          .where(whereClause ?? undefined)
+          .then((result) => result[0]?.count ?? 0);
+
+        // Determine sort order
+        let orderBy;
+        switch (sortField) {
+          case "name":
+            orderBy =
+              sortDirection === "asc" ? asc(fighters.name) : desc(fighters.name);
+            break;
+          case "weightClass":
+            orderBy =
+              sortDirection === "asc" ? asc(fighters.weightClass) : desc(fighters.weightClass);
+            break;
+          case "country":
+            orderBy =
+              sortDirection === "asc" ? asc(fighters.country) : desc(fighters.country);
+            break;
+          case "record":
+            orderBy =
+              sortDirection === "asc" ? asc(fighters.record) : desc(fighters.record);
+            break;
+          case "updatedAt":
+            orderBy =
+              sortDirection === "asc" ? asc(fighters.updatedAt) : desc(fighters.updatedAt);
+            break;
+          case "createdAt":
+          default:
+            orderBy =
+              sortDirection === "asc" ? asc(fighters.createdAt) : desc(fighters.createdAt);
+        }
+
+        const fightersList = await ctx.db.query.fighters.findMany({
+          where: whereClause,
+          orderBy: [orderBy],
+          limit: limit,
+          offset: offset,
+        });
+
+        return {
+          items: fightersList,
+          totalCount,
+          pageCount: Math.ceil(totalCount / limit),
+          currentPage: page,
+        };
+      } catch (error) {
+        console.error("Failed to fetch fighters list:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch fighters",
+        });
+      }
+    }),
+
+  // Legacy list method for backward compatibility
+  listAll: publicProcedure.query(async ({ ctx }) => {
     try {
       const allFighters = await ctx.db.query.fighters.findMany({
         orderBy: [desc(fighters.createdAt)],
