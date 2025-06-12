@@ -114,6 +114,43 @@ export const postRouter = createTRPCRouter({
       }
     }),
 
+  getBySlug: publicProcedure
+    .input(z.object({ slug: z.string() }))
+    .query(async ({ ctx, input }) => {
+      try {
+        const post = await ctx.db.query.posts.findFirst({
+          where: and(
+            eq(posts.slug, input.slug),
+            eq(posts.status, "PUBLISHED"),
+          ),
+          with: {
+            region: true,
+            author: true,
+          },
+        });
+
+        if (!post) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Post not found",
+          });
+        }
+
+        return post;
+      } catch (error) {
+        console.error(`Failed to fetch post with slug ${input.slug}:`, error);
+        // Forward the TRPC error if it's already one
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        // Throw a generic error otherwise
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch post",
+        });
+      }
+    }),
+
   getLatest: publicProcedure.query(async ({ ctx }) => {
     const post = await ctx.db.query.posts.findFirst({
       where: eq(posts.status, "PUBLISHED"),

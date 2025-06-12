@@ -14,6 +14,7 @@ import {
   eventTemplates,
   eventTemplateTickets,
   eventTickets,
+  eventStatusEnum,
 } from "~/server/db/schema";
 import { eq, desc, and, gte, like, asc, count, inArray } from "drizzle-orm";
 
@@ -388,7 +389,7 @@ export const eventRouter = createTRPCRouter({
         endTime: z.date().optional(),
         venueId: z.string().optional(),
         regionId: z.string().optional(),
-        status: z.string().default("SCHEDULED"),
+        status: z.enum(eventStatusEnum.enumValues).default("SCHEDULED"),
         thumbnailUrl: z.string().optional(),
         imageUrl: z.string().optional(),
         imageUrls: z.array(z.string()).optional(),
@@ -415,28 +416,34 @@ export const eventRouter = createTRPCRouter({
       try {
         const { tickets, ...eventData } = input;
 
-        // Create the event
-        const eventId = createId();
-        await ctx.db.insert(events).values({
-          id: eventId,
-          ...eventData,
-        });
+        // Create the event and return the new ID
+        const newEvents = await ctx.db
+          .insert(events)
+          .values(eventData)
+          .returning({ id: events.id });
+        
+        const eventId = newEvents[0]?.id;
+        if (!eventId) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to create event and retrieve ID.",
+          });
+        }
 
         // Create ticket types if provided
         if (tickets && tickets.length > 0) {
-          for (const ticket of tickets) {
-            await ctx.db.insert(eventTickets).values({
-              id: createId(),
-              eventId,
-              ...ticket,
-              soldCount: 0,
-            });
-          }
+          const ticketValues = tickets.map((ticket) => ({
+            ...ticket,
+            eventId: eventId,
+            soldCount: 0,
+          }));
+          await ctx.db.insert(eventTickets).values(ticketValues);
         }
 
         return { id: eventId };
       } catch (error) {
         console.error("Failed to create event:", error);
+        if (error instanceof TRPCError) throw error;
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to create event",
@@ -560,7 +567,7 @@ export const eventRouter = createTRPCRouter({
               endTime: date.endTime,
               venueId: template.venueId,
               regionId: template.regionId,
-              status: "SCHEDULED",
+              status: "SCHEDULED" as const,
               usesDefaultPoster: true,
             };
 
@@ -586,20 +593,25 @@ export const eventRouter = createTRPCRouter({
         // 4. If not preview, save to database
         if (!previewOnly && eventsToCreate.length > 0) {
           for (const item of eventsToCreate) {
-            // Create event
-            const eventId = createId();
-            await ctx.db.insert(events).values({
-              id: eventId,
-              ...item.event,
-            });
+            // Create event and get the new ID
+            const newEvents = await ctx.db
+              .insert(events)
+              .values(item.event)
+              .returning({ id: events.id });
+            
+            const eventId = newEvents[0]?.id;
+            if (!eventId) {
+              console.error("Event creation from template failed, skipping ticket generation.");
+              continue;
+            }
 
             // Create tickets for this event
-            for (const ticket of item.tickets) {
-              await ctx.db.insert(eventTickets).values({
-                id: createId(),
-                eventId,
+            if (item.tickets && item.tickets.length > 0) {
+              const ticketValues = item.tickets.map((ticket) => ({
                 ...ticket,
-              });
+                eventId: eventId,
+              }));
+              await ctx.db.insert(eventTickets).values(ticketValues);
             }
           }
         }
