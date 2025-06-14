@@ -218,5 +218,28 @@ export const postRouter = createTRPCRouter({
       }
     }),
 
+  updateSlug: publicProcedure // TODO: Change to adminProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        newSlug: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        await ctx.db
+          .update(posts)
+          .set({ slug: input.newSlug, updatedAt: new Date() })
+          .where(eq(posts.id, input.id));
+        return { success: true };
+      } catch (error) {
+        console.error("Failed to update slug:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to update slug",
+        });
+      }
+    }),
+
   // TODO: Add delete procedure
 });

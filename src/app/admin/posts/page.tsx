@@ -85,15 +85,23 @@ export default function AdminPostsPage() {
   const posts = postsData ?? [];
 
   return (
-    <div className="p-6">
+    <div className="rounded-lg bg-white p-6 shadow-md">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">Manage Blog Posts</h1>
-        <Link
-          href="/admin/posts/new"
-          className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-        >
-          Add New Post
-        </Link>
+        <div className="flex gap-x-4">
+          <Link
+            href="/admin/posts/fix-slugs"
+            className="rounded-md bg-yellow-500 px-4 py-2 text-white hover:bg-yellow-600"
+          >
+            Fix Invalid Slugs
+          </Link>
+          <Link
+            href="/admin/posts/new"
+            className="rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
+          >
+            Create New Post
+          </Link>
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-lg shadow-md">

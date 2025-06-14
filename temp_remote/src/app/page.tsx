@@ -198,7 +198,7 @@ export default async function Home() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                {featuredPosts.map((post: PostType) => (
                  // --- REPLACE WITH <BlogPostCard /> IF AVAILABLE ---
-                 <Link key={post.id} href={`/blog/${post.slug}`} className="block bg-white/10 rounded-lg p-5 hover:bg-white/20 transition-colors">
+                 <Link key={post.id} href={post.slug.startsWith("http") ? post.slug : `/blog/${post.slug}`} className="block bg-white/10 rounded-lg p-5 hover:bg-white/20 transition-colors">
                    <span className="text-xs text-gray-300">{formatDate(post.publishedAt ?? post.createdAt)}</span>
                    <h3 className="text-xl font-bold my-2 line-clamp-2">{post.title}</h3>
                    {post.excerpt && <p className="text-gray-300 text-sm line-clamp-3">{post.excerpt}</p>}

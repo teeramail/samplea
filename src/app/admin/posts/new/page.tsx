@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "~/trpc/react";
+import slugify from "slugify";
 // import toast from 'react-hot-toast'; // Uncomment if you have toast installed
 
 export default function CreatePostPage() {
@@ -54,13 +55,15 @@ export default function CreatePostPage() {
   // Auto-generate slug from title
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const title = e.target.value;
+    const newSlug = slugify(title, {
+      lower: true,
+      strict: true,
+      remove: /[*+~.()'"!:@]/g,
+    });
     setFormData((prev) => ({
       ...prev,
       title,
-      slug: title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)/g, ""),
+      slug: newSlug,
     }));
   };
 

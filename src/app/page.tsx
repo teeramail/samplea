@@ -491,7 +491,7 @@ export default async function Home() {
                 // --- REPLACE WITH <BlogPostCard /> IF AVAILABLE ---
                 <Link
                   key={post.id}
-                  href={`/blog/${post.slug}`}
+                  href={post.slug.startsWith("http") ? post.slug : `/blog/${post.slug}`}
                   className="block rounded-lg bg-white/10 p-5 transition-colors hover:bg-white/20"
                 >
                   <span className="text-xs text-gray-300">

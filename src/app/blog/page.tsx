@@ -97,7 +97,7 @@ export default async function BlogPage() {
                   <span>{featuredArticle.readTime}</span> */}
                 </div>
                 <Link
-                  href={`/blog/${featuredArticle.slug}`}
+                  href={featuredArticle.slug.startsWith("http") ? featuredArticle.slug : `/blog/${featuredArticle.slug}`}
                   className="mt-2 block"
                 >
                   <h3 className="text-2xl font-bold text-gray-900 hover:text-purple-700">
@@ -127,7 +127,7 @@ export default async function BlogPage() {
                 )}
                 <div className="mt-6">
                   <Link
-                    href={`/blog/${featuredArticle.slug}`}
+                    href={featuredArticle.slug.startsWith("http") ? featuredArticle.slug : `/blog/${featuredArticle.slug}`}
                     className="inline-flex items-center rounded-md border border-transparent bg-purple-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
                   >
                     Read Full Article
@@ -186,7 +186,7 @@ export default async function BlogPage() {
                         })}
                       </span>
                     </div>
-                    <Link href={`/blog/${article.slug}`} className="mt-2 block">
+                    <Link href={article.slug.startsWith("http") ? article.slug : `/blog/${article.slug}`} className="mt-2 block">
                       <h3 className="text-xl font-bold text-gray-900 hover:text-purple-700">
                         {article.title}
                       </h3>
@@ -196,7 +196,7 @@ export default async function BlogPage() {
                     </p>
                     <div className="mt-4">
                       <Link
-                        href={`/blog/${article.slug}`}
+                        href={article.slug.startsWith("http") ? article.slug : `/blog/${article.slug}`}
                         className="text-sm font-semibold text-purple-600 hover:text-purple-800"
                       >
                         Read more &rarr;
@@ -241,7 +241,7 @@ export default async function BlogPage() {
                         })}
                       </span>
                     </div>
-                    <Link href={`/blog/${article.slug}`} className="mt-2 block">
+                    <Link href={article.slug.startsWith("http") ? article.slug : `/blog/${article.slug}`} className="mt-2 block">
                       <h3 className="text-lg font-semibold text-gray-900 hover:text-purple-700">
                         {article.title}
                       </h3>
@@ -251,7 +251,7 @@ export default async function BlogPage() {
                     </p>
                     <div className="mt-3">
                       <Link
-                        href={`/blog/${article.slug}`}
+                        href={article.slug.startsWith("http") ? article.slug : `/blog/${article.slug}`}
                         className="text-sm font-medium text-purple-600 hover:text-purple-800"
                       >
                         Read more
